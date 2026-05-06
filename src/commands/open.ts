@@ -1,0 +1,191 @@
+import {
+	confirm,
+	isCancel,
+	outro,
+	spinner,
+} from "@clack/prompts";
+import { Command } from "commander";
+import fse from "fs-extra";
+import pc from "picocolors";
+
+import { loadConfig } from "../core/config";
+import {
+	clearOriginalPath,
+	getProjectMeta,
+	getProjectPath,
+	listProjects,
+	projectExists,
+} from "../core/project";
+import { openWithIDE } from "../utils/shell";
+import { liveSearch, CANCEL } from "../utils/live-search";
+import {
+	filterProjects,
+	projectHint,
+} from "../utils/project-search";
+import { brand, printError, printInfo } from "../utils/ui";
+
+/**
+ * 搜索并选择项目（实时搜索）
+ */
+async function searchAndSelect(
+	projects: ReturnType<typeof listProjects>,
+	initialQuery?: string,
+): Promise<string> {
+	const options = projects.map((p) => ({
+		value: p.name,
+		label: p.name,
+		hint: projectHint(p),
+	}));
+
+	const result = await liveSearch({
+		message: "搜索项目:",
+		placeholder: "输入名称、模板或标签筛选",
+		options,
+		filterFn: (query: string) => {
+			if (!query) return options;
+			const filtered = filterProjects(projects, query);
+			return filtered.map((p) => ({
+				value: p.name,
+				label: p.name,
+				hint: projectHint(p),
+			}));
+		},
+		initialQuery,
+	});
+
+	if (result === CANCEL) {
+		outro(pc.dim("已取消"));
+		process.exit(0);
+	}
+
+	return result as string;
+}
+
+export const openCommand = new Command("open")
+	.alias("o")
+	.description("打开项目")
+	.argument("[name]", "项目名称、搜索关键词，或 :ide 快速切换")
+	.option("-i, --ide <ide>", "指定 IDE")
+	.action(async (name?: string, options?: { ide?: string }) => {
+		const config = loadConfig();
+
+		// 处理 `:ide` 语法：快速用指定 IDE 打开当前目录
+		if (name?.startsWith(":")) {
+			const ide = name.slice(1);
+			const s = spinner();
+			s.start(`正在查找 ${ide}...`);
+
+			try {
+				// 用户手动指定，启用模糊匹配
+				const { resolved } = await openWithIDE(ide, process.cwd(), true);
+				s.stop(`${brand.success("✓")} 已用 ${brand.primary(resolved)} 打开当前目录`);
+			} catch (error) {
+				s.stop("打开失败");
+				printError((error as Error).message);
+				process.exit(1);
+			}
+			return;
+		}
+
+		// 处理 `p open . -i ide` 的情况：用指定 IDE 打开当前目录
+		if (name === ".") {
+			const ide = options?.ide || config.ide;
+			const s = spinner();
+			s.start(`正在打开...`);
+
+			try {
+				// 只有用户手动指定 -i 时才模糊匹配
+				const { resolved } = await openWithIDE(ide, process.cwd(), !!options?.ide);
+				s.stop(`${brand.success("✓")} 已用 ${brand.primary(resolved)} 打开当前目录`);
+			} catch (error) {
+				s.stop("打开失败");
+				printError((error as Error).message);
+				process.exit(1);
+			}
+			return;
+		}
+
+		const projects = listProjects();
+
+		if (projects.length === 0) {
+			console.log();
+			printInfo(`暂无项目，使用 ${brand.primary("p new")} 创建新项目`);
+			console.log();
+			return;
+		}
+
+		let projectName = name;
+
+		if (!projectName) {
+			// 无参数 → 实时搜索
+			projectName = await searchAndSelect(projects);
+		} else if (!projectExists(projectName)) {
+			// 名称不精确匹配 → 尝试模糊搜索
+			const filtered = filterProjects(projects, projectName);
+			if (filtered.length === 1) {
+				projectName = filtered[0].name;
+			} else if (filtered.length > 1) {
+				// 多个匹配 → 打开实时搜索，预填关键词
+				projectName = await searchAndSelect(projects, projectName);
+			} else {
+				printError(`项目不存在: ${projectName}`);
+				console.log(
+					pc.dim("使用 ") +
+						brand.primary("p ls") +
+						pc.dim(" 查看所有项目"),
+				);
+				process.exit(1);
+			}
+		}
+
+		const projectPath = getProjectPath(projectName);
+		const currentDir = process.cwd();
+
+		// 检查是否已经是当前目录
+		if (projectPath === currentDir) {
+			console.log();
+			printInfo(`已在项目目录: ${brand.primary(projectName)}`);
+			console.log();
+			return;
+		}
+
+		// 检查原始路径是否仍存在
+		const meta = getProjectMeta(projectName);
+		if (meta?.originalPath && fse.existsSync(meta.originalPath)) {
+			const shouldDelete = await confirm({
+				message: `检测到原始路径仍存在: ${pc.underline(meta.originalPath)}\n  是否删除原始目录？`,
+				initialValue: false,
+			});
+
+			if (!isCancel(shouldDelete) && shouldDelete) {
+				const s = spinner();
+				s.start("正在删除原始目录...");
+				try {
+					await fse.remove(meta.originalPath);
+					clearOriginalPath(projectName);
+					s.stop("原始目录已删除");
+				} catch (error) {
+					s.stop("删除原始目录失败");
+					printError((error as Error).message);
+				}
+			}
+		}
+
+		const s = spinner();
+		const ide = options?.ide || config.ide;
+		s.start(`正在打开...`);
+
+		try {
+			// 只有用户手动指定 -i 时才模糊匹配
+			const { resolved } = await openWithIDE(ide, projectPath, !!options?.ide);
+			s.stop(`${brand.success("✓")} 已用 ${brand.primary(resolved)} 打开: ${brand.secondary(projectName)}`);
+		} catch (error) {
+			s.stop("打开失败");
+			console.log();
+			printError((error as Error).message);
+			console.log();
+			console.log(pc.dim("  项目路径: ") + pc.underline(projectPath));
+			console.log();
+			process.exit(1);
+		}
+	});

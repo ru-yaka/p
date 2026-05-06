@@ -1,0 +1,40 @@
+{
+	"name": "p",
+	"version": "1.6.0",
+	"description": "项目管理 CLI 工具 - 快速创建和管理项目",
+	"author": "ru-yaka",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ru-yaka/p.git"
+	},
+	"type": "module",
+	"bin": {
+		"p": "./dist/index.js"
+	},
+	"scripts": {
+		"build": "bun build src/index.ts --outdir dist --target bun && bun run scripts/copy-config.ts",
+		"dev": "bun run src/index.ts",
+		"link": "bun run build && bun link",
+		"version": "changeset version && bun run build"
+	},
+	"dependencies": {
+		"@clack/prompts": "^0.11.0",
+		"adm-zip": "^0.5.17",
+		"commander": "^14.0.2",
+		"fs-extra": "^11.3.3",
+		"glob": "^13.0.6",
+		"picocolors": "^1.1.1",
+		"yaml": "^2.8.2"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.10",
+		"@changesets/cli": "^2.29.8",
+		"@types/adm-zip": "^0.5.8",
+		"@types/bun": "latest",
+		"@types/fs-extra": "^11.0.4"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}
