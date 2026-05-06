@@ -10,6 +10,8 @@ bun install -g ru-yaka/p
 
 安装完成后，运行 `p` 命令即可使用。
 
+> **AI 命名功能**需要配置智谱 API Key，见下方[配置说明](#配置)。
+
 ### 从源码安装
 
 ```bash
@@ -182,7 +184,8 @@ p templates
 # 默认 IDE
 ide: cursor
 
-# 智谱 API Key（用于 AI 命名）
+# 智谱 API Key（用于 AI 命名，必填）
+# 在 https://open.bigmodel.cn/ 申请
 apiKey: your-api-key
 
 # AI 配置
