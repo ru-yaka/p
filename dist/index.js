@@ -20742,12 +20742,17 @@ function getVersion(dir) {
     return "unknown";
   }
 }
-function findPCliDir() {
+function findPDir() {
   const currentFile = fileURLToPath(import.meta.url);
   let dir = dirname4(currentFile);
   for (let i = 0;i < 10; i++) {
-    if (existsSync2(join10(dir, ".git")) && existsSync2(join10(dir, "package.json"))) {
-      return dir;
+    const pkgPath = join10(dir, "package.json");
+    if (existsSync2(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync2(pkgPath, "utf-8"));
+        if (pkg.name === "p")
+          return dir;
+      } catch {}
     }
     const parent = resolve5(dir, "..");
     if (parent === dir)
@@ -20757,57 +20762,30 @@ function findPCliDir() {
   return null;
 }
 var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u65B0 p \u5230\u6700\u65B0\u7248\u672C").action(async () => {
-  const pCliDir = findPCliDir();
-  if (!pCliDir) {
-    printError("\u65E0\u6CD5\u5B9A\u4F4D p \u9879\u76EE\u76EE\u5F55");
-    printInfo("\u8BF7\u624B\u52A8\u66F4\u65B0: cd <p\u76EE\u5F55> && git pull && bun install && bun run link");
-    process.exit(1);
-  }
-  const currentVersion = getVersion(pCliDir);
+  const pDir = findPDir();
+  const currentVersion = pDir ? getVersion(pDir) : "unknown";
   Ie(bgOrange(" \u66F4\u65B0 p "));
   console.log(import_picocolors26.default.dim("  \u5F53\u524D\u7248\u672C: ") + brand.primary(currentVersion));
   console.log();
   const s = Y2();
-  s.start("\u6B63\u5728\u62C9\u53D6\u6700\u65B0\u4EE3\u7801...");
-  const pullResult = await execAndCapture("git pull", pCliDir);
-  if (!pullResult.success) {
-    s.stop("\u62C9\u53D6\u5931\u8D25");
+  s.start("\u6B63\u5728\u66F4\u65B0...");
+  const result = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
+  if (!result.success) {
+    s.stop("\u66F4\u65B0\u5931\u8D25");
     console.log();
-    printError(`git pull \u5931\u8D25: ${pullResult.error || pullResult.output}`);
+    printError(`\u66F4\u65B0\u5931\u8D25: ${result.error || result.output}`);
     console.log();
-    printInfo(`\u624B\u52A8\u66F4\u65B0: cd ${pCliDir} && git pull && bun install && bun run link`);
+    printInfo("\u624B\u52A8\u66F4\u65B0: bun remove -g p && bun install -g ru-yaka/p");
     process.exit(1);
   }
-  if (pullResult.output.includes("Already up to date")) {
-    s.stop("\u5DF2\u662F\u6700\u65B0\u7248\u672C");
-    console.log();
-    Se(brand.success(`p \u5DF2\u662F\u6700\u65B0\u7248\u672C (${currentVersion})`));
-    return;
-  }
-  s.stop("\u4EE3\u7801\u5DF2\u66F4\u65B0");
-  const installSpinner = Y2();
-  installSpinner.start("\u6B63\u5728\u5B89\u88C5\u4F9D\u8D56...");
-  const installResult = await execAndCapture("bun install", pCliDir);
-  if (!installResult.success) {
-    installSpinner.stop("\u5B89\u88C5\u4F9D\u8D56\u5931\u8D25");
-    console.log();
-    printError(`bun install \u5931\u8D25: ${installResult.error || installResult.output}`);
-    process.exit(1);
-  }
-  installSpinner.stop("\u4F9D\u8D56\u5B89\u88C5\u5B8C\u6210");
-  const buildSpinner = Y2();
-  buildSpinner.start("\u6B63\u5728\u6784\u5EFA...");
-  const buildResult = await execAndCapture("bun run build", pCliDir);
-  if (!buildResult.success) {
-    buildSpinner.stop("\u6784\u5EFA\u5931\u8D25");
-    console.log();
-    printError(`\u6784\u5EFA\u5931\u8D25: ${buildResult.error || buildResult.output}`);
-    process.exit(1);
-  }
-  buildSpinner.stop("\u6784\u5EFA\u5B8C\u6210");
-  const newVersion = getVersion(pCliDir);
+  s.stop("\u66F4\u65B0\u5B8C\u6210");
+  const newVersion = getVersion(pDir || "");
   console.log();
-  Se(brand.success("p \u5DF2\u66F4\u65B0: ") + import_picocolors26.default.dim(currentVersion) + brand.success(" \u2192 ") + brand.primary(newVersion));
+  if (newVersion !== "unknown" && newVersion !== currentVersion) {
+    Se(brand.success("p \u5DF2\u66F4\u65B0: ") + import_picocolors26.default.dim(currentVersion) + brand.success(" \u2192 ") + brand.primary(newVersion));
+  } else {
+    Se(brand.success("p \u5DF2\u662F\u6700\u65B0\u7248\u672C"));
+  }
 });
 
 // src/index.ts

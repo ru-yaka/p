@@ -17,21 +17,22 @@ function getVersion(dir: string): string {
 }
 
 /**
- * 从当前文件位置向上查找 p 项目根目录（包含 .git 和 package.json）
+ * 从当前文件位置向上查找 p 安装目录（包含 package.json 且 name 为 p）
  */
-function findPCliDir(): string | null {
+function findPDir(): string | null {
 	const currentFile = fileURLToPath(import.meta.url);
 	let dir = dirname(currentFile);
 
 	for (let i = 0; i < 10; i++) {
-		if (
-			existsSync(join(dir, ".git")) &&
-			existsSync(join(dir, "package.json"))
-		) {
-			return dir;
+		const pkgPath = join(dir, "package.json");
+		if (existsSync(pkgPath)) {
+			try {
+				const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+				if (pkg.name === "p") return dir;
+			} catch {}
 		}
 		const parent = resolve(dir, "..");
-		if (parent === dir) break; // 到达根目录
+		if (parent === dir) break;
 		dir = parent;
 	}
 
@@ -42,82 +43,40 @@ export const updateCommand = new Command("update")
 	.alias("upgrade")
 	.description("更新 p 到最新版本")
 	.action(async () => {
-		const pCliDir = findPCliDir();
-
-		if (!pCliDir) {
-			printError("无法定位 p 项目目录");
-			printInfo("请手动更新: cd <p目录> && git pull && bun install && bun run link");
-			process.exit(1);
-		}
-
-		const currentVersion = getVersion(pCliDir);
+		const pDir = findPDir();
+		const currentVersion = pDir ? getVersion(pDir) : "unknown";
 
 		intro(bgOrange(" 更新 p "));
 		console.log(pc.dim("  当前版本: ") + brand.primary(currentVersion));
 		console.log();
 
 		const s = spinner();
-		s.start("正在拉取最新代码...");
+		s.start("正在更新...");
 
-		// git pull
-		const pullResult = await execAndCapture("git pull", pCliDir);
+		const result = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
 
-		if (!pullResult.success) {
-			s.stop("拉取失败");
+		if (!result.success) {
+			s.stop("更新失败");
 			console.log();
-			printError(`git pull 失败: ${pullResult.error || pullResult.output}`);
+			printError(`更新失败: ${result.error || result.output}`);
 			console.log();
-			printInfo(`手动更新: cd ${pCliDir} && git pull && bun install && bun run link`);
+			printInfo("手动更新: bun remove -g p && bun install -g ru-yaka/p");
 			process.exit(1);
 		}
 
-		// 检查是否有更新
-		if (pullResult.output.includes("Already up to date")) {
-			s.stop("已是最新版本");
-			console.log();
-			outro(brand.success(`p 已是最新版本 (${currentVersion})`));
-			return;
-		}
+		s.stop("更新完成");
 
-		s.stop("代码已更新");
-
-		// 安装依赖
-		const installSpinner = spinner();
-		installSpinner.start("正在安装依赖...");
-
-		const installResult = await execAndCapture("bun install", pCliDir);
-
-		if (!installResult.success) {
-			installSpinner.stop("安装依赖失败");
-			console.log();
-			printError(`bun install 失败: ${installResult.error || installResult.output}`);
-			process.exit(1);
-		}
-
-		installSpinner.stop("依赖安装完成");
-
-		// 构建
-		const buildSpinner = spinner();
-		buildSpinner.start("正在构建...");
-
-		const buildResult = await execAndCapture("bun run build", pCliDir);
-
-		if (!buildResult.success) {
-			buildSpinner.stop("构建失败");
-			console.log();
-			printError(`构建失败: ${buildResult.error || buildResult.output}`);
-			process.exit(1);
-		}
-
-		buildSpinner.stop("构建完成");
-
-		const newVersion = getVersion(pCliDir);
+		const newVersion = getVersion(pDir || "");
 
 		console.log();
-		outro(
-			brand.success("p 已更新: ") +
-				pc.dim(currentVersion) +
-				brand.success(" → ") +
-				brand.primary(newVersion),
-		);
+		if (newVersion !== "unknown" && newVersion !== currentVersion) {
+			outro(
+				brand.success("p 已更新: ") +
+					pc.dim(currentVersion) +
+					brand.success(" → ") +
+					brand.primary(newVersion),
+			);
+		} else {
+			outro(brand.success("p 已是最新版本"));
+		}
 	});
