@@ -17122,7 +17122,7 @@ function buildTemplateOptions(projects) {
     hint: p2.template ? import_picocolors24.default.cyan(p2.template) : undefined
   }));
 }
-var templateCommand = new Command("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (action, target) => {
+var templateCommand = new Command("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
   if (!action) {
     const config = loadConfig();
     await import_fs_extra16.default.ensureDir(TEMPLATES_DIR);
@@ -17143,7 +17143,7 @@ var templateCommand = new Command("template").alias("templates").description("\u
     return;
   }
   if (action === "add") {
-    await handleAdd(target);
+    await handleAdd(target, name);
   } else if (action === "update") {
     await handleUpdate(target);
   } else {
@@ -17152,12 +17152,12 @@ var templateCommand = new Command("template").alias("templates").description("\u
     process.exit(1);
   }
 });
-async function handleAdd(target) {
+async function handleAdd(target, templateNameArg) {
   const currentDir = process.cwd();
   const projects = listProjects();
   const currentProject = projects.find((p2) => p2.path === currentDir);
   if (!target && currentProject) {
-    const templateName2 = currentProject.template || currentProject.name;
+    const templateName2 = templateNameArg || currentProject.template || currentProject.name;
     const isUpdate2 = !!currentProject.template;
     const exists = await templateExists(templateName2);
     if (exists && !isUpdate2) {
@@ -17169,7 +17169,11 @@ async function handleAdd(target) {
   if (target === ".") {
     let templateName2 = null;
     let isUpdate2 = false;
-    if (currentProject?.template) {
+    if (templateNameArg) {
+      templateName2 = templateNameArg;
+      const exists2 = await templateExists(templateName2);
+      isUpdate2 = exists2;
+    } else if (currentProject?.template) {
       templateName2 = currentProject.template;
       isUpdate2 = true;
     } else {
@@ -17257,7 +17261,7 @@ async function handleAdd(target) {
   }
   const sourcePath = getProjectPath(selectedProject);
   const project = projects.find((p2) => p2.name === selectedProject);
-  const templateName = project?.template || selectedProject;
+  const templateName = templateNameArg || project?.template || selectedProject;
   const isUpdate = !!project?.template;
   await createOrUpdateTemplate(sourcePath, templateName, isUpdate);
 }

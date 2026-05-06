@@ -37,7 +37,8 @@ export const templateCommand = new Command("template")
 	.description("管理本地模板")
 	.argument("[action]", "操作: add, update")
 	.argument("[target]", "项目名称或 . 表示当前目录")
-	.action(async (action?: string, target?: string) => {
+	.argument("[name]", "模板名称")
+	.action(async (action?: string, target?: string, name?: string) => {
 		// 如果没有提供 action，则打开 templates 目录
 		if (!action) {
 			const config = loadConfig();
@@ -68,7 +69,7 @@ export const templateCommand = new Command("template")
 
 		// 处理 add 操作
 		if (action === "add") {
-			await handleAdd(target);
+			await handleAdd(target, name);
 		} else if (action === "update") {
 			await handleUpdate(target);
 		} else {
@@ -78,14 +79,14 @@ export const templateCommand = new Command("template")
 		}
 	});
 
-async function handleAdd(target?: string) {
+async function handleAdd(target?: string, templateNameArg?: string) {
 	const currentDir = process.cwd();
 	const projects = listProjects();
 	const currentProject = projects.find((p) => p.path === currentDir);
 
 	// 如果没有指定目标，且当前目录是项目，默认使用当前项目
 	if (!target && currentProject) {
-		const templateName = currentProject.template || currentProject.name;
+		const templateName = templateNameArg || currentProject.template || currentProject.name;
 		const isUpdate = !!currentProject.template;
 
 		// 检查模板是否已存在
@@ -103,7 +104,11 @@ async function handleAdd(target?: string) {
 		let templateName: string | null = null;
 		let isUpdate = false;
 
-		if (currentProject?.template) {
+		if (templateNameArg) {
+			templateName = templateNameArg;
+			const exists = await templateExists(templateName);
+			isUpdate = exists;
+		} else if (currentProject?.template) {
 			templateName = currentProject.template;
 			isUpdate = true;
 		} else {
@@ -209,7 +214,7 @@ async function handleAdd(target?: string) {
 
 	// 检查项目是否有关联的模板
 	const project = projects.find((p) => p.name === selectedProject);
-	const templateName = project?.template || selectedProject;
+	const templateName = templateNameArg || project?.template || selectedProject;
 	const isUpdate = !!project?.template;
 
 	await createOrUpdateTemplate(sourcePath, templateName, isUpdate);
