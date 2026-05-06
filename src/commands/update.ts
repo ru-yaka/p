@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
 import pc from "picocolors";
 import { execAndCapture } from "../utils/shell";
-import { bgOrange, brand, printError, printInfo } from "../utils/ui";
+import { bgOrange, brand, printError } from "../utils/ui";
 
 function getVersion(dir: string): string {
 	try {
@@ -38,32 +38,6 @@ function findPCliDir(): string | null {
 	return null;
 }
 
-/**
- * 获取当前 git 配置的用户名
- */
-async function getGitUsername(): Promise<string | null> {
-	const result = await execAndCapture("git config user.name", process.cwd());
-	if (result.success && result.output.trim()) {
-		return result.output.trim();
-	}
-	return null;
-}
-
-/**
- * 从 remote URL 提取 owner
- */
-function extractOwnerFromRemote(url: string): string | null {
-	// HTTPS: https://github.com/OWNER/REPO.git
-	let match = url.match(/github\.com[:/]([^/]+)\//);
-	if (match) return match[1];
-
-	// SSH: git@github.com:OWNER/REPO.git
-	match = url.match(/git@[^:]+:([^/]+)\//);
-	if (match) return match[1];
-
-	return null;
-}
-
 export const updateCommand = new Command("update")
 	.alias("upgrade")
 	.description("更新 p 到最新版本")
@@ -81,19 +55,6 @@ export const updateCommand = new Command("update")
 		intro(bgOrange(" 更新 p "));
 		console.log(pc.dim("  当前版本: ") + brand.primary(currentVersion));
 		console.log();
-
-		// 检查 git 用户与仓库 owner 是否一致
-		const remoteResult = await execAndCapture("git remote get-url origin", pCliDir);
-		const gitUser = await getGitUsername();
-
-		if (remoteResult.success && gitUser) {
-			const owner = extractOwnerFromRemote(remoteResult.output);
-			if (owner && gitUser.toLowerCase() !== owner.toLowerCase()) {
-				printError(`git 用户 (${gitUser}) 与仓库 owner (${owner}) 不一致`);
-				printInfo("请先切换到正确的账户后再执行 p update");
-				process.exit(1);
-			}
-		}
 
 		const s = spinner();
 		s.start("正在拉取最新代码...");
