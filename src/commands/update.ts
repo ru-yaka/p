@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
 import pc from "picocolors";
 import { execAndCapture } from "../utils/shell";
-import { bgOrange, brand, printError } from "../utils/ui";
+import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 
 function getVersion(dir: string): string {
 	try {
