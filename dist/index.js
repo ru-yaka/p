@@ -14533,7 +14533,7 @@ function printError(message) {
   console.log(`${brand.error("\u2717")} ${message}`);
 }
 function printInfo(message) {
-  console.log(`${brand.secondary("\u25C6")} ${message}`);
+  console.log(`${brand.secondary("\u25CF")} ${message}`);
 }
 function printPath(label, path) {
   console.log(import_picocolors3.default.dim(`  ${label}: `) + import_picocolors3.default.underline(path));
@@ -15264,7 +15264,7 @@ async function liveSearch(opts) {
       parts.push(import_sisteransi3.cursor.up(blockHeight));
     }
     const lines = [];
-    lines.push(`  ${brand.secondary("\u25C6")} ${opts.message}`);
+    lines.push(`  ${brand.secondary("\u25CF")} ${opts.message}`);
     const placeholder = opts.placeholder || "";
     const inputLine = buildInputLine(state.query, state.cursor, placeholder);
     lines.push(`  ${brand.secondary("\u2502")} ${inputLine}`);
@@ -15323,7 +15323,7 @@ async function liveSearch(opts) {
 `);
       }
       parts.push(import_sisteransi3.cursor.up(blockHeight));
-      parts.push(`  ${brand.success("\u25C6")} ${opts.message} ${brand.primary(label)}
+      parts.push(`  ${brand.success("\u25CF")} ${opts.message} ${brand.primary(label)}
 `);
       stdout.write(parts.join(""));
       cleanup();
@@ -15337,7 +15337,7 @@ async function liveSearch(opts) {
 `);
       }
       parts.push(import_sisteransi3.cursor.up(blockHeight));
-      parts.push(`  ${brand.secondary("\u25C6")} ${opts.message} ${import_picocolors9.default.dim("\u5DF2\u53D6\u6D88")}
+      parts.push(`  ${brand.secondary("\u25CF")} ${opts.message} ${import_picocolors9.default.dim("\u5DF2\u53D6\u6D88")}
 `);
       stdout.write(parts.join(""));
       cleanup();
@@ -15861,7 +15861,7 @@ var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\
     const timeStr = formatRelativeTime(project.modifiedAt);
     const templateTag = project.template ? ` ${import_picocolors14.default.cyan(`[${project.template}]`)}` : "";
     const tagDisplay = project.tags && project.tags.length > 0 ? ` ${project.tags.map((t) => import_picocolors14.default.magenta(`#${t}`)).join(" ")}` : "";
-    console.log("  " + brand.secondary("\u25C6") + " " + brand.bold(project.name) + templateTag + tagDisplay + import_picocolors14.default.dim(`  ${timeStr}`));
+    console.log("  " + brand.secondary("\u25CF") + " " + brand.bold(project.name) + templateTag + tagDisplay + import_picocolors14.default.dim(`  ${timeStr}`));
     console.log(import_picocolors14.default.dim(`    ${project.path}`));
     console.log();
   }
@@ -16196,7 +16196,7 @@ async function selectOrInput(opts) {
       parts.push(import_sisteransi4.cursor.up(blockHeight));
     }
     const lines = [];
-    lines.push(`  ${brand.secondary("\u25C6")} ${opts.message}`);
+    lines.push(`  ${brand.secondary("\u25CF")} ${opts.message}`);
     const placeholder = opts.placeholder || "\u76F4\u63A5\u8F93\u5165\u81EA\u5B9A\u4E49\u540D\u79F0...";
     let inputLine;
     if (state.query.length === 0) {
@@ -16264,7 +16264,7 @@ async function selectOrInput(opts) {
 `);
       }
       parts.push(import_sisteransi4.cursor.up(blockHeight));
-      parts.push(`  ${brand.success("\u25C6")} ${opts.message} ${brand.primary(label)}
+      parts.push(`  ${brand.success("\u25CF")} ${opts.message} ${brand.primary(label)}
 `);
       stdout.write(parts.join(""));
       cleanup();
@@ -16278,7 +16278,7 @@ async function selectOrInput(opts) {
 `);
       }
       parts.push(import_sisteransi4.cursor.up(blockHeight));
-      parts.push(`  ${brand.secondary("\u25C6")} ${opts.message} ${import_picocolors17.default.dim("\u5DF2\u53D6\u6D88")}
+      parts.push(`  ${brand.secondary("\u25CF")} ${opts.message} ${import_picocolors17.default.dim("\u5DF2\u53D6\u6D88")}
 `);
       stdout.write(parts.join(""));
       cleanup();
@@ -16433,7 +16433,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
           }
           process.stdout.write(`\x1B[${linesPrinted}A`);
         }
-        console.log(`  ${brand.secondary("\u25C6")} ${import_picocolors18.default.dim("AI \u547D\u540D\u5EFA\u8BAE")}`);
+        console.log(`  ${brand.secondary("\u25CF")} ${import_picocolors18.default.dim("AI \u547D\u540D\u5EFA\u8BAE")}`);
         linesPrinted = 1;
         const result = await generateProjectNames(options.desc, {
           onName: (name2) => {

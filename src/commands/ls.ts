@@ -36,7 +36,7 @@ export const lsCommand = new Command("ls")
 
 			console.log(
 				"  " +
-					brand.secondary("◆") +
+					brand.secondary("●") +
 					" " +
 					brand.bold(project.name) +
 					templateTag +
