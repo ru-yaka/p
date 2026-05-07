@@ -5,7 +5,7 @@ import fse from "fs-extra";
 import pc from "picocolors";
 
 import { loadConfig } from "../core/config";
-import { getProjectMeta, getProjectPath, listProjects, projectExists } from "../core/project";
+import { getProjectMeta, getProjectPath, listProjects, projectExists, saveProjectMeta } from "../core/project";
 import { collectProjectFiles, copyFiles } from "../utils/files";
 import { liveSearch, CANCEL } from "../utils/live-search";
 import { TEMPLATES_DIR } from "../utils/paths";
@@ -28,7 +28,7 @@ function buildTemplateOptions(projects: ReturnType<typeof listProjects>) {
 	return projects.map((p) => ({
 		value: p.name,
 		label: p.name,
-		hint: p.template ? pc.cyan(p.template) : undefined,
+		hint: p.savedTemplate ? pc.cyan(p.savedTemplate) : undefined,
 	}));
 }
 
@@ -88,7 +88,8 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 	if (!target && currentProject) {
 		const templateName = await resolveTemplateName(currentProject, templateNameArg);
 		if (!templateName) return;
-		await createOrUpdateTemplate(currentDir, templateName, false);
+		await createOrUpdateTemplate(currentDir, templateName, !!currentProject.savedTemplate && currentProject.savedTemplate === templateName);
+		saveSavedTemplate(currentProject.name, templateName);
 		return;
 	}
 
@@ -96,7 +97,8 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 	if (target === ".") {
 		const templateName = await resolveTemplateName(currentProject, templateNameArg);
 		if (!templateName) return;
-		await createOrUpdateTemplate(currentDir, templateName, false);
+		await createOrUpdateTemplate(currentDir, templateName, !!currentProject?.savedTemplate && currentProject.savedTemplate === templateName);
+		if (currentProject) saveSavedTemplate(currentProject.name, templateName);
 		return;
 	}
 
@@ -125,7 +127,7 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 				return filtered.map((p) => ({
 					value: p.name,
 					label: p.name,
-					hint: p.template ? pc.cyan(p.template) : undefined,
+					hint: p.savedTemplate ? pc.cyan(p.savedTemplate) : undefined,
 				}));
 			},
 		});
@@ -154,7 +156,7 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 						return f.map((p) => ({
 							value: p.name,
 							label: p.name,
-							hint: p.template ? pc.cyan(p.template) : undefined,
+							hint: p.savedTemplate ? pc.cyan(p.savedTemplate) : undefined,
 						}));
 					},
 					initialQuery: selectedProject,
@@ -178,17 +180,25 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 	const project = projects.find((p) => p.name === selectedProject);
 	const templateName = await resolveTemplateName(project, templateNameArg);
 	if (!templateName) return;
-	await createOrUpdateTemplate(sourcePath, templateName, false);
+	await createOrUpdateTemplate(sourcePath, templateName, !!project?.savedTemplate && project.savedTemplate === templateName);
+	if (project) saveSavedTemplate(project.name, templateName);
+}
+
+/**
+ * 保存 savedTemplate 到项目元数据
+ */
+function saveSavedTemplate(projectName: string, templateName: string): void {
+	saveProjectMeta(projectName, { savedTemplate: templateName });
 }
 
 /**
  * 解析模板名称：
  * 1. 如果提供了名称参数 → 直接使用
- * 2. 如果项目已关联模板 → 提示是否更新该模板
+ * 2. 如果项目已保存为模板 → 提示是否更新该模板
  * 3. 否则 → 要求输入模板名称
  */
 async function resolveTemplateName(
-	project: { name: string; template?: string } | undefined,
+	project: { name: string; savedTemplate?: string } | undefined,
 	templateNameArg?: string,
 ): Promise<string | null> {
 	// 指定了名称参数
@@ -196,21 +206,19 @@ async function resolveTemplateName(
 		return templateNameArg;
 	}
 
-	// 项目已关联模板 → 询问是否更新
-	if (project?.template) {
+	// 项目已保存为模板 → 询问是否更新
+	if (project?.savedTemplate) {
 		console.log(
-			pc.dim("  当前项目关联的模板: ") + brand.primary(project.template),
+			pc.dim("  当前项目已保存为模板: ") + brand.primary(project.savedTemplate),
 		);
 		console.log(
 			pc.dim("  下次可直接运行: ") +
-				brand.primary(`p templates update .`) +
-				pc.dim(" 或 ") +
-				brand.primary(`p templates add . ${project.template}`),
+				brand.primary(`p templates update .`),
 		);
 		console.log();
 
 		const shouldUpdate = await confirm({
-			message: `是否更新模板 ${project.template}？`,
+			message: `是否更新模板 ${project.savedTemplate}？`,
 		});
 
 		if (isCancel(shouldUpdate) || !shouldUpdate) {
@@ -218,14 +226,13 @@ async function resolveTemplateName(
 			return null;
 		}
 
-		return project.template;
+		return project.savedTemplate;
 	}
 
 	// 没有关联模板 → 要求输入名称
-	const defaultName = project?.name || "";
 	const result = await text({
 		message: "请输入模板名称:",
-		placeholder: defaultName || "my-template",
+		placeholder: "my-template",
 	});
 
 	if (isCancel(result)) {
@@ -248,14 +255,14 @@ async function handleUpdate(target?: string) {
 	const currentProject = projects.find((p) => p.path === currentDir);
 
 	// 如果没有指定目标，且当前目录是项目，默认更新当前项目的模板
-	if (!target && currentProject?.template) {
-		await createOrUpdateTemplate(currentDir, currentProject.template, true);
+	if (!target && currentProject?.savedTemplate) {
+		await createOrUpdateTemplate(currentDir, currentProject.savedTemplate, true);
 		return;
 	}
 
 	// 处理当前目录（显式指定 .）
 	if (target === ".") {
-		if (!currentProject?.template) {
+		if (!currentProject?.savedTemplate) {
 			printError("当前项目没有关联模板");
 			console.log(
 				pc.dim("  使用 ") +
@@ -265,7 +272,7 @@ async function handleUpdate(target?: string) {
 			process.exit(1);
 		}
 
-		await createOrUpdateTemplate(currentDir, currentProject.template, true);
+		await createOrUpdateTemplate(currentDir, currentProject.savedTemplate, true);
 		return;
 	}
 
@@ -311,7 +318,7 @@ async function handleUpdate(target?: string) {
 
 	// 查找使用该模板的项目
 	const allProjects = listProjects();
-	const project = allProjects.find((p) => p.template === selectedTemplate);
+	const project = allProjects.find((p) => p.savedTemplate === selectedTemplate);
 
 	if (project) {
 		await createOrUpdateTemplate(project.path, selectedTemplate, true);

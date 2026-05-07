@@ -41,6 +41,7 @@ export interface Config {
  */
 export interface ProjectMetaData {
 	template?: string;
+	savedTemplate?: string;
 	createdAt: string;
 	originalPath?: string;
 	tags?: string[];
@@ -60,6 +61,7 @@ export interface ProjectInfo {
 	name: string;
 	path: string;
 	template?: string;
+	savedTemplate?: string;
 	createdAt: Date;
 	modifiedAt: Date;
 	originalPath?: string;

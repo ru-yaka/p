@@ -49,7 +49,8 @@ export function listProjects(): ProjectInfo[] {
 			projects.push({
 				name: entry.name,
 				path: projectPath,
-				template: meta?.template,
+				template: meta?.template && meta.template !== "empty" ? meta.template : undefined,
+				savedTemplate: meta?.savedTemplate,
 				createdAt: meta?.createdAt ? new Date(meta.createdAt) : stat.birthtime,
 				modifiedAt: stat.mtime,
 				originalPath: meta?.originalPath,
@@ -85,6 +86,7 @@ export function saveProjectMeta(
 	metadata.projects[projectName] = {
 		...(existing || {}),
 		template: data.template ?? existing?.template,
+		savedTemplate: data.savedTemplate ?? existing?.savedTemplate,
 		createdAt: existing?.createdAt || new Date().toISOString(),
 		...(data.originalPath !== undefined && { originalPath: data.originalPath }),
 		...(data.tags !== undefined && { tags: data.tags }),
