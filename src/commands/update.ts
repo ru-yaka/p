@@ -53,12 +53,14 @@ export const updateCommand = new Command("update")
 		const s = spinner();
 		s.start("正在更新...");
 
-		const result = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
+		// 先移除旧版本，再重新安装，避免 bun 缓存
+		const removeResult = await execAndCapture("bun remove -g p", process.cwd());
+		const installResult = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
 
-		if (!result.success) {
+		if (!installResult.success) {
 			s.stop("更新失败");
 			console.log();
-			printError(`更新失败: ${result.error || result.output}`);
+			printError(`更新失败: ${installResult.error || installResult.output}`);
 			console.log();
 			printInfo("手动更新: bun remove -g p && bun install -g ru-yaka/p");
 			process.exit(1);
@@ -66,7 +68,9 @@ export const updateCommand = new Command("update")
 
 		s.stop("更新完成");
 
-		const newVersion = getVersion(pDir || "");
+		// 重新查找安装目录读版本
+		const newDir = findPDir();
+		const newVersion = newDir ? getVersion(newDir) : "unknown";
 
 		console.log();
 		if (newVersion !== "unknown" && newVersion !== currentVersion) {

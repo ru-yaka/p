@@ -20782,17 +20782,19 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
   console.log();
   const s = Y2();
   s.start("\u6B63\u5728\u66F4\u65B0...");
-  const result = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
-  if (!result.success) {
+  const removeResult = await execAndCapture("bun remove -g p", process.cwd());
+  const installResult = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
+  if (!installResult.success) {
     s.stop("\u66F4\u65B0\u5931\u8D25");
     console.log();
-    printError(`\u66F4\u65B0\u5931\u8D25: ${result.error || result.output}`);
+    printError(`\u66F4\u65B0\u5931\u8D25: ${installResult.error || installResult.output}`);
     console.log();
     printInfo("\u624B\u52A8\u66F4\u65B0: bun remove -g p && bun install -g ru-yaka/p");
     process.exit(1);
   }
   s.stop("\u66F4\u65B0\u5B8C\u6210");
-  const newVersion = getVersion(pDir || "");
+  const newDir = findPDir();
+  const newVersion = newDir ? getVersion(newDir) : "unknown";
   console.log();
   if (newVersion !== "unknown" && newVersion !== currentVersion) {
     Se(brand.success("p \u5DF2\u66F4\u65B0: ") + import_picocolors26.default.dim(currentVersion) + brand.success(" \u2192 ") + brand.primary(newVersion));
