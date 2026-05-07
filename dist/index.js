@@ -17108,13 +17108,9 @@ var tagCommand = new Command("tag").alias("t").alias("tags").description("\u7BA1
 }));
 
 // src/commands/template.ts
-import { basename as basename3, resolve as resolve4 } from "path";
+import { resolve as resolve4 } from "path";
 var import_fs_extra16 = __toESM(require_lib(), 1);
 var import_picocolors24 = __toESM(require_picocolors(), 1);
-async function templateExists(templateName) {
-  const templatePath = resolve4(TEMPLATES_DIR, templateName);
-  return import_fs_extra16.default.pathExists(templatePath);
-}
 function buildTemplateOptions(projects) {
   return projects.map((p2) => ({
     value: p2.name,
@@ -17157,43 +17153,17 @@ async function handleAdd(target, templateNameArg) {
   const projects = listProjects();
   const currentProject = projects.find((p2) => p2.path === currentDir);
   if (!target && currentProject) {
-    const templateName2 = templateNameArg || currentProject.template || currentProject.name;
-    const isUpdate2 = !!currentProject.template;
-    const exists = await templateExists(templateName2);
-    if (exists && !isUpdate2) {
-      printInfo(`\u6A21\u677F ${brand.primary(templateName2)} \u5DF2\u5B58\u5728\uFF0C\u5C06\u66F4\u65B0`);
-    }
-    await createOrUpdateTemplate(currentDir, templateName2, isUpdate2 || exists);
+    const templateName2 = await resolveTemplateName(currentProject, templateNameArg);
+    if (!templateName2)
+      return;
+    await createOrUpdateTemplate(currentDir, templateName2, false);
     return;
   }
   if (target === ".") {
-    let templateName2 = null;
-    let isUpdate2 = false;
-    if (templateNameArg) {
-      templateName2 = templateNameArg;
-      const exists2 = await templateExists(templateName2);
-      isUpdate2 = exists2;
-    } else if (currentProject?.template) {
-      templateName2 = currentProject.template;
-      isUpdate2 = true;
-    } else {
-      const defaultName = currentProject?.name || basename3(currentDir);
-      const result = await he({
-        message: "\u8BF7\u8F93\u5165\u6A21\u677F\u540D\u79F0:",
-        placeholder: defaultName,
-        defaultValue: defaultName
-      });
-      if (pD(result)) {
-        Se(import_picocolors24.default.dim("\u5DF2\u53D6\u6D88"));
-        process.exit(0);
-      }
-      templateName2 = result.trim() || defaultName;
-    }
-    const exists = await templateExists(templateName2);
-    if (exists && !isUpdate2) {
-      printInfo(`\u6A21\u677F ${brand.primary(templateName2)} \u5DF2\u5B58\u5728\uFF0C\u5C06\u66F4\u65B0`);
-    }
-    await createOrUpdateTemplate(currentDir, templateName2, isUpdate2 || exists);
+    const templateName2 = await resolveTemplateName(currentProject, templateNameArg);
+    if (!templateName2)
+      return;
+    await createOrUpdateTemplate(currentDir, templateName2, false);
     return;
   }
   if (projects.length === 0) {
@@ -17261,9 +17231,43 @@ async function handleAdd(target, templateNameArg) {
   }
   const sourcePath = getProjectPath(selectedProject);
   const project = projects.find((p2) => p2.name === selectedProject);
-  const templateName = templateNameArg || project?.template || selectedProject;
-  const isUpdate = !!project?.template;
-  await createOrUpdateTemplate(sourcePath, templateName, isUpdate);
+  const templateName = await resolveTemplateName(project, templateNameArg);
+  if (!templateName)
+    return;
+  await createOrUpdateTemplate(sourcePath, templateName, false);
+}
+async function resolveTemplateName(project, templateNameArg) {
+  if (templateNameArg) {
+    return templateNameArg;
+  }
+  if (project?.template) {
+    console.log(import_picocolors24.default.dim("  \u5F53\u524D\u9879\u76EE\u5173\u8054\u7684\u6A21\u677F: ") + brand.primary(project.template));
+    console.log(import_picocolors24.default.dim("  \u4E0B\u6B21\u53EF\u76F4\u63A5\u8FD0\u884C: ") + brand.primary(`p templates update .`) + import_picocolors24.default.dim(" \u6216 ") + brand.primary(`p templates add . ${project.template}`));
+    console.log();
+    const shouldUpdate = await ye({
+      message: `\u662F\u5426\u66F4\u65B0\u6A21\u677F ${project.template}\uFF1F`
+    });
+    if (pD(shouldUpdate) || !shouldUpdate) {
+      Se(import_picocolors24.default.dim("\u5DF2\u53D6\u6D88"));
+      return null;
+    }
+    return project.template;
+  }
+  const defaultName = project?.name || "";
+  const result = await he({
+    message: "\u8BF7\u8F93\u5165\u6A21\u677F\u540D\u79F0:",
+    placeholder: defaultName || "my-template"
+  });
+  if (pD(result)) {
+    Se(import_picocolors24.default.dim("\u5DF2\u53D6\u6D88"));
+    return null;
+  }
+  const name = result.trim();
+  if (!name) {
+    printError("\u6A21\u677F\u540D\u79F0\u4E0D\u80FD\u4E3A\u7A7A");
+    return null;
+  }
+  return name;
 }
 async function handleUpdate(target) {
   const currentDir = process.cwd();
@@ -17276,7 +17280,7 @@ async function handleUpdate(target) {
   if (target === ".") {
     if (!currentProject?.template) {
       printError("\u5F53\u524D\u9879\u76EE\u6CA1\u6709\u5173\u8054\u6A21\u677F");
-      console.log(import_picocolors24.default.dim("  \u4F7F\u7528 ") + brand.primary("p templates add .") + import_picocolors24.default.dim(" \u6DFB\u52A0\u4E3A\u6A21\u677F"));
+      console.log(import_picocolors24.default.dim("  \u4F7F\u7528 ") + brand.primary("p templates add . <\u540D\u79F0>") + import_picocolors24.default.dim(" \u6DFB\u52A0\u4E3A\u6A21\u677F"));
       process.exit(1);
     }
     await createOrUpdateTemplate(currentDir, currentProject.template, true);

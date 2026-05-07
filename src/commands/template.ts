@@ -1,5 +1,5 @@
 import { basename, resolve } from "node:path";
-import { intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
+import { confirm, intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
 import pc from "picocolors";
@@ -86,53 +86,17 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 
 	// 如果没有指定目标，且当前目录是项目，默认使用当前项目
 	if (!target && currentProject) {
-		const templateName = templateNameArg || currentProject.template || currentProject.name;
-		const isUpdate = !!currentProject.template;
-
-		// 检查模板是否已存在
-		const exists = await templateExists(templateName);
-		if (exists && !isUpdate) {
-			printInfo(`模板 ${brand.primary(templateName)} 已存在，将更新`);
-		}
-
-		await createOrUpdateTemplate(currentDir, templateName, isUpdate || exists);
+		const templateName = await resolveTemplateName(currentProject, templateNameArg);
+		if (!templateName) return;
+		await createOrUpdateTemplate(currentDir, templateName, false);
 		return;
 	}
 
 	// 处理当前目录（显式指定 .）
 	if (target === ".") {
-		let templateName: string | null = null;
-		let isUpdate = false;
-
-		if (templateNameArg) {
-			templateName = templateNameArg;
-			const exists = await templateExists(templateName);
-			isUpdate = exists;
-		} else if (currentProject?.template) {
-			templateName = currentProject.template;
-			isUpdate = true;
-		} else {
-			const defaultName = currentProject?.name || basename(currentDir);
-			const result = await text({
-				message: "请输入模板名称:",
-				placeholder: defaultName,
-				defaultValue: defaultName,
-			});
-
-			if (isCancel(result)) {
-				outro(pc.dim("已取消"));
-				process.exit(0);
-			}
-
-			templateName = (result as string).trim() || defaultName;
-		}
-
-		const exists = await templateExists(templateName);
-		if (exists && !isUpdate) {
-			printInfo(`模板 ${brand.primary(templateName)} 已存在，将更新`);
-		}
-
-		await createOrUpdateTemplate(currentDir, templateName, isUpdate || exists);
+		const templateName = await resolveTemplateName(currentProject, templateNameArg);
+		if (!templateName) return;
+		await createOrUpdateTemplate(currentDir, templateName, false);
 		return;
 	}
 
@@ -211,13 +175,71 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 	}
 
 	const sourcePath = getProjectPath(selectedProject);
-
-	// 检查项目是否有关联的模板
 	const project = projects.find((p) => p.name === selectedProject);
-	const templateName = templateNameArg || project?.template || selectedProject;
-	const isUpdate = !!project?.template;
+	const templateName = await resolveTemplateName(project, templateNameArg);
+	if (!templateName) return;
+	await createOrUpdateTemplate(sourcePath, templateName, false);
+}
 
-	await createOrUpdateTemplate(sourcePath, templateName, isUpdate);
+/**
+ * 解析模板名称：
+ * 1. 如果提供了名称参数 → 直接使用
+ * 2. 如果项目已关联模板 → 提示是否更新该模板
+ * 3. 否则 → 要求输入模板名称
+ */
+async function resolveTemplateName(
+	project: { name: string; template?: string } | undefined,
+	templateNameArg?: string,
+): Promise<string | null> {
+	// 指定了名称参数
+	if (templateNameArg) {
+		return templateNameArg;
+	}
+
+	// 项目已关联模板 → 询问是否更新
+	if (project?.template) {
+		console.log(
+			pc.dim("  当前项目关联的模板: ") + brand.primary(project.template),
+		);
+		console.log(
+			pc.dim("  下次可直接运行: ") +
+				brand.primary(`p templates update .`) +
+				pc.dim(" 或 ") +
+				brand.primary(`p templates add . ${project.template}`),
+		);
+		console.log();
+
+		const shouldUpdate = await confirm({
+			message: `是否更新模板 ${project.template}？`,
+		});
+
+		if (isCancel(shouldUpdate) || !shouldUpdate) {
+			outro(pc.dim("已取消"));
+			return null;
+		}
+
+		return project.template;
+	}
+
+	// 没有关联模板 → 要求输入名称
+	const defaultName = project?.name || "";
+	const result = await text({
+		message: "请输入模板名称:",
+		placeholder: defaultName || "my-template",
+	});
+
+	if (isCancel(result)) {
+		outro(pc.dim("已取消"));
+		return null;
+	}
+
+	const name = (result as string).trim();
+	if (!name) {
+		printError("模板名称不能为空");
+		return null;
+	}
+
+	return name;
 }
 
 async function handleUpdate(target?: string) {
@@ -237,7 +259,7 @@ async function handleUpdate(target?: string) {
 			printError("当前项目没有关联模板");
 			console.log(
 				pc.dim("  使用 ") +
-					brand.primary("p templates add .") +
+					brand.primary("p templates add . <名称>") +
 					pc.dim(" 添加为模板"),
 			);
 			process.exit(1);
