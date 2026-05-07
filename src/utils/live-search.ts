@@ -141,7 +141,7 @@ export async function liveSearch(
 		const lines: string[] = [];
 
 		// 标题
-		lines.push(`  ${brand.secondary("●")} ${opts.message}`);
+		lines.push(`  ${brand.secondary("◆")} ${opts.message}`);
 
 		// 输入
 		const placeholder = opts.placeholder || "";
@@ -236,7 +236,7 @@ export async function liveSearch(
 			// 回到块顶，写结果行
 			parts.push(ansiCursor.up(blockHeight));
 			parts.push(
-				`  ${brand.success("●")} ${opts.message} ${brand.primary(label)}\n`,
+				`  ${brand.success("◆")} ${opts.message} ${brand.primary(label)}\n`,
 			);
 			stdout.write(parts.join(""));
 			cleanup();
@@ -251,7 +251,7 @@ export async function liveSearch(
 			}
 			parts.push(ansiCursor.up(blockHeight));
 			parts.push(
-				`  ${brand.secondary("●")} ${opts.message} ${pc.dim("已取消")}\n`,
+				`  ${brand.secondary("◆")} ${opts.message} ${pc.dim("已取消")}\n`,
 			);
 			stdout.write(parts.join(""));
 			cleanup();

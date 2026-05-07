@@ -119,7 +119,7 @@ export const newCommand = new Command("new")
 					}
 
 					console.log(
-						`  ${brand.secondary("●")} ${pc.dim("AI 命名建议")}`,
+						`  ${brand.secondary("◆")} ${pc.dim("AI 命名建议")}`,
 					);
 					linesPrinted = 1;
 

@@ -76,7 +76,7 @@ export async function selectOrInput(
 		const lines: string[] = [];
 
 		// 标题
-		lines.push(`  ${brand.secondary("●")} ${opts.message}`);
+		lines.push(`  ${brand.secondary("◆")} ${opts.message}`);
 
 		// 输入框
 		const placeholder = opts.placeholder || "直接输入自定义名称...";
@@ -166,7 +166,7 @@ export async function selectOrInput(
 			}
 			parts.push(ansiCursor.up(blockHeight));
 			parts.push(
-				`  ${brand.success("●")} ${opts.message} ${brand.primary(label)}\n`,
+				`  ${brand.success("◆")} ${opts.message} ${brand.primary(label)}\n`,
 			);
 			stdout.write(parts.join(""));
 			cleanup();
@@ -180,7 +180,7 @@ export async function selectOrInput(
 				parts.push("\x1b[K\n");
 			}
 			parts.push(ansiCursor.up(blockHeight));
-			parts.push(`  ${brand.secondary("●")} ${opts.message} ${pc.dim("已取消")}\n`);
+			parts.push(`  ${brand.secondary("◆")} ${opts.message} ${pc.dim("已取消")}\n`);
 			stdout.write(parts.join(""));
 			cleanup();
 			resolve(CANCEL);

@@ -62,7 +62,7 @@ export function printWarning(message: string): void {
  * 打印信息消息
  */
 export function printInfo(message: string): void {
-	console.log(`${brand.secondary("●")} ${message}`);
+	console.log(`${brand.secondary("◆")} ${message}`);
 }
 
 /**
