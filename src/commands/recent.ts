@@ -128,12 +128,15 @@ export const recentCommand = new Command("recent")
 		}
 
 		function clearBlock() {
+			if (blockHeight === 0) return;
 			const parts: string[] = [];
 			parts.push(ansiCursor.up(blockHeight));
 			for (let i = 0; i < blockHeight; i++) {
-				parts.push("\x1b[K\n");
+				parts.push("\x1b[K");
+				if (i < blockHeight - 1) parts.push("\n");
 			}
 			stdout.write(parts.join(""));
+			blockHeight = 0;
 		}
 
 		async function handleOpen() {

@@ -17348,13 +17348,18 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
     stdout.write(import_sisteransi5.cursor.show);
   }
   function clearBlock() {
+    if (blockHeight === 0)
+      return;
     const parts = [];
     parts.push(import_sisteransi5.cursor.up(blockHeight));
     for (let i = 0;i < blockHeight; i++) {
-      parts.push(`\x1B[K
+      parts.push("\x1B[K");
+      if (i < blockHeight - 1)
+        parts.push(`
 `);
     }
     stdout.write(parts.join(""));
+    blockHeight = 0;
   }
   async function handleOpen() {
     const project = currentProjects[selectedIndex];
