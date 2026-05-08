@@ -764,7 +764,7 @@ var require_command = __commonJS((exports) => {
   var { Option, DualOptions } = require_option();
   var { suggestSimilar } = require_suggestSimilar();
 
-  class Command2 extends EventEmitter {
+  class Command extends EventEmitter {
     constructor(name) {
       super();
       this.commands = [];
@@ -867,7 +867,7 @@ var require_command = __commonJS((exports) => {
       return cmd;
     }
     createCommand(name) {
-      return new Command2(name);
+      return new Command(name);
     }
     createHelp() {
       return Object.assign(new Help, this.configureHelp());
@@ -2102,22 +2102,22 @@ Expecting one of '${allowedValues.join("', '")}'`);
       return true;
     return;
   }
-  exports.Command = Command2;
+  exports.Command = Command;
   exports.useColor = useColor;
 });
 
 // node_modules/commander/index.js
 var require_commander = __commonJS((exports) => {
   var { Argument } = require_argument();
-  var { Command: Command2 } = require_command();
+  var { Command } = require_command();
   var { CommanderError, InvalidArgumentError } = require_error();
   var { Help } = require_help();
   var { Option } = require_option();
-  exports.program = new Command2;
-  exports.createCommand = (name) => new Command2(name);
+  exports.program = new Command;
+  exports.createCommand = (name) => new Command(name);
   exports.createOption = (flags, description) => new Option(flags, description);
   exports.createArgument = (name, description) => new Argument(name, description);
-  exports.Command = Command2;
+  exports.Command = Command;
   exports.Option = Option;
   exports.Argument = Argument;
   exports.Help = Help;
@@ -13596,7 +13596,7 @@ var {
   CommanderError,
   InvalidArgumentError,
   InvalidOptionArgumentError,
-  Command: Command2,
+  Command,
   Argument,
   Option,
   Help
@@ -14940,7 +14940,7 @@ async function handleProjectAdd(projectName, destDir, projects) {
     process.exit(1);
   }
 }
-var addCommand = new Command2("add").description("\u5C06\u6A21\u677F\u6216\u9879\u76EE\u6DFB\u52A0\u5230\u5F53\u524D\u76EE\u5F55\u6216\u6307\u5B9A\u8DEF\u5F84").argument("[source]", "\u6A21\u677F\u540D\u6216\u9879\u76EE\u540D\uFF0C\u652F\u6301 name:alias \u91CD\u547D\u540D").argument("[target]", "\u76EE\u6807\u57FA\u8DEF\u5F84\uFF0C\u9ED8\u8BA4\u4E3A\u5F53\u524D\u76EE\u5F55 .").action(async (sourceArg, targetArg) => {
+var addCommand = new Command("add").description("\u5C06\u6A21\u677F\u6216\u9879\u76EE\u6DFB\u52A0\u5230\u5F53\u524D\u76EE\u5F55\u6216\u6307\u5B9A\u8DEF\u5F84").argument("[source]", "\u6A21\u677F\u540D\u6216\u9879\u76EE\u540D\uFF0C\u652F\u6301 name:alias \u91CD\u547D\u540D").argument("[target]", "\u76EE\u6807\u57FA\u8DEF\u5F84\uFF0C\u9ED8\u8BA4\u4E3A\u5F53\u524D\u76EE\u5F55 .").action(async (sourceArg, targetArg) => {
   const projects = listProjects();
   const config = loadConfig();
   const allTemplates = await getAllTemplates(config.templates);
@@ -15043,7 +15043,7 @@ async function getGitUsername() {
   }
   return null;
 }
-var cloneCommand = new Command2("clone").alias("cl").description("\u4ECE\u8FDC\u7A0B\u5730\u5740\u514B\u9686\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<url>", "Git \u4ED3\u5E93\u5730\u5740\uFF08\u652F\u6301 owner/repo \u77ED\u683C\u5F0F\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE URL \u63A8\u65AD\uFF09").action(async (url, customName) => {
+var cloneCommand = new Command("clone").alias("cl").description("\u4ECE\u8FDC\u7A0B\u5730\u5740\u514B\u9686\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<url>", "Git \u4ED3\u5E93\u5730\u5740\uFF08\u652F\u6301 owner/repo \u77ED\u683C\u5F0F\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE URL \u63A8\u65AD\uFF09").action(async (url, customName) => {
   const config = loadConfig();
   const normalizedUrl = normalizeUrl(url);
   let projectName = customName || extractProjectName(normalizedUrl);
@@ -15103,7 +15103,7 @@ var cloneCommand = new Command2("clone").alias("cl").description("\u4ECE\u8FDC\u
 });
 
 // src/commands/config.ts
-var configCommand = new Command2("config").description("\u7F16\u8F91\u914D\u7F6E\u6587\u4EF6").action(async () => {
+var configCommand = new Command("config").description("\u7F16\u8F91\u914D\u7F6E\u6587\u4EF6").action(async () => {
   const config = loadConfig();
   console.log();
   console.log(brand.primary("  \u2699\uFE0F  \u914D\u7F6E\u6587\u4EF6"));
@@ -15130,7 +15130,7 @@ var configCommand = new Command2("config").description("\u7F16\u8F91\u914D\u7F6E
 import { basename, resolve as resolve2 } from "path";
 var import_fs_extra5 = __toESM(require_lib(), 1);
 var import_picocolors8 = __toESM(require_picocolors(), 1);
-var copyCommand = new Command2("copy").alias("cp").description("\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
+var copyCommand = new Command("copy").alias("cp").description("\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
   const config = loadConfig();
   const sourcePath = resolve2(inputPath);
   if (!import_fs_extra5.default.existsSync(sourcePath)) {
@@ -15567,7 +15567,7 @@ async function batchDelete(projectNames) {
     Se(`${brand.success("\u2713")} \u5DF2\u6210\u529F\u5220\u9664 ${deletedCount} \u4E2A\u9879\u76EE`);
   }
 }
-var deleteCommand = new Command2("delete").alias("d").alias("rm").description("\u5220\u9664\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u901A\u914D\u7B26\u6A21\u5F0F\uFF0C\u6216 'all'").action(async (name) => {
+var deleteCommand = new Command("delete").alias("d").alias("rm").description("\u5220\u9664\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u901A\u914D\u7B26\u6A21\u5F0F\uFF0C\u6216 'all'").action(async (name) => {
   const projects = listProjects();
   if (projects.length === 0) {
     console.log();
@@ -15739,7 +15739,7 @@ console.log('\u4F7F\u7528\u6A21\u677F: ' + templateName);
 // \u5728\u8FD9\u91CC\u7F16\u5199\u4F60\u7684\u81EA\u5B9A\u4E49\u903B\u8F91...
 // \u4F8B\u5982: \u521B\u5EFA\u989D\u5916\u7684\u6587\u4EF6\u3001\u4FEE\u6539\u914D\u7F6E\u7B49
 `;
-var hookCommand = new Command2("hook").alias("hooks").description("\u7BA1\u7406\u81EA\u5B9A\u4E49 Hooks").action(async () => {
+var hookCommand = new Command("hook").alias("hooks").description("\u7BA1\u7406\u81EA\u5B9A\u4E49 Hooks").action(async () => {
   const config = loadConfig();
   console.log();
   console.log(brand.primary("  \uD83D\uDCDD \u81EA\u5B9A\u4E49 Hooks"));
@@ -15885,7 +15885,7 @@ async function copyFiles(sourcePath, targetPath, files) {
 }
 
 // src/commands/import.ts
-var importCommand = new Command2("import").alias("i").description("\u5BFC\u5165\u5916\u90E8\u9879\u76EE\u5230 p \u7BA1\u7406").argument("[path]", "\u8981\u5BFC\u5165\u7684\u9879\u76EE\u8DEF\u5F84\uFF08. \u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF0C\u7701\u7565\u5219\u4EA4\u4E92\u9009\u62E9\uFF09").action(async (inputPath) => {
+var importCommand = new Command("import").alias("i").description("\u5BFC\u5165\u5916\u90E8\u9879\u76EE\u5230 p \u7BA1\u7406").argument("[path]", "\u8981\u5BFC\u5165\u7684\u9879\u76EE\u8DEF\u5F84\uFF08. \u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF0C\u7701\u7565\u5219\u4EA4\u4E92\u9009\u62E9\uFF09").action(async (inputPath) => {
   let sourcePath;
   if (inputPath === ".") {
     sourcePath = process.cwd();
@@ -16010,7 +16010,7 @@ async function listTemplates() {
   console.log(import_picocolors14.default.dim("  \u63D0\u793A: \u4F7F\u7528 ") + brand.primary("p templates add") + import_picocolors14.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
   console.log();
 }
-var lsCommand = new Command2("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").action(async (filter) => {
+var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").action(async (filter) => {
   if (filter === "templates" || filter === "t") {
     await listTemplates();
     return;
@@ -16041,7 +16041,7 @@ var lsCommand = new Command2("ls").alias("list").description("\u5217\u51FA\u6240
 
 // src/commands/meta.ts
 var import_fs_extra11 = __toESM(require_lib(), 1);
-var metaCommand = new Command2("meta").description("\u67E5\u770B\u9879\u76EE\u5143\u6570\u636E").action(async () => {
+var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u5143\u6570\u636E").action(async () => {
   const config = loadConfig();
   console.log();
   console.log(brand.primary("  \uD83D\uDCCB \u9879\u76EE\u5143\u6570\u636E"));
@@ -16548,7 +16548,7 @@ async function selectOrInput(opts) {
 
 // src/commands/new.ts
 var REGENERATE = Symbol("regenerate");
-var newCommand = new Command2("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").allowExcessArguments(true).action(async (name, options) => {
+var newCommand = new Command("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").allowExcessArguments(true).action(async (name, options) => {
   const rawArgs = process.argv;
   const ddIdx = rawArgs.indexOf("--");
   const newIdx = rawArgs.lastIndexOf("new");
@@ -16874,7 +16874,7 @@ async function showNote(projectName) {
   console.log(brand.primary(`  ${projectName}`) + import_picocolors19.default.dim(": ") + import_picocolors19.default.dim(note));
   console.log();
 }
-var noteCommand = new Command2("note").alias("notes").description("\u7BA1\u7406\u9879\u76EE\u5907\u6CE8").argument("[project]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[text]", "\u5907\u6CE8\u5185\u5BB9").option("-c, --clear", "\u6E05\u9664\u5907\u6CE8").action(async (project, noteText, options) => {
+var noteCommand = new Command("note").alias("notes").description("\u7BA1\u7406\u9879\u76EE\u5907\u6CE8").argument("[project]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[text]", "\u5907\u6CE8\u5185\u5BB9").option("-c, --clear", "\u6E05\u9664\u5907\u6CE8").action(async (project, noteText, options) => {
   if (!project) {
     const currentDir = process.cwd();
     const projects = listProjects();
@@ -16927,7 +16927,7 @@ async function searchAndSelect(projects, initialQuery) {
   }
   return result;
 }
-var openCommand = new Command2("open").alias("o").description("\u6253\u5F00\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u641C\u7D22\u5173\u952E\u8BCD\uFF0C\u6216 :ide \u5FEB\u901F\u5207\u6362").option("-i, --ide <ide>", "\u6307\u5B9A IDE").action(async (name, options) => {
+var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u641C\u7D22\u5173\u952E\u8BCD\uFF0C\u6216 :ide \u5FEB\u901F\u5207\u6362").option("-i, --ide <ide>", "\u6307\u5B9A IDE").action(async (name, options) => {
   const config = loadConfig();
   if (name?.startsWith(":")) {
     const ide2 = name.slice(1);
@@ -17041,7 +17041,7 @@ var openCommand = new Command2("open").alias("o").description("\u6253\u5F00\u987
 // src/commands/project.ts
 var import_fs_extra15 = __toESM(require_lib(), 1);
 var import_picocolors21 = __toESM(require_picocolors(), 1);
-var projectCommand = new Command2("project").alias("projects").description("\u6253\u5F00\u9879\u76EE\u76EE\u5F55").action(async () => {
+var projectCommand = new Command("project").alias("projects").description("\u6253\u5F00\u9879\u76EE\u76EE\u5F55").action(async () => {
   const config = loadConfig();
   await import_fs_extra15.default.ensureDir(PROJECTS_DIR);
   const s = Y2();
@@ -17138,7 +17138,7 @@ async function moveWithTimeout(src, dest, timeoutMs) {
     });
   });
 }
-var renameCommand = new Command2("rename").alias("mv").description("\u91CD\u547D\u540D\u9879\u76EE").argument("[oldName]", "\u5F53\u524D\u9879\u76EE\u540D\u79F0").argument("[newName]", "\u65B0\u9879\u76EE\u540D\u79F0").action(async (oldName, newName) => {
+var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\u540D\u9879\u76EE").argument("[oldName]", "\u5F53\u524D\u9879\u76EE\u540D\u79F0").argument("[newName]", "\u65B0\u9879\u76EE\u540D\u79F0").action(async (oldName, newName) => {
   const projects = listProjects();
   if (projects.length === 0) {
     console.log();
@@ -17249,10 +17249,10 @@ var renameCommand = new Command2("rename").alias("mv").description("\u91CD\u547D
 });
 
 // src/commands/recent.ts
-var import_fs_extra17 = __toESM(require_lib(), 1);
-var import_picocolors23 = __toESM(require_picocolors(), 1);
 import * as readline3 from "readline";
 import { Writable as Writable3 } from "stream";
+var import_fs_extra17 = __toESM(require_lib(), 1);
+var import_picocolors23 = __toESM(require_picocolors(), 1);
 var import_sisteransi5 = __toESM(require_src(), 1);
 var MAX_VISIBLE3 = 10;
 var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\u6700\u8FD1\u9879\u76EE").action(async () => {
@@ -17450,7 +17450,7 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
 
 // src/commands/run.ts
 var import_picocolors24 = __toESM(require_picocolors(), 1);
-var runCommand = new Command2("run").alias("r").description("\u5728\u5F53\u524D\u9879\u76EE\u6267\u884C hooks").argument("[hooks...]", "\u8981\u6267\u884C\u7684 hook \u540D\u79F0").action(async (hookKeys) => {
+var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u9879\u76EE\u6267\u884C hooks").argument("[hooks...]", "\u8981\u6267\u884C\u7684 hook \u540D\u79F0").action(async (hookKeys) => {
   const config = loadConfig();
   const currentDir = process.cwd();
   const projects = listProjects();
@@ -17625,13 +17625,13 @@ async function showCurrentTags() {
   console.log(brand.primary(`  ${projectName}`) + import_picocolors25.default.dim(":") + " " + tags.map((t) => import_picocolors25.default.magenta(`#${t}`)).join(" "));
   console.log();
 }
-var tagCommand = new Command2("tag").alias("t").alias("tags").description("\u7BA1\u7406\u5F53\u524D\u9879\u76EE\u6807\u7B7E").action(async () => {
+var tagCommand = new Command("tag").alias("t").alias("tags").description("\u7BA1\u7406\u5F53\u524D\u9879\u76EE\u6807\u7B7E").action(async () => {
   await showCurrentTags();
-}).addCommand(new Command2("add").description("\u6DFB\u52A0\u6807\u7B7E\u5230\u5F53\u524D\u9879\u76EE").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0\uFF08\u7A7A\u683C\u5206\u9694\uFF09").action(async (tags) => {
+}).addCommand(new Command("add").description("\u6DFB\u52A0\u6807\u7B7E\u5230\u5F53\u524D\u9879\u76EE").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0\uFF08\u7A7A\u683C\u5206\u9694\uFF09").action(async (tags) => {
   await addTags(tags || []);
-})).addCommand(new Command2("rm").alias("remove").description("\u79FB\u9664\u5F53\u524D\u9879\u76EE\u6807\u7B7E").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0").action(async (tags) => {
+})).addCommand(new Command("rm").alias("remove").description("\u79FB\u9664\u5F53\u524D\u9879\u76EE\u6807\u7B7E").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0").action(async (tags) => {
   await removeTags(tags || []);
-})).addCommand(new Command2("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u6807\u7B7E").action(async () => {
+})).addCommand(new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u6807\u7B7E").action(async () => {
   await listAllTags();
 }));
 
@@ -17646,7 +17646,7 @@ function buildTemplateOptions(projects) {
     hint: p2.savedTemplate ? import_picocolors26.default.cyan(p2.savedTemplate) : undefined
   }));
 }
-var templateCommand = new Command2("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
+var templateCommand = new Command("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
   if (!action) {
     const config = loadConfig();
     await import_fs_extra18.default.ensureDir(TEMPLATES_DIR);
@@ -21190,7 +21190,7 @@ Ze.glob = Ze;
 // src/commands/unzip.ts
 var import_picocolors27 = __toESM(require_picocolors(), 1);
 import { basename as basename4, dirname as dirname3, join as join9, parse } from "path";
-var unzipCommand = new Command2("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
+var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
   let cwd;
   if (!project || project === ".") {
     cwd = process.cwd();
@@ -21300,7 +21300,7 @@ function findPDir() {
   }
   return null;
 }
-var updateCommand = new Command2("update").alias("upgrade").description("\u66F4\u65B0 p \u5230\u6700\u65B0\u7248\u672C").action(async () => {
+var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u65B0 p \u5230\u6700\u65B0\u7248\u672C").action(async () => {
   const pDir = findPDir();
   const currentVersion = pDir ? getVersion(pDir) : "unknown";
   Ie(bgOrange(" \u66F4\u65B0 p "));
@@ -21333,7 +21333,7 @@ var updateCommand = new Command2("update").alias("upgrade").description("\u66F4\
 var __dirname2 = dirname5(fileURLToPath2(import.meta.url));
 var pkgPath = join11(__dirname2, "..", "package.json");
 var pkg = JSON.parse(readFileSync3(pkgPath, "utf-8"));
-var program2 = new Command2;
+var program2 = new Command;
 await ensureInitialized();
 program2.name("p").description(brand.primary("\u26A1 P - \u9879\u76EE\u7BA1\u7406\u5DE5\u5177")).version(pkg.version);
 program2.addCommand(addCommand);

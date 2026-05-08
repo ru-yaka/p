@@ -1,5 +1,6 @@
 import * as readline from "node:readline";
 import { Writable } from "node:stream";
+import { Command } from "commander";
 import fse from "fs-extra";
 import pc from "picocolors";
 import { confirm, spinner } from "@clack/prompts";
