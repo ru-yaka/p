@@ -16531,7 +16531,45 @@ async function selectOrInput(opts) {
 
 // src/commands/new.ts
 var REGENERATE = Symbol("regenerate");
-var newCommand = new Command("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").action(async (name, options) => {
+var newCommand = new Command("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").allowExcessArguments(true).action(async (name, options) => {
+  const rawArgs = process.argv;
+  const ddIdx = rawArgs.indexOf("--");
+  const newIdx = rawArgs.lastIndexOf("new");
+  if (ddIdx !== -1 && ddIdx > newIdx) {
+    const cmd = rawArgs.slice(ddIdx + 1).join(" ");
+    if (!cmd) {
+      printError("-- \u540E\u9700\u8981\u63D0\u4F9B\u547D\u4EE4");
+      process.exit(1);
+    }
+    console.log();
+    console.log(import_picocolors18.default.dim("  \u5DE5\u4F5C\u76EE\u5F55: ") + import_picocolors18.default.underline(PROJECTS_DIR));
+    console.log();
+    await import_fs_extra13.default.ensureDir(PROJECTS_DIR);
+    const existingProjects = new Set(listProjects().map((p2) => p2.name));
+    const result = await execInDir(cmd, PROJECTS_DIR);
+    if (!result.success) {
+      console.log();
+      printError("\u547D\u4EE4\u6267\u884C\u5931\u8D25");
+      process.exit(1);
+    }
+    const entries = await import_fs_extra13.default.readdir(PROJECTS_DIR, { withFileTypes: true });
+    const newProjects = [];
+    for (const entry of entries) {
+      if (entry.isDirectory() && !existingProjects.has(entry.name)) {
+        saveProjectMeta(entry.name, {});
+        newProjects.push(entry.name);
+      }
+    }
+    console.log();
+    if (newProjects.length > 0) {
+      for (const n of newProjects) {
+        console.log(`  ${brand.success("\u2713")} \u5DF2\u6CE8\u518C\u9879\u76EE: ${brand.primary(n)}`);
+      }
+    } else {
+      printInfo("\u672A\u68C0\u6D4B\u5230\u65B0\u9879\u76EE\u76EE\u5F55");
+    }
+    return;
+  }
   const config = loadConfig();
   const allTemplates = await getAllTemplates(config.templates);
   const isQuickMode = name && !options?.template && !options?.desc;

@@ -32,6 +32,7 @@ p update
 | 命令 | 说明 |
 |------|------|
 | `p new <name>` | 创建新项目 |
+| `p new -- <command>` | 在项目目录执行 CLI 初始化（如框架脚手架） |
 | `p new -d "描述"` | AI 生成项目名称 |
 | `p clone <url> [name]` | 克隆远程仓库到 p 管理 |
 | `p copy <path> [name]` | 复制目录作为新项目 |

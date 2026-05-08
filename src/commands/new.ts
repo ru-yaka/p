@@ -7,6 +7,8 @@ import { loadConfig } from "../core/config";
 import { runHooks } from "../core/hooks";
 import {
 	getProjectPath,
+	listProjects,
+	projectExists,
 	saveProjectMeta,
 	validateProjectName,
 } from "../core/project";
@@ -15,8 +17,9 @@ import {
 	getAllTemplates,
 	getTemplateChoices,
 } from "../core/template";
-import { openWithIDE } from "../utils/shell";
-import { bgOrange, brand, printError } from "../utils/ui";
+import { execInDir, openWithIDE } from "../utils/shell";
+import { PROJECTS_DIR } from "../utils/paths";
+import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 import { LLMError, generateProjectNames } from "../utils/llm";
 import { selectOrInput, CANCEL } from "../utils/select-or-input";
 
@@ -30,13 +33,69 @@ export const newCommand = new Command("new")
 	.option("-t, --template [template]", "使用指定模板")
 	.option("-d, --desc <text>", "用描述生成项目名（AI 命名）")
 	.option("--debug", "AI 调试模式")
-	.action(
-		async (
-			name?: string,
-			options?: { template?: string | boolean; desc?: string; debug?: boolean },
-		) => {
-		const config = loadConfig();
-		const allTemplates = await getAllTemplates(config.templates);
+		.allowExcessArguments(true)
+		.action(
+			async (
+				name?: string,
+				options?: { template?: string | boolean; desc?: string; debug?: boolean },
+			) => {
+			// 检测 p new -- <command> 模式
+			const rawArgs = process.argv;
+			const ddIdx = rawArgs.indexOf("--");
+			const newIdx = rawArgs.lastIndexOf("new");
+
+			if (ddIdx !== -1 && ddIdx > newIdx) {
+				const cmd = rawArgs.slice(ddIdx + 1).join(" ");
+				if (!cmd) {
+					printError("-- 后需要提供命令");
+					process.exit(1);
+				}
+
+				console.log();
+				console.log(pc.dim("  工作目录: ") + pc.underline(PROJECTS_DIR));
+				console.log();
+
+				await fse.ensureDir(PROJECTS_DIR);
+
+				const existingProjects = new Set(
+					listProjects().map((p) => p.name),
+				);
+
+				const result = await execInDir(cmd, PROJECTS_DIR);
+
+				if (!result.success) {
+					console.log();
+					printError("命令执行失败");
+					process.exit(1);
+				}
+
+				// 扫描新项目目录并注册
+				const entries = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
+				const newProjects: string[] = [];
+
+				for (const entry of entries) {
+					if (entry.isDirectory() && !existingProjects.has(entry.name)) {
+						saveProjectMeta(entry.name, {});
+						newProjects.push(entry.name);
+					}
+				}
+
+				console.log();
+				if (newProjects.length > 0) {
+					for (const n of newProjects) {
+						console.log(
+							`  ${brand.success("✓")} 已注册项目: ${brand.primary(n)}`,
+						);
+					}
+				} else {
+					printInfo("未检测到新项目目录");
+				}
+
+				return;
+			}
+
+			const config = loadConfig();
+			const allTemplates = await getAllTemplates(config.templates);
 
 		// 快速模式：只有项目名，没有 -t / --desc 参数 → 使用 empty 模板
 		const isQuickMode = name && !options?.template && !options?.desc;
