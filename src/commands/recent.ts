@@ -132,9 +132,9 @@ export const recentCommand = new Command("recent")
 			const parts: string[] = [];
 			parts.push(ansiCursor.up(blockHeight));
 			for (let i = 0; i < blockHeight; i++) {
-				parts.push("\x1b[K");
-				if (i < blockHeight - 1) parts.push("\n");
+				parts.push("\x1b[2K\n");
 			}
+			parts.push(ansiCursor.up(blockHeight));
 			stdout.write(parts.join(""));
 			blockHeight = 0;
 		}
