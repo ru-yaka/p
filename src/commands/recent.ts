@@ -17,6 +17,7 @@ export const recentCommand = new Command("recent")
 	.alias("re")
 	.description("查看最近项目")
 	.action(async () => {
+		const config = loadConfig();
 		const projects = listProjects();
 
 		if (projects.length === 0) {
@@ -26,8 +27,7 @@ export const recentCommand = new Command("recent")
 			return;
 		}
 
-		const recent = projects.slice(0, 20);
-		const config = loadConfig();
+		const recent = projects.slice(0, config.recentCount ?? 5);
 
 		const stdin = process.stdin as NodeJS.ReadStream;
 		const stdout = process.stdout as NodeJS.WriteStream;

@@ -35,6 +35,7 @@ export interface Config {
 	hooks: Record<string, HookDefinition>;
 	templates: Record<string, TemplateConfig>;
 	shortcuts?: Record<string, string>;
+	recentCount?: number;
 }
 
 /**

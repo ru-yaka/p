@@ -17256,6 +17256,7 @@ import { Writable as Writable3 } from "stream";
 var import_sisteransi5 = __toESM(require_src(), 1);
 var MAX_VISIBLE3 = 10;
 var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\u6700\u8FD1\u9879\u76EE").action(async () => {
+  const config = loadConfig();
   const projects = listProjects();
   if (projects.length === 0) {
     console.log();
@@ -17263,8 +17264,7 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
     console.log();
     return;
   }
-  const recent = projects.slice(0, 20);
-  const config = loadConfig();
+  const recent = projects.slice(0, config.recentCount ?? 5);
   const stdin = process.stdin;
   const stdout = process.stdout;
   const interceptStream = new Writable3({
