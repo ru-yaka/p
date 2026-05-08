@@ -37,6 +37,7 @@ p update
 | `p copy <path> [name]` | 复制目录作为新项目 |
 | `p add <path>` | 添加现有项目 |
 | `p ls` | 列出所有项目 |
+| `p ls templates` / `p ls t` | 列出所有模板 |
 | `p open [name]` | 打开项目（实时搜索） |
 | `p open [name] -i <ide>` | 用指定 IDE 打开 |
 | `p open . -i <ide>` | 用指定 IDE 打开当前目录 |

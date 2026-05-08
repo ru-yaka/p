@@ -15964,8 +15964,40 @@ var importCommand = new Command("import").alias("i").description("\u5BFC\u5165\u
 });
 
 // src/commands/ls.ts
+var import_fs_extra10 = __toESM(require_lib(), 1);
 var import_picocolors14 = __toESM(require_picocolors(), 1);
-var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").action(async () => {
+async function listTemplates() {
+  if (!await import_fs_extra10.default.pathExists(TEMPLATES_DIR)) {
+    console.log();
+    printInfo(`\u6682\u65E0\u6A21\u677F\uFF0C\u4F7F\u7528 ${brand.primary("p templates add")} \u6DFB\u52A0\u6A21\u677F`);
+    console.log();
+    return;
+  }
+  const localTemplates = await getLocalTemplates();
+  const entries = Object.values(localTemplates);
+  if (entries.length === 0) {
+    console.log();
+    printInfo(`\u6682\u65E0\u6A21\u677F\uFF0C\u4F7F\u7528 ${brand.primary("p templates add")} \u6DFB\u52A0\u6A21\u677F`);
+    console.log();
+    return;
+  }
+  console.log();
+  console.log(brand.primary("  \uD83D\uDCE6 \u6A21\u677F\u5217\u8868") + import_picocolors14.default.dim(` (${entries.length} \u4E2A)`));
+  console.log(import_picocolors14.default.dim("  \u2500".repeat(20)));
+  console.log();
+  for (const tpl of entries) {
+    console.log("  " + brand.secondary("\u25C6") + " " + brand.bold(tpl.name));
+    console.log(import_picocolors14.default.dim(`    ${TEMPLATES_DIR}/${tpl.dir || tpl.name}`));
+    console.log();
+  }
+  console.log(import_picocolors14.default.dim("  \u63D0\u793A: \u4F7F\u7528 ") + brand.primary("p templates add") + import_picocolors14.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
+  console.log();
+}
+var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").action(async (filter) => {
+  if (filter === "templates" || filter === "t") {
+    await listTemplates();
+    return;
+  }
   const projects = listProjects();
   if (projects.length === 0) {
     console.log();
@@ -15991,15 +16023,15 @@ var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\
 });
 
 // src/commands/meta.ts
-var import_fs_extra10 = __toESM(require_lib(), 1);
+var import_fs_extra11 = __toESM(require_lib(), 1);
 var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u5143\u6570\u636E").action(async () => {
   const config = loadConfig();
   console.log();
   console.log(brand.primary("  \uD83D\uDCCB \u9879\u76EE\u5143\u6570\u636E"));
   printPath("  \u8DEF\u5F84", METADATA_PATH);
   console.log();
-  if (!import_fs_extra10.default.existsSync(METADATA_PATH)) {
-    import_fs_extra10.default.writeFileSync(METADATA_PATH, JSON.stringify({ projects: {} }, null, 2), "utf-8");
+  if (!import_fs_extra11.default.existsSync(METADATA_PATH)) {
+    import_fs_extra11.default.writeFileSync(METADATA_PATH, JSON.stringify({ projects: {} }, null, 2), "utf-8");
     printInfo("\u5DF2\u521B\u5EFA\u7A7A\u7684\u5143\u6570\u636E\u6587\u4EF6");
     console.log();
   }
@@ -16021,11 +16053,11 @@ var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u514
 });
 
 // src/commands/new.ts
-var import_fs_extra12 = __toESM(require_lib(), 1);
+var import_fs_extra13 = __toESM(require_lib(), 1);
 var import_picocolors18 = __toESM(require_picocolors(), 1);
 
 // src/core/hooks.ts
-var import_fs_extra11 = __toESM(require_lib(), 1);
+var import_fs_extra12 = __toESM(require_lib(), 1);
 var import_picocolors15 = __toESM(require_picocolors(), 1);
 import { join as join8 } from "path";
 async function executeHook(hookKey, hookDef, projectPath, projectName, templateName) {
@@ -16041,7 +16073,7 @@ async function executeHook(hookKey, hookDef, projectPath, projectName, templateN
         return false;
       }
       const scriptPath = join8(HOOKS_DIR, hookDef.file);
-      if (!import_fs_extra11.default.existsSync(scriptPath)) {
+      if (!import_fs_extra12.default.existsSync(scriptPath)) {
         console.log(import_picocolors15.default.yellow(`    \u811A\u672C\u4E0D\u5B58\u5728: ${hookDef.file}`));
         return false;
       }
@@ -16511,7 +16543,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     }
     const projectPath2 = getProjectPath(name);
     try {
-      await import_fs_extra12.default.ensureDir(projectPath2);
+      await import_fs_extra13.default.ensureDir(projectPath2);
     } catch (error) {
       const err = error;
       printError(err.message);
@@ -16673,7 +16705,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
   console.log(import_picocolors18.default.dim("  \u4F7F\u7528\u6A21\u677F: ") + brand.secondary(template.name));
   console.log(import_picocolors18.default.dim("  \u9879\u76EE\u8DEF\u5F84: ") + import_picocolors18.default.dim(projectPath));
   try {
-    await import_fs_extra12.default.ensureDir(projectPath);
+    await import_fs_extra13.default.ensureDir(projectPath);
   } catch (error) {
     const err = error;
     printError(err.message);
@@ -16682,7 +16714,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
   const templateResult = await applyTemplate(template, projectPath);
   if (!templateResult.success) {
     try {
-      await import_fs_extra12.default.remove(projectPath);
+      await import_fs_extra13.default.remove(projectPath);
     } catch {}
     printError(templateResult.message);
     process.exit(1);
@@ -16789,7 +16821,7 @@ var noteCommand = new Command("note").alias("notes").description("\u7BA1\u7406\u
 });
 
 // src/commands/open.ts
-var import_fs_extra13 = __toESM(require_lib(), 1);
+var import_fs_extra14 = __toESM(require_lib(), 1);
 var import_picocolors20 = __toESM(require_picocolors(), 1);
 async function searchAndSelect(projects, initialQuery) {
   const options = projects.map((p2) => ({
@@ -16880,7 +16912,7 @@ var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879
     return;
   }
   const meta = getProjectMeta(projectName);
-  if (meta?.originalPath && import_fs_extra13.default.existsSync(meta.originalPath)) {
+  if (meta?.originalPath && import_fs_extra14.default.existsSync(meta.originalPath)) {
     const shouldDelete = await ye({
       message: `\u68C0\u6D4B\u5230\u539F\u59CB\u8DEF\u5F84\u4ECD\u5B58\u5728: ${import_picocolors20.default.underline(meta.originalPath)}
   \u662F\u5426\u5220\u9664\u539F\u59CB\u76EE\u5F55\uFF1F`,
@@ -16890,7 +16922,7 @@ var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879
       const s2 = Y2();
       s2.start("\u6B63\u5728\u5220\u9664\u539F\u59CB\u76EE\u5F55...");
       try {
-        await import_fs_extra13.default.remove(meta.originalPath);
+        await import_fs_extra14.default.remove(meta.originalPath);
         clearOriginalPath(projectName);
         s2.stop("\u539F\u59CB\u76EE\u5F55\u5DF2\u5220\u9664");
       } catch (error) {
@@ -16917,11 +16949,11 @@ var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879
 });
 
 // src/commands/project.ts
-var import_fs_extra14 = __toESM(require_lib(), 1);
+var import_fs_extra15 = __toESM(require_lib(), 1);
 var import_picocolors21 = __toESM(require_picocolors(), 1);
 var projectCommand = new Command("project").alias("projects").description("\u6253\u5F00\u9879\u76EE\u76EE\u5F55").action(async () => {
   const config = loadConfig();
-  await import_fs_extra14.default.ensureDir(PROJECTS_DIR);
+  await import_fs_extra15.default.ensureDir(PROJECTS_DIR);
   const s = Y2();
   s.start(`\u6B63\u5728\u7528 ${config.ide} \u6253\u5F00\u9879\u76EE\u76EE\u5F55...`);
   try {
@@ -16939,7 +16971,7 @@ var projectCommand = new Command("project").alias("projects").description("\u625
 });
 
 // src/commands/rename.ts
-var import_fs_extra15 = __toESM(require_lib(), 1);
+var import_fs_extra16 = __toESM(require_lib(), 1);
 var import_picocolors22 = __toESM(require_picocolors(), 1);
 async function searchAndSelect2(projects, initialQuery) {
   const options = projects.map((p2) => ({
@@ -17007,7 +17039,7 @@ async function moveWithTimeout(src, dest, timeoutMs) {
         error: `\u64CD\u4F5C\u8D85\u65F6\uFF08${timeoutMs / 1000}\u79D2\uFF09\uFF0C\u53EF\u80FD\u6709 IDE \u6B63\u5728\u5360\u7528\u76EE\u5F55\uFF0C\u8BF7\u5173\u95ED\u8BE5\u9879\u76EE\u7A97\u53E3\u540E\u91CD\u8BD5`
       });
     }, timeoutMs);
-    import_fs_extra15.default.move(src, dest).then(() => {
+    import_fs_extra16.default.move(src, dest).then(() => {
       clearTimeout(timer);
       resolve4({ success: true });
     }).catch((error) => {
@@ -17315,7 +17347,7 @@ var tagCommand = new Command("tag").alias("t").alias("tags").description("\u7BA1
 
 // src/commands/template.ts
 import { resolve as resolve4 } from "path";
-var import_fs_extra16 = __toESM(require_lib(), 1);
+var import_fs_extra17 = __toESM(require_lib(), 1);
 var import_picocolors25 = __toESM(require_picocolors(), 1);
 function buildTemplateOptions(projects) {
   return projects.map((p2) => ({
@@ -17327,7 +17359,7 @@ function buildTemplateOptions(projects) {
 var templateCommand = new Command("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
   if (!action) {
     const config = loadConfig();
-    await import_fs_extra16.default.ensureDir(TEMPLATES_DIR);
+    await import_fs_extra17.default.ensureDir(TEMPLATES_DIR);
     const s = Y2();
     s.start(`\u6B63\u5728\u7528 ${config.ide} \u6253\u5F00\u6A21\u677F\u76EE\u5F55...`);
     try {
@@ -17499,11 +17531,11 @@ async function handleUpdate(target) {
     await createOrUpdateTemplate(currentDir, currentProject.savedTemplate, true);
     return;
   }
-  const localTemplates = await import_fs_extra16.default.readdir(TEMPLATES_DIR).catch(() => []);
+  const localTemplates = await import_fs_extra17.default.readdir(TEMPLATES_DIR).catch(() => []);
   const updatableTemplates = [];
   for (const name of localTemplates) {
     const templatePath2 = resolve4(TEMPLATES_DIR, name);
-    const stat = await import_fs_extra16.default.stat(templatePath2);
+    const stat = await import_fs_extra17.default.stat(templatePath2);
     if (stat.isDirectory()) {
       updatableTemplates.push(name);
     }
@@ -17555,7 +17587,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   copySpinner.start(isUpdate ? "\u6B63\u5728\u66F4\u65B0\u6A21\u677F..." : "\u6B63\u5728\u590D\u5236\u6587\u4EF6\u5230\u6A21\u677F\u76EE\u5F55...");
   try {
     if (isUpdate) {
-      await import_fs_extra16.default.emptyDir(targetPath);
+      await import_fs_extra17.default.emptyDir(targetPath);
     }
     await copyFiles(sourcePath, targetPath, files);
     copySpinner.stop(`${brand.success("\u2713")} \u6A21\u677F${isUpdate ? "\u5DF2\u66F4\u65B0" : "\u5DF2\u521B\u5EFA"}: ${brand.primary(templateName)}`);
@@ -17575,7 +17607,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
 
 // src/commands/unzip.ts
 var import_adm_zip = __toESM(require_adm_zip(), 1);
-var import_fs_extra17 = __toESM(require_lib(), 1);
+var import_fs_extra18 = __toESM(require_lib(), 1);
 
 // node_modules/glob/dist/esm/index.min.js
 import { fileURLToPath as Wi } from "url";
@@ -20905,30 +20937,30 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
     try {
       const zipName = parse(zipFile).name;
       const destDir = join9(dirname3(zipFile), zipName);
-      if (await import_fs_extra17.default.pathExists(destDir)) {
-        await import_fs_extra17.default.remove(destDir);
+      if (await import_fs_extra18.default.pathExists(destDir)) {
+        await import_fs_extra18.default.remove(destDir);
       }
       const tempDir = `${destDir}.tmp`;
       const zip = new import_adm_zip.default(zipFile);
       zip.extractAllTo(tempDir, true);
       if (options?.flatten) {
-        const entries = await import_fs_extra17.default.readdir(tempDir);
+        const entries = await import_fs_extra18.default.readdir(tempDir);
         if (entries.length === 1) {
           const singleEntry = join9(tempDir, entries[0]);
-          const stat = await import_fs_extra17.default.stat(singleEntry);
+          const stat = await import_fs_extra18.default.stat(singleEntry);
           if (stat.isDirectory()) {
-            await import_fs_extra17.default.move(singleEntry, destDir);
-            await import_fs_extra17.default.remove(tempDir);
+            await import_fs_extra18.default.move(singleEntry, destDir);
+            await import_fs_extra18.default.remove(tempDir);
           } else {
-            await import_fs_extra17.default.move(tempDir, destDir);
+            await import_fs_extra18.default.move(tempDir, destDir);
           }
         } else {
-          await import_fs_extra17.default.move(tempDir, destDir);
+          await import_fs_extra18.default.move(tempDir, destDir);
         }
       } else {
-        await import_fs_extra17.default.move(tempDir, destDir);
+        await import_fs_extra18.default.move(tempDir, destDir);
       }
-      await import_fs_extra17.default.remove(zipFile);
+      await import_fs_extra18.default.remove(zipFile);
       successCount++;
       console.log(`  ${brand.success("\u2713")} ${relativePath} \u2192 ${zipName}/`);
     } catch (error) {
