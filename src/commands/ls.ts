@@ -33,6 +33,9 @@ export const lsCommand = new Command("ls")
 				project.tags && project.tags.length > 0
 					? ` ${project.tags.map((t) => pc.magenta(`#${t}`)).join(" ")}`
 					: "";
+			const noteDisplay = project.note
+				? ` ${pc.dim(`— ${project.note}`)}`
+				: "";
 
 			console.log(
 				"  " +
@@ -41,6 +44,7 @@ export const lsCommand = new Command("ls")
 					brand.bold(project.name) +
 					templateTag +
 					tagDisplay +
+					noteDisplay +
 					pc.dim(`  ${timeStr}`),
 			);
 			console.log(pc.dim(`    ${project.path}`));

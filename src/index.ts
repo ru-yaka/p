@@ -13,6 +13,7 @@ import { importCommand } from "./commands/import";
 import { lsCommand } from "./commands/ls";
 import { metaCommand } from "./commands/meta";
 import { newCommand } from "./commands/new";
+import { noteCommand } from "./commands/note";
 import { openCommand } from "./commands/open";
 import { projectCommand } from "./commands/project";
 import { renameCommand } from "./commands/rename";
@@ -56,6 +57,7 @@ program.addCommand(templateCommand);
 program.addCommand(configCommand);
 program.addCommand(hookCommand);
 program.addCommand(metaCommand);
+program.addCommand(noteCommand);
 program.addCommand(unzipCommand);
 program.addCommand(updateCommand);
 

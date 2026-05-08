@@ -22,7 +22,12 @@ export function projectHint(p: {
 	template?: string;
 	tags?: string[];
 	path: string;
+	note?: string;
 }): string {
+	if (p.note) {
+		const note = p.note.length > 30 ? `${p.note.slice(0, 30)}...` : p.note;
+		return pc.dim(note);
+	}
 	const hints: string[] = [];
 	if (p.template) hints.push(pc.cyan(p.template));
 	if (p.tags && p.tags.length > 0) {

@@ -45,6 +45,7 @@ export interface ProjectMetaData {
 	createdAt: string;
 	originalPath?: string;
 	tags?: string[];
+	note?: string;
 }
 
 /**
@@ -66,4 +67,5 @@ export interface ProjectInfo {
 	modifiedAt: Date;
 	originalPath?: string;
 	tags?: string[];
+	note?: string;
 }

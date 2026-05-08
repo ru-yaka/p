@@ -2,6 +2,7 @@ import {
 	confirm,
 	intro,
 	isCancel,
+	multiselect,
 	outro,
 	spinner,
 } from "@clack/prompts";
@@ -60,11 +61,96 @@ async function searchAndSelectDelete(
 	return result as string;
 }
 
+/**
+ * 通配符匹配项目名
+ */
+function wildcardMatch(projects: ReturnType<typeof listProjects>, pattern: string): string[] {
+	const regexStr = `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`;
+	const regex = new RegExp(regexStr, "i");
+	return projects.filter((p) => regex.test(p.name)).map((p) => p.name);
+}
+
+/**
+ * 批量删除项目
+ */
+async function batchDelete(projectNames: string[]) {
+	if (projectNames.length === 0) {
+		printInfo("没有匹配的项目");
+		return;
+	}
+
+	console.log();
+	console.log(pc.dim("  将要删除的项目:"));
+	for (const name of projectNames) {
+		console.log(`  ${brand.secondary("•")} ${name}`);
+	}
+	console.log();
+
+	const shouldDelete = await confirm({
+		message: `确定要删除 ${brand.primary(String(projectNames.length))} 个项目吗？此操作不可恢复！`,
+		initialValue: true,
+	});
+
+	if (isCancel(shouldDelete) || !shouldDelete) {
+		outro(pc.dim("已取消"));
+		process.exit(0);
+	}
+
+	console.log();
+	const s = spinner();
+	s.start("正在删除项目...");
+
+	const results = await Promise.allSettled(
+		projectNames.map(async (name, index) => {
+			try {
+				await fse.remove(getProjectPath(name));
+				return { success: true, name, index };
+			} catch (error) {
+				const err = error as Error;
+				return { success: false, name, error: err.message, index };
+			}
+		}),
+	);
+
+	s.stop();
+
+	console.log();
+	let deletedCount = 0;
+	const errors: string[] = [];
+
+	for (const result of results) {
+		if (result.status === "fulfilled") {
+			const r = result.value;
+			if (r.success) {
+				deletedCount++;
+				deleteProjectMeta(r.name);
+				console.log(
+					`  ${brand.success("✓")} [${r.index + 1}/${projectNames.length}] ${r.name}`,
+				);
+			} else {
+				errors.push(`${r.name}: ${r.error}`);
+				console.log(
+					`  ${brand.error("✗")} [${r.index + 1}/${projectNames.length}] ${r.name} - ${r.error}`,
+				);
+			}
+		}
+	}
+
+	console.log();
+	if (errors.length > 0) {
+		outro(
+			`${brand.success("✓")} 已删除 ${deletedCount} 个项目，${errors.length} 个失败`,
+		);
+	} else {
+		outro(`${brand.success("✓")} 已成功删除 ${deletedCount} 个项目`);
+	}
+}
+
 export const deleteCommand = new Command("delete")
 	.alias("d")
-		.alias("rm")
+	.alias("rm")
 	.description("删除项目")
-	.argument("[name]", "项目名称（使用 'all' 删除所有项目）")
+	.argument("[name]", "项目名称、通配符模式，或 'all'")
 	.action(async (name?: string) => {
 		const projects = listProjects();
 
@@ -172,12 +258,47 @@ export const deleteCommand = new Command("delete")
 			return;
 		}
 
+		// 通配符模式
+		if (name && name.includes("*")) {
+			const matched = wildcardMatch(projects, name);
+
+			if (matched.length === 0) {
+				printError(`没有匹配 '${name}' 的项目`);
+				process.exit(1);
+			}
+
+			intro(bgOrange(" 批量删除 "));
+			await batchDelete(matched);
+			return;
+		}
+
+		// 无参数 → 多选模式
+		if (!name) {
+			intro(bgOrange(" 批量删除 "));
+
+			const result = await multiselect({
+				message: "选择要删除的项目（空格选择）:",
+				options: projects.map((p) => ({
+					value: p.name,
+					label: p.name,
+					hint: projectHint(p),
+				})),
+			});
+
+			if (isCancel(result)) {
+				outro(pc.dim("已取消"));
+				process.exit(0);
+			}
+
+			const selected = result as string[];
+			await batchDelete(selected);
+			return;
+		}
+
+		// 单个项目删除
 		let projectName = name;
 
-		// 如果没有提供项目名，实时搜索
-		if (!projectName) {
-			projectName = await searchAndSelectDelete(projects);
-		} else if (!projectExists(projectName)) {
+		if (!projectExists(projectName)) {
 			// 名称不精确匹配 → 模糊搜索
 			const filtered = filterProjects(projects, projectName);
 			if (filtered.length === 1) {

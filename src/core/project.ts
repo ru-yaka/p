@@ -55,6 +55,7 @@ export function listProjects(): ProjectInfo[] {
 				modifiedAt: stat.mtime,
 				originalPath: meta?.originalPath,
 				tags: meta?.tags,
+				note: meta?.note,
 			});
 		}
 	}
@@ -90,6 +91,7 @@ export function saveProjectMeta(
 		createdAt: existing?.createdAt || new Date().toISOString(),
 		...(data.originalPath !== undefined && { originalPath: data.originalPath }),
 		...(data.tags !== undefined && { tags: data.tags }),
+		...(data.note !== undefined && { note: data.note }),
 	};
 
 	saveMetadata(metadata);
