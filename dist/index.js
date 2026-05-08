@@ -16548,7 +16548,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
       const remaining = tokens.slice(1).join(" ");
       cmd = remaining ? `${alias} ${remaining}` : alias;
       console.log();
-      console.log(import_picocolors18.default.dim("  \u522B\u540D: ") + brand.primary(tokens[0]) + import_picocolors18.default.dim(` \u2192 ${cmd}`));
+      console.log(import_picocolors18.default.dim("  \u522B\u540D: ") + brand.primary(tokens[0]) + import_picocolors18.default.dim(` \u2192 ${alias}`));
       console.log(import_picocolors18.default.dim("  \u914D\u7F6E: ") + import_picocolors18.default.underline(CONFIG_PATH));
     }
     console.log();

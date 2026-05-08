@@ -59,7 +59,7 @@ export const newCommand = new Command("new")
 					const remaining = tokens.slice(1).join(" ");
 					cmd = remaining ? `${alias} ${remaining}` : alias;
 					console.log();
-					console.log(pc.dim("  别名: ") + brand.primary(tokens[0]) + pc.dim(` → ${cmd}`));
+					console.log(pc.dim("  别名: ") + brand.primary(tokens[0]) + pc.dim(` → ${alias}`));
 					console.log(pc.dim("  配置: ") + pc.underline(CONFIG_PATH));
 				}
 
