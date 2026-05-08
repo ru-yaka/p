@@ -29,17 +29,9 @@ export async function ensureInitialized(): Promise<void> {
 	const defaultConfigPath = join(currentDir, "config.yaml");
 
 	if (await fse.pathExists(defaultConfigPath)) {
-		// 如果配置文件不存在，直接复制
+		// 只在配置文件不存在时才复制，不覆盖用户的本地修改
 		if (!(await fse.pathExists(CONFIG_PATH))) {
 			await fse.copyFile(defaultConfigPath, CONFIG_PATH);
-		} else {
-			// 如果配置文件存在，比较修改时间，如果源文件更新则覆盖
-			const sourceStats = await fse.stat(defaultConfigPath);
-			const targetStats = await fse.stat(CONFIG_PATH);
-
-			if (sourceStats.mtime > targetStats.mtime) {
-				await fse.copyFile(defaultConfigPath, CONFIG_PATH);
-			}
 		}
 	}
 }
