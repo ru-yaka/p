@@ -764,7 +764,7 @@ var require_command = __commonJS((exports) => {
   var { Option, DualOptions } = require_option();
   var { suggestSimilar } = require_suggestSimilar();
 
-  class Command extends EventEmitter {
+  class Command2 extends EventEmitter {
     constructor(name) {
       super();
       this.commands = [];
@@ -867,7 +867,7 @@ var require_command = __commonJS((exports) => {
       return cmd;
     }
     createCommand(name) {
-      return new Command(name);
+      return new Command2(name);
     }
     createHelp() {
       return Object.assign(new Help, this.configureHelp());
@@ -2102,22 +2102,22 @@ Expecting one of '${allowedValues.join("', '")}'`);
       return true;
     return;
   }
-  exports.Command = Command;
+  exports.Command = Command2;
   exports.useColor = useColor;
 });
 
 // node_modules/commander/index.js
 var require_commander = __commonJS((exports) => {
   var { Argument } = require_argument();
-  var { Command } = require_command();
+  var { Command: Command2 } = require_command();
   var { CommanderError, InvalidArgumentError } = require_error();
   var { Help } = require_help();
   var { Option } = require_option();
-  exports.program = new Command;
-  exports.createCommand = (name) => new Command(name);
+  exports.program = new Command2;
+  exports.createCommand = (name) => new Command2(name);
   exports.createOption = (flags, description) => new Option(flags, description);
   exports.createArgument = (name, description) => new Argument(name, description);
-  exports.Command = Command;
+  exports.Command = Command2;
   exports.Option = Option;
   exports.Argument = Argument;
   exports.Help = Help;
@@ -13596,7 +13596,7 @@ var {
   CommanderError,
   InvalidArgumentError,
   InvalidOptionArgumentError,
-  Command,
+  Command: Command2,
   Argument,
   Option,
   Help
@@ -14940,7 +14940,7 @@ async function handleProjectAdd(projectName, destDir, projects) {
     process.exit(1);
   }
 }
-var addCommand = new Command("add").description("\u5C06\u6A21\u677F\u6216\u9879\u76EE\u6DFB\u52A0\u5230\u5F53\u524D\u76EE\u5F55\u6216\u6307\u5B9A\u8DEF\u5F84").argument("[source]", "\u6A21\u677F\u540D\u6216\u9879\u76EE\u540D\uFF0C\u652F\u6301 name:alias \u91CD\u547D\u540D").argument("[target]", "\u76EE\u6807\u57FA\u8DEF\u5F84\uFF0C\u9ED8\u8BA4\u4E3A\u5F53\u524D\u76EE\u5F55 .").action(async (sourceArg, targetArg) => {
+var addCommand = new Command2("add").description("\u5C06\u6A21\u677F\u6216\u9879\u76EE\u6DFB\u52A0\u5230\u5F53\u524D\u76EE\u5F55\u6216\u6307\u5B9A\u8DEF\u5F84").argument("[source]", "\u6A21\u677F\u540D\u6216\u9879\u76EE\u540D\uFF0C\u652F\u6301 name:alias \u91CD\u547D\u540D").argument("[target]", "\u76EE\u6807\u57FA\u8DEF\u5F84\uFF0C\u9ED8\u8BA4\u4E3A\u5F53\u524D\u76EE\u5F55 .").action(async (sourceArg, targetArg) => {
   const projects = listProjects();
   const config = loadConfig();
   const allTemplates = await getAllTemplates(config.templates);
@@ -15043,7 +15043,7 @@ async function getGitUsername() {
   }
   return null;
 }
-var cloneCommand = new Command("clone").alias("cl").description("\u4ECE\u8FDC\u7A0B\u5730\u5740\u514B\u9686\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<url>", "Git \u4ED3\u5E93\u5730\u5740\uFF08\u652F\u6301 owner/repo \u77ED\u683C\u5F0F\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE URL \u63A8\u65AD\uFF09").action(async (url, customName) => {
+var cloneCommand = new Command2("clone").alias("cl").description("\u4ECE\u8FDC\u7A0B\u5730\u5740\u514B\u9686\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<url>", "Git \u4ED3\u5E93\u5730\u5740\uFF08\u652F\u6301 owner/repo \u77ED\u683C\u5F0F\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE URL \u63A8\u65AD\uFF09").action(async (url, customName) => {
   const config = loadConfig();
   const normalizedUrl = normalizeUrl(url);
   let projectName = customName || extractProjectName(normalizedUrl);
@@ -15103,7 +15103,7 @@ var cloneCommand = new Command("clone").alias("cl").description("\u4ECE\u8FDC\u7
 });
 
 // src/commands/config.ts
-var configCommand = new Command("config").description("\u7F16\u8F91\u914D\u7F6E\u6587\u4EF6").action(async () => {
+var configCommand = new Command2("config").description("\u7F16\u8F91\u914D\u7F6E\u6587\u4EF6").action(async () => {
   const config = loadConfig();
   console.log();
   console.log(brand.primary("  \u2699\uFE0F  \u914D\u7F6E\u6587\u4EF6"));
@@ -15130,7 +15130,7 @@ var configCommand = new Command("config").description("\u7F16\u8F91\u914D\u7F6E\
 import { basename, resolve as resolve2 } from "path";
 var import_fs_extra5 = __toESM(require_lib(), 1);
 var import_picocolors8 = __toESM(require_picocolors(), 1);
-var copyCommand = new Command("copy").alias("cp").description("\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
+var copyCommand = new Command2("copy").alias("cp").description("\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
   const config = loadConfig();
   const sourcePath = resolve2(inputPath);
   if (!import_fs_extra5.default.existsSync(sourcePath)) {
@@ -15550,7 +15550,7 @@ async function batchDelete(projectNames) {
     Se(`${brand.success("\u2713")} \u5DF2\u6210\u529F\u5220\u9664 ${deletedCount} \u4E2A\u9879\u76EE`);
   }
 }
-var deleteCommand = new Command("delete").alias("d").alias("rm").description("\u5220\u9664\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u901A\u914D\u7B26\u6A21\u5F0F\uFF0C\u6216 'all'").action(async (name) => {
+var deleteCommand = new Command2("delete").alias("d").alias("rm").description("\u5220\u9664\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u901A\u914D\u7B26\u6A21\u5F0F\uFF0C\u6216 'all'").action(async (name) => {
   const projects = listProjects();
   if (projects.length === 0) {
     console.log();
@@ -15722,7 +15722,7 @@ console.log('\u4F7F\u7528\u6A21\u677F: ' + templateName);
 // \u5728\u8FD9\u91CC\u7F16\u5199\u4F60\u7684\u81EA\u5B9A\u4E49\u903B\u8F91...
 // \u4F8B\u5982: \u521B\u5EFA\u989D\u5916\u7684\u6587\u4EF6\u3001\u4FEE\u6539\u914D\u7F6E\u7B49
 `;
-var hookCommand = new Command("hook").alias("hooks").description("\u7BA1\u7406\u81EA\u5B9A\u4E49 Hooks").action(async () => {
+var hookCommand = new Command2("hook").alias("hooks").description("\u7BA1\u7406\u81EA\u5B9A\u4E49 Hooks").action(async () => {
   const config = loadConfig();
   console.log();
   console.log(brand.primary("  \uD83D\uDCDD \u81EA\u5B9A\u4E49 Hooks"));
@@ -15868,7 +15868,7 @@ async function copyFiles(sourcePath, targetPath, files) {
 }
 
 // src/commands/import.ts
-var importCommand = new Command("import").alias("i").description("\u5BFC\u5165\u5916\u90E8\u9879\u76EE\u5230 p \u7BA1\u7406").argument("[path]", "\u8981\u5BFC\u5165\u7684\u9879\u76EE\u8DEF\u5F84\uFF08. \u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF0C\u7701\u7565\u5219\u4EA4\u4E92\u9009\u62E9\uFF09").action(async (inputPath) => {
+var importCommand = new Command2("import").alias("i").description("\u5BFC\u5165\u5916\u90E8\u9879\u76EE\u5230 p \u7BA1\u7406").argument("[path]", "\u8981\u5BFC\u5165\u7684\u9879\u76EE\u8DEF\u5F84\uFF08. \u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF0C\u7701\u7565\u5219\u4EA4\u4E92\u9009\u62E9\uFF09").action(async (inputPath) => {
   let sourcePath;
   if (inputPath === ".") {
     sourcePath = process.cwd();
@@ -15993,7 +15993,7 @@ async function listTemplates() {
   console.log(import_picocolors14.default.dim("  \u63D0\u793A: \u4F7F\u7528 ") + brand.primary("p templates add") + import_picocolors14.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
   console.log();
 }
-var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").action(async (filter) => {
+var lsCommand = new Command2("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").action(async (filter) => {
   if (filter === "templates" || filter === "t") {
     await listTemplates();
     return;
@@ -16024,7 +16024,7 @@ var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\
 
 // src/commands/meta.ts
 var import_fs_extra11 = __toESM(require_lib(), 1);
-var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u5143\u6570\u636E").action(async () => {
+var metaCommand = new Command2("meta").description("\u67E5\u770B\u9879\u76EE\u5143\u6570\u636E").action(async () => {
   const config = loadConfig();
   console.log();
   console.log(brand.primary("  \uD83D\uDCCB \u9879\u76EE\u5143\u6570\u636E"));
@@ -16531,7 +16531,7 @@ async function selectOrInput(opts) {
 
 // src/commands/new.ts
 var REGENERATE = Symbol("regenerate");
-var newCommand = new Command("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").allowExcessArguments(true).action(async (name, options) => {
+var newCommand = new Command2("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").allowExcessArguments(true).action(async (name, options) => {
   const rawArgs = process.argv;
   const ddIdx = rawArgs.indexOf("--");
   const newIdx = rawArgs.lastIndexOf("new");
@@ -16857,7 +16857,7 @@ async function showNote(projectName) {
   console.log(brand.primary(`  ${projectName}`) + import_picocolors19.default.dim(": ") + import_picocolors19.default.dim(note));
   console.log();
 }
-var noteCommand = new Command("note").alias("notes").description("\u7BA1\u7406\u9879\u76EE\u5907\u6CE8").argument("[project]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[text]", "\u5907\u6CE8\u5185\u5BB9").option("-c, --clear", "\u6E05\u9664\u5907\u6CE8").action(async (project, noteText, options) => {
+var noteCommand = new Command2("note").alias("notes").description("\u7BA1\u7406\u9879\u76EE\u5907\u6CE8").argument("[project]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[text]", "\u5907\u6CE8\u5185\u5BB9").option("-c, --clear", "\u6E05\u9664\u5907\u6CE8").action(async (project, noteText, options) => {
   if (!project) {
     const currentDir = process.cwd();
     const projects = listProjects();
@@ -16910,7 +16910,7 @@ async function searchAndSelect(projects, initialQuery) {
   }
   return result;
 }
-var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u641C\u7D22\u5173\u952E\u8BCD\uFF0C\u6216 :ide \u5FEB\u901F\u5207\u6362").option("-i, --ide <ide>", "\u6307\u5B9A IDE").action(async (name, options) => {
+var openCommand = new Command2("open").alias("o").description("\u6253\u5F00\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001\u641C\u7D22\u5173\u952E\u8BCD\uFF0C\u6216 :ide \u5FEB\u901F\u5207\u6362").option("-i, --ide <ide>", "\u6307\u5B9A IDE").action(async (name, options) => {
   const config = loadConfig();
   if (name?.startsWith(":")) {
     const ide2 = name.slice(1);
@@ -17010,7 +17010,7 @@ var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879
 // src/commands/project.ts
 var import_fs_extra15 = __toESM(require_lib(), 1);
 var import_picocolors21 = __toESM(require_picocolors(), 1);
-var projectCommand = new Command("project").alias("projects").description("\u6253\u5F00\u9879\u76EE\u76EE\u5F55").action(async () => {
+var projectCommand = new Command2("project").alias("projects").description("\u6253\u5F00\u9879\u76EE\u76EE\u5F55").action(async () => {
   const config = loadConfig();
   await import_fs_extra15.default.ensureDir(PROJECTS_DIR);
   const s = Y2();
@@ -17107,7 +17107,7 @@ async function moveWithTimeout(src, dest, timeoutMs) {
     });
   });
 }
-var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\u540D\u9879\u76EE").argument("[oldName]", "\u5F53\u524D\u9879\u76EE\u540D\u79F0").argument("[newName]", "\u65B0\u9879\u76EE\u540D\u79F0").action(async (oldName, newName) => {
+var renameCommand = new Command2("rename").alias("mv").description("\u91CD\u547D\u540D\u9879\u76EE").argument("[oldName]", "\u5F53\u524D\u9879\u76EE\u540D\u79F0").argument("[newName]", "\u65B0\u9879\u76EE\u540D\u79F0").action(async (oldName, newName) => {
   const projects = listProjects();
   if (projects.length === 0) {
     console.log();
@@ -17217,34 +17217,234 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
   Se(brand.success("\u2728 \u91CD\u547D\u540D\u5B8C\u6210\uFF01"));
 });
 
-// src/commands/run.ts
+// src/commands/recent.ts
+var import_fs_extra17 = __toESM(require_lib(), 1);
 var import_picocolors23 = __toESM(require_picocolors(), 1);
-var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u9879\u76EE\u6267\u884C hooks").argument("[hooks...]", "\u8981\u6267\u884C\u7684 hook \u540D\u79F0").action(async (hookKeys) => {
+import * as readline3 from "readline";
+import { Writable as Writable3 } from "stream";
+var import_sisteransi5 = __toESM(require_src(), 1);
+var MAX_VISIBLE3 = 10;
+var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\u6700\u8FD1\u9879\u76EE").action(async () => {
+  const projects = listProjects();
+  if (projects.length === 0) {
+    console.log();
+    printInfo(`\u6682\u65E0\u9879\u76EE\uFF0C\u4F7F\u7528 ${brand.primary("p new")} \u521B\u5EFA\u65B0\u9879\u76EE`);
+    console.log();
+    return;
+  }
+  const recent = projects.slice(0, 20);
+  const config = loadConfig();
+  const stdin = process.stdin;
+  const stdout = process.stdout;
+  const interceptStream = new Writable3({
+    write(_chunk, _encoding, callback) {
+      callback();
+    }
+  });
+  stdin.setRawMode(true);
+  stdin.resume();
+  stdout.write(import_sisteransi5.cursor.hide);
+  const rl = readline3.createInterface({
+    input: stdin,
+    output: interceptStream,
+    terminal: true
+  });
+  readline3.emitKeypressEvents(stdin, rl);
+  let selectedIndex = 0;
+  let scrollOffset = 0;
+  let blockHeight = 0;
+  let done = false;
+  let currentProjects = recent;
+  function render() {
+    const parts = [];
+    if (blockHeight > 0)
+      parts.push(import_sisteransi5.cursor.up(blockHeight));
+    const lines = [];
+    lines.push(`  ${brand.secondary("\u25C6")} \u6700\u8FD1\u9879\u76EE ${import_picocolors23.default.dim(`(${currentProjects.length})`)}`);
+    lines.push(`  ${brand.secondary("\u2502")}`);
+    const visibleCount = Math.min(MAX_VISIBLE3, currentProjects.length - scrollOffset);
+    const visible = currentProjects.slice(scrollOffset, scrollOffset + visibleCount);
+    for (let i = 0;i < visible.length; i++) {
+      const idx = scrollOffset + i;
+      const isSelected = idx === selectedIndex;
+      const p2 = visible[i];
+      const marker = isSelected ? brand.primary("\u25C9") : import_picocolors23.default.dim("\u25CB");
+      const name = isSelected ? brand.bold(p2.name) : p2.name;
+      const time = import_picocolors23.default.dim(`  ${formatRelativeTime(p2.modifiedAt)}`);
+      const note = p2.note ? import_picocolors23.default.dim(` \u2014 ${p2.note}`) : "";
+      const tpl = p2.template ? ` ${import_picocolors23.default.cyan(`[${p2.template}]`)}` : "";
+      lines.push(`  ${brand.secondary("\u2502")} ${marker} ${name}${tpl}${note}${time}`);
+    }
+    if (currentProjects.length > MAX_VISIBLE3) {
+      const remaining = currentProjects.length - scrollOffset - MAX_VISIBLE3;
+      if (remaining > 0) {
+        lines.push(`  ${brand.secondary("\u2502")}   ${import_picocolors23.default.dim(`... \u8FD8\u6709 ${remaining} \u4E2A`)}`);
+      }
+    }
+    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors23.default.dim("j/k \u79FB\u52A8 \xB7 o \u6253\u5F00 \xB7 d \u5220\u9664 \xB7 q \u9000\u51FA")}`);
+    for (const line of lines) {
+      parts.push(line + `\x1B[K
+`);
+    }
+    if (blockHeight > lines.length) {
+      for (let i = lines.length;i < blockHeight; i++) {
+        parts.push(`\x1B[K
+`);
+      }
+      parts.push(import_sisteransi5.cursor.up(blockHeight - lines.length));
+    }
+    stdout.write(parts.join(""));
+    blockHeight = lines.length;
+  }
+  render();
+  function scrollSelectedIntoView() {
+    if (selectedIndex < scrollOffset) {
+      scrollOffset = selectedIndex;
+    } else if (selectedIndex >= scrollOffset + MAX_VISIBLE3) {
+      scrollOffset = selectedIndex - MAX_VISIBLE3 + 1;
+    }
+  }
+  function cleanup() {
+    if (done)
+      return;
+    done = true;
+    stdin.removeListener("keypress", onKey);
+    stdin.setRawMode(false);
+    stdin.pause();
+    rl.close();
+    stdout.write(import_sisteransi5.cursor.show);
+  }
+  function clearBlock() {
+    const parts = [];
+    parts.push(import_sisteransi5.cursor.up(blockHeight));
+    for (let i = 0;i < blockHeight; i++) {
+      parts.push(`\x1B[K
+`);
+    }
+    stdout.write(parts.join(""));
+  }
+  async function handleOpen() {
+    const project = currentProjects[selectedIndex];
+    if (!project)
+      return;
+    clearBlock();
+    blockHeight = 0;
+    const s = Y2();
+    s.start(`\u6B63\u5728\u6253\u5F00 ${project.name}...`);
+    try {
+      await openWithIDE(config.ide, project.path);
+      s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5F00: ${brand.primary(project.name)}`);
+    } catch (error) {
+      s.stop("\u6253\u5F00\u5931\u8D25");
+      printError(error.message);
+    }
+    cleanup();
+  }
+  async function handleDelete() {
+    const project = currentProjects[selectedIndex];
+    if (!project)
+      return;
+    stdin.setRawMode(false);
+    stdin.pause();
+    stdin.removeListener("keypress", onKey);
+    clearBlock();
+    blockHeight = 0;
+    const shouldDelete = await ye({
+      message: `\u786E\u5B9A\u5220\u9664 ${brand.primary(project.name)} \u5417\uFF1F`,
+      initialValue: false
+    });
+    if (shouldDelete && !readline3.isCancel(shouldDelete)) {
+      const s = Y2();
+      s.start(`\u6B63\u5728\u5220\u9664 ${project.name}...`);
+      try {
+        await import_fs_extra17.default.remove(project.path);
+        deleteProjectMeta(project.name);
+        s.stop(`${brand.success("\u2713")} \u5DF2\u5220\u9664: ${brand.primary(project.name)}`);
+        currentProjects.splice(selectedIndex, 1);
+        if (selectedIndex >= currentProjects.length) {
+          selectedIndex = Math.max(0, currentProjects.length - 1);
+        }
+      } catch (error) {
+        s.stop("\u5220\u9664\u5931\u8D25");
+        printError(error.message);
+      }
+    }
+    if (currentProjects.length === 0) {
+      cleanup();
+      console.log();
+      printInfo("\u5DF2\u65E0\u9879\u76EE");
+      console.log();
+      return;
+    }
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.on("keypress", onKey);
+    render();
+  }
+  function onKey(_char, key) {
+    if (done)
+      return;
+    if (key.sequence === "\x03" || key.name === "q" || key.name === "escape") {
+      clearBlock();
+      blockHeight = 0;
+      cleanup();
+      return;
+    }
+    switch (key.name) {
+      case "up":
+      case "k":
+        if (selectedIndex > 0)
+          selectedIndex--;
+        scrollSelectedIntoView();
+        break;
+      case "down":
+      case "j":
+        if (selectedIndex < currentProjects.length - 1)
+          selectedIndex++;
+        scrollSelectedIntoView();
+        break;
+      case "o":
+        handleOpen();
+        return;
+      case "d":
+        handleDelete();
+        return;
+      default:
+        return;
+    }
+    render();
+  }
+  stdin.on("keypress", onKey);
+});
+
+// src/commands/run.ts
+var import_picocolors24 = __toESM(require_picocolors(), 1);
+var runCommand = new Command2("run").alias("r").description("\u5728\u5F53\u524D\u9879\u76EE\u6267\u884C hooks").argument("[hooks...]", "\u8981\u6267\u884C\u7684 hook \u540D\u79F0").action(async (hookKeys) => {
   const config = loadConfig();
   const currentDir = process.cwd();
   const projects = listProjects();
   const currentProject = projects.find((p2) => p2.path === currentDir);
   if (!currentProject) {
     printError("\u5F53\u524D\u76EE\u5F55\u4E0D\u662F p \u7BA1\u7406\u7684\u9879\u76EE");
-    console.log(import_picocolors23.default.dim("  \u8BF7\u5728\u9879\u76EE\u76EE\u5F55\u4E2D\u8FD0\u884C\uFF0C\u6216\u4F7F\u7528 ") + brand.primary("p open") + import_picocolors23.default.dim(" \u6253\u5F00\u9879\u76EE"));
+    console.log(import_picocolors24.default.dim("  \u8BF7\u5728\u9879\u76EE\u76EE\u5F55\u4E2D\u8FD0\u884C\uFF0C\u6216\u4F7F\u7528 ") + brand.primary("p open") + import_picocolors24.default.dim(" \u6253\u5F00\u9879\u76EE"));
     process.exit(1);
   }
   const allHookKeys = Object.keys(config.hooks);
   if (allHookKeys.length === 0) {
     printInfo("\u6682\u65E0\u53EF\u7528 hooks");
-    console.log(import_picocolors23.default.dim("  \u5728 ") + brand.primary("~/.p/config.yaml") + import_picocolors23.default.dim(" \u4E2D\u914D\u7F6E hooks"));
+    console.log(import_picocolors24.default.dim("  \u5728 ") + brand.primary("~/.p/config.yaml") + import_picocolors24.default.dim(" \u4E2D\u914D\u7F6E hooks"));
     return;
   }
   if (hookKeys.length > 0) {
     const invalid = hookKeys.filter((k3) => !config.hooks[k3]);
     if (invalid.length > 0) {
       printError(`\u672A\u77E5\u7684 hook: ${invalid.join(", ")}`);
-      console.log(import_picocolors23.default.dim(`  \u53EF\u7528 hooks: ${allHookKeys.join(", ")}`));
+      console.log(import_picocolors24.default.dim(`  \u53EF\u7528 hooks: ${allHookKeys.join(", ")}`));
       process.exit(1);
     }
     await runHooksByKeys(config, hookKeys, currentDir, currentProject.name);
     console.log();
-    console.log(brand.success("\u2713") + import_picocolors23.default.dim(` \u5DF2\u5728 ${brand.primary(currentProject.name)} \u6267\u884C ${hookKeys.length} \u4E2A hook`));
+    console.log(brand.success("\u2713") + import_picocolors24.default.dim(` \u5DF2\u5728 ${brand.primary(currentProject.name)} \u6267\u884C ${hookKeys.length} \u4E2A hook`));
     return;
   }
   Ie(bgOrange(` \u8FD0\u884C Hooks \xB7 ${currentProject.name} `));
@@ -17258,7 +17458,7 @@ var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u
     required: true
   });
   if (pD(result)) {
-    Se(import_picocolors23.default.dim("\u5DF2\u53D6\u6D88"));
+    Se(import_picocolors24.default.dim("\u5DF2\u53D6\u6D88"));
     process.exit(0);
   }
   const selected = result;
@@ -17268,7 +17468,7 @@ var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u
 });
 
 // src/commands/tag.ts
-var import_picocolors24 = __toESM(require_picocolors(), 1);
+var import_picocolors25 = __toESM(require_picocolors(), 1);
 function getCurrentProjectName() {
   const currentDir = process.cwd();
   const projects = listProjects();
@@ -17288,7 +17488,7 @@ async function addTags(tags) {
       placeholder: "react typescript web"
     });
     if (pD(result)) {
-      Se(import_picocolors24.default.dim("\u5DF2\u53D6\u6D88"));
+      Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
       process.exit(0);
     }
     tagList = result.split(/[\s,\uFF0C]+/).map((t) => t.trim().toLowerCase()).filter(Boolean);
@@ -17303,7 +17503,7 @@ async function addTags(tags) {
   const added = merged.filter((t) => !existing.includes(t));
   saveProjectMeta(projectName, { tags: merged });
   if (added.length > 0) {
-    printSuccess(`\u5DF2\u4E3A ${brand.primary(projectName)} \u6DFB\u52A0\u6807\u7B7E: ${added.map((t) => import_picocolors24.default.magenta(`#${t}`)).join(" ")}`);
+    printSuccess(`\u5DF2\u4E3A ${brand.primary(projectName)} \u6DFB\u52A0\u6807\u7B7E: ${added.map((t) => import_picocolors25.default.magenta(`#${t}`)).join(" ")}`);
   } else {
     printInfo("\u6807\u7B7E\u5DF2\u5B58\u5728\uFF0C\u65E0\u65B0\u589E");
   }
@@ -17324,7 +17524,7 @@ async function removeTags(tags) {
   if (tags.length === 0) {
     if (existing.length === 1) {
       saveProjectMeta(projectName, { tags: [] });
-      printSuccess(`\u5DF2\u4ECE ${brand.primary(projectName)} \u79FB\u9664\u6807\u7B7E: ${import_picocolors24.default.magenta(`#${existing[0]}`)}`);
+      printSuccess(`\u5DF2\u4ECE ${brand.primary(projectName)} \u79FB\u9664\u6807\u7B7E: ${import_picocolors25.default.magenta(`#${existing[0]}`)}`);
       return;
     }
     Ie(bgOrange(" \u79FB\u9664\u6807\u7B7E "));
@@ -17336,7 +17536,7 @@ async function removeTags(tags) {
       }))
     });
     if (pD(result)) {
-      Se(import_picocolors24.default.dim("\u5DF2\u53D6\u6D88"));
+      Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
       process.exit(0);
     }
     toRemove = result;
@@ -17349,7 +17549,7 @@ async function removeTags(tags) {
   }
   const remaining = existing.filter((t) => !toRemove.includes(t));
   saveProjectMeta(projectName, { tags: remaining });
-  printSuccess(`\u5DF2\u4ECE ${brand.primary(projectName)} \u79FB\u9664\u6807\u7B7E: ${toRemove.map((t) => import_picocolors24.default.magenta(`#${t}`)).join(" ")}`);
+  printSuccess(`\u5DF2\u4ECE ${brand.primary(projectName)} \u79FB\u9664\u6807\u7B7E: ${toRemove.map((t) => import_picocolors25.default.magenta(`#${t}`)).join(" ")}`);
 }
 async function listAllTags() {
   const projects = listProjects();
@@ -17368,12 +17568,12 @@ async function listAllTags() {
   }
   console.log();
   console.log(brand.primary("  \uD83C\uDFF7\uFE0F \u6807\u7B7E\u5217\u8868"));
-  console.log(import_picocolors24.default.dim("  \u2500".repeat(20)));
+  console.log(import_picocolors25.default.dim("  \u2500".repeat(20)));
   console.log();
   for (const [tag, projectNames] of allTags) {
-    console.log("  " + import_picocolors24.default.magenta(`#${tag}`) + import_picocolors24.default.dim(` (${projectNames.length})`));
+    console.log("  " + import_picocolors25.default.magenta(`#${tag}`) + import_picocolors25.default.dim(` (${projectNames.length})`));
     for (const name of projectNames) {
-      console.log(import_picocolors24.default.dim(`    ${name}`));
+      console.log(import_picocolors25.default.dim(`    ${name}`));
     }
     console.log();
   }
@@ -17391,34 +17591,34 @@ async function showCurrentTags() {
     return;
   }
   console.log();
-  console.log(brand.primary(`  ${projectName}`) + import_picocolors24.default.dim(":") + " " + tags.map((t) => import_picocolors24.default.magenta(`#${t}`)).join(" "));
+  console.log(brand.primary(`  ${projectName}`) + import_picocolors25.default.dim(":") + " " + tags.map((t) => import_picocolors25.default.magenta(`#${t}`)).join(" "));
   console.log();
 }
-var tagCommand = new Command("tag").alias("t").alias("tags").description("\u7BA1\u7406\u5F53\u524D\u9879\u76EE\u6807\u7B7E").action(async () => {
+var tagCommand = new Command2("tag").alias("t").alias("tags").description("\u7BA1\u7406\u5F53\u524D\u9879\u76EE\u6807\u7B7E").action(async () => {
   await showCurrentTags();
-}).addCommand(new Command("add").description("\u6DFB\u52A0\u6807\u7B7E\u5230\u5F53\u524D\u9879\u76EE").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0\uFF08\u7A7A\u683C\u5206\u9694\uFF09").action(async (tags) => {
+}).addCommand(new Command2("add").description("\u6DFB\u52A0\u6807\u7B7E\u5230\u5F53\u524D\u9879\u76EE").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0\uFF08\u7A7A\u683C\u5206\u9694\uFF09").action(async (tags) => {
   await addTags(tags || []);
-})).addCommand(new Command("rm").alias("remove").description("\u79FB\u9664\u5F53\u524D\u9879\u76EE\u6807\u7B7E").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0").action(async (tags) => {
+})).addCommand(new Command2("rm").alias("remove").description("\u79FB\u9664\u5F53\u524D\u9879\u76EE\u6807\u7B7E").argument("[tags...]", "\u6807\u7B7E\u540D\u79F0").action(async (tags) => {
   await removeTags(tags || []);
-})).addCommand(new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u6807\u7B7E").action(async () => {
+})).addCommand(new Command2("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u6807\u7B7E").action(async () => {
   await listAllTags();
 }));
 
 // src/commands/template.ts
 import { resolve as resolve4 } from "path";
-var import_fs_extra17 = __toESM(require_lib(), 1);
-var import_picocolors25 = __toESM(require_picocolors(), 1);
+var import_fs_extra18 = __toESM(require_lib(), 1);
+var import_picocolors26 = __toESM(require_picocolors(), 1);
 function buildTemplateOptions(projects) {
   return projects.map((p2) => ({
     value: p2.name,
     label: p2.name,
-    hint: p2.savedTemplate ? import_picocolors25.default.cyan(p2.savedTemplate) : undefined
+    hint: p2.savedTemplate ? import_picocolors26.default.cyan(p2.savedTemplate) : undefined
   }));
 }
-var templateCommand = new Command("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
+var templateCommand = new Command2("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
   if (!action) {
     const config = loadConfig();
-    await import_fs_extra17.default.ensureDir(TEMPLATES_DIR);
+    await import_fs_extra18.default.ensureDir(TEMPLATES_DIR);
     const s = Y2();
     s.start(`\u6B63\u5728\u7528 ${config.ide} \u6253\u5F00\u6A21\u677F\u76EE\u5F55...`);
     try {
@@ -17429,7 +17629,7 @@ var templateCommand = new Command("template").alias("templates").description("\u
       console.log();
       printError(error.message);
       console.log();
-      console.log(import_picocolors25.default.dim("  \u6A21\u677F\u76EE\u5F55: ") + import_picocolors25.default.underline(TEMPLATES_DIR));
+      console.log(import_picocolors26.default.dim("  \u6A21\u677F\u76EE\u5F55: ") + import_picocolors26.default.underline(TEMPLATES_DIR));
       console.log();
       process.exit(1);
     }
@@ -17441,7 +17641,7 @@ var templateCommand = new Command("template").alias("templates").description("\u
     await handleUpdate(target);
   } else {
     printError(`\u672A\u77E5\u64CD\u4F5C: ${action}`);
-    console.log(import_picocolors25.default.dim("  \u652F\u6301\u7684\u64CD\u4F5C: add, update"));
+    console.log(import_picocolors26.default.dim("  \u652F\u6301\u7684\u64CD\u4F5C: add, update"));
     process.exit(1);
   }
 });
@@ -17486,12 +17686,12 @@ async function handleAdd(target, templateNameArg) {
         return filtered.map((p2) => ({
           value: p2.name,
           label: p2.name,
-          hint: p2.savedTemplate ? import_picocolors25.default.cyan(p2.savedTemplate) : undefined
+          hint: p2.savedTemplate ? import_picocolors26.default.cyan(p2.savedTemplate) : undefined
         }));
       }
     });
     if (result === CANCEL) {
-      Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
+      Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
       process.exit(0);
     }
     selectedProject = result;
@@ -17512,19 +17712,19 @@ async function handleAdd(target, templateNameArg) {
             return f.map((p2) => ({
               value: p2.name,
               label: p2.name,
-              hint: p2.savedTemplate ? import_picocolors25.default.cyan(p2.savedTemplate) : undefined
+              hint: p2.savedTemplate ? import_picocolors26.default.cyan(p2.savedTemplate) : undefined
             }));
           },
           initialQuery: selectedProject
         });
         if (pD(result)) {
-          Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
+          Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
           process.exit(0);
         }
         selectedProject = result;
       } else {
         printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${selectedProject}`);
-        console.log(import_picocolors25.default.dim("\u4F7F\u7528 ") + brand.primary("p ls") + import_picocolors25.default.dim(" \u67E5\u770B\u6240\u6709\u9879\u76EE"));
+        console.log(import_picocolors26.default.dim("\u4F7F\u7528 ") + brand.primary("p ls") + import_picocolors26.default.dim(" \u67E5\u770B\u6240\u6709\u9879\u76EE"));
         process.exit(1);
       }
     }
@@ -17546,14 +17746,14 @@ async function resolveTemplateName(project, templateNameArg) {
     return templateNameArg;
   }
   if (project?.savedTemplate) {
-    console.log(import_picocolors25.default.dim("  \u5F53\u524D\u9879\u76EE\u5DF2\u4FDD\u5B58\u4E3A\u6A21\u677F: ") + brand.primary(project.savedTemplate));
-    console.log(import_picocolors25.default.dim("  \u4E0B\u6B21\u53EF\u76F4\u63A5\u8FD0\u884C: ") + brand.primary(`p templates update .`));
+    console.log(import_picocolors26.default.dim("  \u5F53\u524D\u9879\u76EE\u5DF2\u4FDD\u5B58\u4E3A\u6A21\u677F: ") + brand.primary(project.savedTemplate));
+    console.log(import_picocolors26.default.dim("  \u4E0B\u6B21\u53EF\u76F4\u63A5\u8FD0\u884C: ") + brand.primary(`p templates update .`));
     console.log();
     const shouldUpdate = await ye({
       message: `\u662F\u5426\u66F4\u65B0\u6A21\u677F ${project.savedTemplate}\uFF1F`
     });
     if (pD(shouldUpdate) || !shouldUpdate) {
-      Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
+      Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
       return null;
     }
     return project.savedTemplate;
@@ -17563,7 +17763,7 @@ async function resolveTemplateName(project, templateNameArg) {
     placeholder: "my-template"
   });
   if (pD(result)) {
-    Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
+    Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
     return null;
   }
   const name = result.trim();
@@ -17584,24 +17784,24 @@ async function handleUpdate(target) {
   if (target === ".") {
     if (!currentProject?.savedTemplate) {
       printError("\u5F53\u524D\u9879\u76EE\u6CA1\u6709\u5173\u8054\u6A21\u677F");
-      console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p templates add . <\u540D\u79F0>") + import_picocolors25.default.dim(" \u6DFB\u52A0\u4E3A\u6A21\u677F"));
+      console.log(import_picocolors26.default.dim("  \u4F7F\u7528 ") + brand.primary("p templates add . <\u540D\u79F0>") + import_picocolors26.default.dim(" \u6DFB\u52A0\u4E3A\u6A21\u677F"));
       process.exit(1);
     }
     await createOrUpdateTemplate(currentDir, currentProject.savedTemplate, true);
     return;
   }
-  const localTemplates = await import_fs_extra17.default.readdir(TEMPLATES_DIR).catch(() => []);
+  const localTemplates = await import_fs_extra18.default.readdir(TEMPLATES_DIR).catch(() => []);
   const updatableTemplates = [];
   for (const name of localTemplates) {
     const templatePath2 = resolve4(TEMPLATES_DIR, name);
-    const stat = await import_fs_extra17.default.stat(templatePath2);
+    const stat = await import_fs_extra18.default.stat(templatePath2);
     if (stat.isDirectory()) {
       updatableTemplates.push(name);
     }
   }
   if (updatableTemplates.length === 0) {
     printInfo("\u6682\u65E0\u53EF\u66F4\u65B0\u7684\u6A21\u677F");
-    console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p templates add <project>") + import_picocolors25.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
+    console.log(import_picocolors26.default.dim("  \u4F7F\u7528 ") + brand.primary("p templates add <project>") + import_picocolors26.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
     return;
   }
   Ie(bgOrange(" \u66F4\u65B0\u6A21\u677F "));
@@ -17613,7 +17813,7 @@ async function handleUpdate(target) {
     }))
   });
   if (pD(result)) {
-    Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
+    Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
     process.exit(0);
   }
   const selectedTemplate = result;
@@ -17624,7 +17824,7 @@ async function handleUpdate(target) {
     await createOrUpdateTemplate(project.path, selectedTemplate, true);
   } else {
     printError(`\u627E\u4E0D\u5230\u4F7F\u7528\u6A21\u677F ${selectedTemplate} \u7684\u9879\u76EE`);
-    console.log(import_picocolors25.default.dim("  \u6A21\u677F\u76EE\u5F55: ") + import_picocolors25.default.underline(templatePath));
+    console.log(import_picocolors26.default.dim("  \u6A21\u677F\u76EE\u5F55: ") + import_picocolors26.default.underline(templatePath));
     process.exit(1);
   }
 }
@@ -17646,7 +17846,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   copySpinner.start(isUpdate ? "\u6B63\u5728\u66F4\u65B0\u6A21\u677F..." : "\u6B63\u5728\u590D\u5236\u6587\u4EF6\u5230\u6A21\u677F\u76EE\u5F55...");
   try {
     if (isUpdate) {
-      await import_fs_extra17.default.emptyDir(targetPath);
+      await import_fs_extra18.default.emptyDir(targetPath);
     }
     await copyFiles(sourcePath, targetPath, files);
     copySpinner.stop(`${brand.success("\u2713")} \u6A21\u677F${isUpdate ? "\u5DF2\u66F4\u65B0" : "\u5DF2\u521B\u5EFA"}: ${brand.primary(templateName)}`);
@@ -17660,13 +17860,13 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   console.log();
   Se(brand.success(`\u2713 \u6A21\u677F${isUpdate ? "\u66F4\u65B0" : "\u6DFB\u52A0"}\u6210\u529F: ${brand.primary(templateName)}`));
   console.log();
-  console.log(import_picocolors25.default.dim("  \u6A21\u677F\u4F4D\u7F6E: ") + import_picocolors25.default.underline(targetPath));
+  console.log(import_picocolors26.default.dim("  \u6A21\u677F\u4F4D\u7F6E: ") + import_picocolors26.default.underline(targetPath));
   console.log();
 }
 
 // src/commands/unzip.ts
 var import_adm_zip = __toESM(require_adm_zip(), 1);
-var import_fs_extra18 = __toESM(require_lib(), 1);
+var import_fs_extra19 = __toESM(require_lib(), 1);
 
 // node_modules/glob/dist/esm/index.min.js
 import { fileURLToPath as Wi } from "url";
@@ -20957,9 +21157,9 @@ var Ze = Object.assign(Je, { glob: Je, globSync: ts, sync: Ui, globStream: Qe, s
 Ze.glob = Ze;
 
 // src/commands/unzip.ts
-var import_picocolors26 = __toESM(require_picocolors(), 1);
+var import_picocolors27 = __toESM(require_picocolors(), 1);
 import { basename as basename4, dirname as dirname3, join as join9, parse } from "path";
-var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
+var unzipCommand = new Command2("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
   let cwd;
   if (!project || project === ".") {
     cwd = process.cwd();
@@ -20982,7 +21182,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   }
   Ie(bgOrange(" \u89E3\u538B zip \u6587\u4EF6 "));
   console.log();
-  console.log(import_picocolors26.default.dim(`  \u627E\u5230 ${zipFiles.length} \u4E2A zip \u6587\u4EF6:`));
+  console.log(import_picocolors27.default.dim(`  \u627E\u5230 ${zipFiles.length} \u4E2A zip \u6587\u4EF6:`));
   for (const file of zipFiles) {
     console.log(`  ${brand.secondary("\u2022")} ${basename4(file)}`);
   }
@@ -20996,30 +21196,30 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
     try {
       const zipName = parse(zipFile).name;
       const destDir = join9(dirname3(zipFile), zipName);
-      if (await import_fs_extra18.default.pathExists(destDir)) {
-        await import_fs_extra18.default.remove(destDir);
+      if (await import_fs_extra19.default.pathExists(destDir)) {
+        await import_fs_extra19.default.remove(destDir);
       }
       const tempDir = `${destDir}.tmp`;
       const zip = new import_adm_zip.default(zipFile);
       zip.extractAllTo(tempDir, true);
       if (options?.flatten) {
-        const entries = await import_fs_extra18.default.readdir(tempDir);
+        const entries = await import_fs_extra19.default.readdir(tempDir);
         if (entries.length === 1) {
           const singleEntry = join9(tempDir, entries[0]);
-          const stat = await import_fs_extra18.default.stat(singleEntry);
+          const stat = await import_fs_extra19.default.stat(singleEntry);
           if (stat.isDirectory()) {
-            await import_fs_extra18.default.move(singleEntry, destDir);
-            await import_fs_extra18.default.remove(tempDir);
+            await import_fs_extra19.default.move(singleEntry, destDir);
+            await import_fs_extra19.default.remove(tempDir);
           } else {
-            await import_fs_extra18.default.move(tempDir, destDir);
+            await import_fs_extra19.default.move(tempDir, destDir);
           }
         } else {
-          await import_fs_extra18.default.move(tempDir, destDir);
+          await import_fs_extra19.default.move(tempDir, destDir);
         }
       } else {
-        await import_fs_extra18.default.move(tempDir, destDir);
+        await import_fs_extra19.default.move(tempDir, destDir);
       }
-      await import_fs_extra18.default.remove(zipFile);
+      await import_fs_extra19.default.remove(zipFile);
       successCount++;
       console.log(`  ${brand.success("\u2713")} ${relativePath} \u2192 ${zipName}/`);
     } catch (error) {
@@ -21038,7 +21238,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
 });
 
 // src/commands/update.ts
-var import_picocolors27 = __toESM(require_picocolors(), 1);
+var import_picocolors28 = __toESM(require_picocolors(), 1);
 import { dirname as dirname4, join as join10, resolve as resolve5 } from "path";
 import { fileURLToPath } from "url";
 import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
@@ -21069,11 +21269,11 @@ function findPDir() {
   }
   return null;
 }
-var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u65B0 p \u5230\u6700\u65B0\u7248\u672C").action(async () => {
+var updateCommand = new Command2("update").alias("upgrade").description("\u66F4\u65B0 p \u5230\u6700\u65B0\u7248\u672C").action(async () => {
   const pDir = findPDir();
   const currentVersion = pDir ? getVersion(pDir) : "unknown";
   Ie(bgOrange(" \u66F4\u65B0 p "));
-  console.log(import_picocolors27.default.dim("  \u5F53\u524D\u7248\u672C: ") + brand.primary(currentVersion));
+  console.log(import_picocolors28.default.dim("  \u5F53\u524D\u7248\u672C: ") + brand.primary(currentVersion));
   console.log();
   const s = Y2();
   s.start("\u6B63\u5728\u66F4\u65B0...");
@@ -21092,7 +21292,7 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
   const newVersion = newDir ? getVersion(newDir) : "unknown";
   console.log();
   if (newVersion !== "unknown" && newVersion !== currentVersion) {
-    Se(brand.success("p \u5DF2\u66F4\u65B0: ") + import_picocolors27.default.dim(currentVersion) + brand.success(" \u2192 ") + brand.primary(newVersion));
+    Se(brand.success("p \u5DF2\u66F4\u65B0: ") + import_picocolors28.default.dim(currentVersion) + brand.success(" \u2192 ") + brand.primary(newVersion));
   } else {
     Se(brand.success("p \u5DF2\u662F\u6700\u65B0\u7248\u672C"));
   }
@@ -21102,7 +21302,7 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
 var __dirname2 = dirname5(fileURLToPath2(import.meta.url));
 var pkgPath = join11(__dirname2, "..", "package.json");
 var pkg = JSON.parse(readFileSync3(pkgPath, "utf-8"));
-var program2 = new Command;
+var program2 = new Command2;
 await ensureInitialized();
 program2.name("p").description(brand.primary("\u26A1 P - \u9879\u76EE\u7BA1\u7406\u5DE5\u5177")).version(pkg.version);
 program2.addCommand(addCommand);
@@ -21113,6 +21313,7 @@ program2.addCommand(lsCommand);
 program2.addCommand(openCommand);
 program2.addCommand(deleteCommand);
 program2.addCommand(renameCommand);
+program2.addCommand(recentCommand);
 program2.addCommand(projectCommand);
 program2.addCommand(runCommand);
 program2.addCommand(importCommand);
