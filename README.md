@@ -33,6 +33,7 @@ p update
 |------|------|
 | `p new <name>` | 创建新项目 |
 | `p new -- <command>` | 在项目目录执行 CLI 初始化（如框架脚手架） |
+| `p new -- <alias> <name>` | 使用 config.yaml 中配置的快捷方式初始化 |
 | `p new -d "描述"` | AI 生成项目名称 |
 | `p clone <url> [name]` | 克隆远程仓库到 p 管理 |
 | `p copy <path> [name]` | 复制目录作为新项目 |
@@ -232,6 +233,11 @@ apiKey: your-api-key
 ai:
   model: glm-4.7-flash  # GLM 模型
   count: 5              # 生成名称数量（5-20）
+
+# 命令快捷方式（用于 p new -- <别名> <项目名>）
+shortcuts:
+  heroui: npx -y heroui-cli@latest init
+  next: npx -y create-next-app@latest
 
 # Hooks 定义
 hooks:

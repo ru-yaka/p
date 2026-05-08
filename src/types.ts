@@ -34,6 +34,7 @@ export interface Config {
 	ai?: AIConfig;
 	hooks: Record<string, HookDefinition>;
 	templates: Record<string, TemplateConfig>;
+	shortcuts?: Record<string, string>;
 }
 
 /**

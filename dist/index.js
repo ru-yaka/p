@@ -16536,10 +16536,20 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
   const ddIdx = rawArgs.indexOf("--");
   const newIdx = rawArgs.lastIndexOf("new");
   if (ddIdx !== -1 && ddIdx > newIdx) {
-    const cmd = rawArgs.slice(ddIdx + 1).join(" ");
+    let cmd = rawArgs.slice(ddIdx + 1).join(" ");
     if (!cmd) {
       printError("-- \u540E\u9700\u8981\u63D0\u4F9B\u547D\u4EE4");
       process.exit(1);
+    }
+    const config2 = loadConfig();
+    const tokens = rawArgs.slice(ddIdx + 1);
+    const alias = config2.shortcuts?.[tokens[0]];
+    if (alias) {
+      const remaining = tokens.slice(1).join(" ");
+      cmd = remaining ? `${alias} ${remaining}` : alias;
+      console.log();
+      console.log(import_picocolors18.default.dim("  \u522B\u540D: ") + brand.primary(tokens[0]) + import_picocolors18.default.dim(` \u2192 ${cmd}`));
+      console.log(import_picocolors18.default.dim("  \u914D\u7F6E: ") + import_picocolors18.default.underline(CONFIG_PATH));
     }
     console.log();
     console.log(import_picocolors18.default.dim("  \u5DE5\u4F5C\u76EE\u5F55: ") + import_picocolors18.default.underline(PROJECTS_DIR));
@@ -16562,16 +16572,16 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     }
     console.log();
     if (newProjects.length > 0) {
-      const config2 = loadConfig();
+      const config3 = loadConfig();
       for (const n of newProjects) {
         console.log(`  ${brand.success("\u2713")} \u5DF2\u6CE8\u518C\u9879\u76EE: ${brand.primary(n)}`);
       }
       const firstProject = getProjectPath(newProjects[0]);
       const s2 = Y2();
-      s2.start(`\u6B63\u5728\u6253\u5F00 ${config2.ide}...`);
+      s2.start(`\u6B63\u5728\u6253\u5F00 ${config3.ide}...`);
       try {
-        await openWithIDE(config2.ide, firstProject);
-        s2.stop(`${config2.ide} \u5DF2\u6253\u5F00`);
+        await openWithIDE(config3.ide, firstProject);
+        s2.stop(`${config3.ide} \u5DF2\u6253\u5F00`);
       } catch (error) {
         s2.stop("\u6253\u5F00\u5931\u8D25");
         printError(error.message);

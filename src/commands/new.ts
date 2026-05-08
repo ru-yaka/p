@@ -18,7 +18,7 @@ import {
 	getTemplateChoices,
 } from "../core/template";
 import { execInDir, openWithIDE } from "../utils/shell";
-import { PROJECTS_DIR } from "../utils/paths";
+import { PROJECTS_DIR, CONFIG_PATH } from "../utils/paths";
 import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 import { LLMError, generateProjectNames } from "../utils/llm";
 import { selectOrInput, CANCEL } from "../utils/select-or-input";
@@ -45,10 +45,22 @@ export const newCommand = new Command("new")
 			const newIdx = rawArgs.lastIndexOf("new");
 
 			if (ddIdx !== -1 && ddIdx > newIdx) {
-				const cmd = rawArgs.slice(ddIdx + 1).join(" ");
+				let cmd = rawArgs.slice(ddIdx + 1).join(" ");
 				if (!cmd) {
 					printError("-- 后需要提供命令");
 					process.exit(1);
+				}
+
+				// 检测别名：第一个 token 匹配 config.shortcuts
+				const config = loadConfig();
+				const tokens = rawArgs.slice(ddIdx + 1);
+				const alias = config.shortcuts?.[tokens[0]];
+				if (alias) {
+					const remaining = tokens.slice(1).join(" ");
+					cmd = remaining ? `${alias} ${remaining}` : alias;
+					console.log();
+					console.log(pc.dim("  别名: ") + brand.primary(tokens[0]) + pc.dim(` → ${cmd}`));
+					console.log(pc.dim("  配置: ") + pc.underline(CONFIG_PATH));
 				}
 
 				console.log();

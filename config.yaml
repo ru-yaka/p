@@ -11,6 +11,11 @@ ai:
   model: glm-4.7-flash # GLM 模型
   count: 5 # 生成名称数量（5-20）
 
+# 命令快捷方式（用于 p new -- <别名> <项目名>）
+#shortcuts:
+#  heroui: npx -y heroui-cli@latest init
+#  next: npx -y create-next-app@latest
+
 # Hooks 定义（在根节点声明，供模板引用）
 # 每个 hook 可以使用 command（命令）或 file（脚本文件名，必须是 .js）
 hooks:
