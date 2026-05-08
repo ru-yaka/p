@@ -1,7 +1,18 @@
 import pc from "picocolors";
 
 /**
- * 模糊匹配项目（子串匹配项目名、模板名或标签）
+ * 子序列匹配：query 的每个字符按顺序出现在 target 中
+ */
+function isSubsequence(query: string, target: string): boolean {
+	let qi = 0;
+	for (let ti = 0; ti < target.length && qi < query.length; ti++) {
+		if (query[qi] === target[ti]) qi++;
+	}
+	return qi === query.length;
+}
+
+/**
+ * 模糊匹配项目（子串 + 子序列匹配项目名、模板名或标签）
  */
 export function filterProjects<
 	T extends { name: string; template?: string; tags?: string[] },
@@ -11,7 +22,8 @@ export function filterProjects<
 		(p) =>
 			p.name.toLowerCase().includes(q) ||
 			(p.template && p.template.toLowerCase().includes(q)) ||
-			(p.tags && p.tags.some((tag) => tag.toLowerCase().includes(q))),
+			(p.tags && p.tags.some((tag) => tag.toLowerCase().includes(q))) ||
+			isSubsequence(q, p.name.toLowerCase()),
 	);
 }
 

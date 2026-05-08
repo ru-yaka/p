@@ -15435,9 +15435,17 @@ async function liveSearch(opts) {
 
 // src/utils/project-search.ts
 var import_picocolors10 = __toESM(require_picocolors(), 1);
+function isSubsequence(query, target) {
+  let qi = 0;
+  for (let ti = 0;ti < target.length && qi < query.length; ti++) {
+    if (query[qi] === target[ti])
+      qi++;
+  }
+  return qi === query.length;
+}
 function filterProjects(projects, query) {
   const q2 = query.toLowerCase();
-  return projects.filter((p2) => p2.name.toLowerCase().includes(q2) || p2.template && p2.template.toLowerCase().includes(q2) || p2.tags && p2.tags.some((tag) => tag.toLowerCase().includes(q2)));
+  return projects.filter((p2) => p2.name.toLowerCase().includes(q2) || p2.template && p2.template.toLowerCase().includes(q2) || p2.tags && p2.tags.some((tag) => tag.toLowerCase().includes(q2)) || isSubsequence(q2, p2.name.toLowerCase()));
 }
 function projectHint(p2) {
   if (p2.note) {
