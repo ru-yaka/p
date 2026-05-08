@@ -15613,7 +15613,18 @@ var deleteCommand = new Command("delete").alias("d").alias("rm").description("\u
   if (name && name.includes("*")) {
     const matched = wildcardMatch(projects, name);
     if (matched.length === 0) {
+      const keyword = name.replace(/\*/g, "");
+      const similar = keyword ? filterProjects(projects, keyword).map((p2) => p2.name) : [];
       printError(`\u6CA1\u6709\u5339\u914D '${name}' \u7684\u9879\u76EE`);
+      if (similar.length > 0) {
+        console.log();
+        console.log(import_picocolors11.default.dim("  \u4F60\u662F\u4E0D\u662F\u60F3\u5220:"));
+        for (const n of similar) {
+          console.log(`    ${brand.secondary("\u2022")} ${n}`);
+        }
+        console.log();
+        console.log(import_picocolors11.default.dim("  \u4F7F\u7528 ") + brand.primary(`p delete ${similar.length > 1 ? similar[0].replace(/-.+$/, "") + "-*" : similar[0]}`) + import_picocolors11.default.dim(" \u5220\u9664"));
+      }
       process.exit(1);
     }
     Ie(bgOrange(" \u6279\u91CF\u5220\u9664 "));
