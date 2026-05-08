@@ -43,6 +43,10 @@ p update
 | `p open :<ide>` | 快速用指定 IDE 打开当前目录 |
 | `p rename [old] [new]` | 重命名项目 |
 | `p delete <name>` | 删除项目 |
+| `p delete` | 多选批量删除 |
+| `p delete <pattern*>` | 通配符匹配删除（如 `p delete test-*`） |
+| `p note <project> <text>` | 设置项目备注 |
+| `p note <project> --clear` | 清除备注 |
 | `p templates` | 管理模板 |
 | `p hooks` | 管理 hooks |
 | `p config` | 打开配置文件 |
@@ -162,6 +166,40 @@ AI 命名功能支持：
 - 边输入边筛选
 - ↑↓ 选择，Enter 确认
 - Esc 取消
+
+## 项目备注
+
+为项目添加备注，在搜索和列表中显示，方便区分同名项目：
+
+```bash
+# 设置备注
+p note heroui-v3-pro-test "原生版测试"
+p note . "当前项目的备注"
+
+# 交互输入
+p note heroui-v3-pro-test
+
+# 清除备注
+p note heroui-v3-pro-test --clear
+
+# 查看当前项目备注
+p note
+```
+
+备注会显示在：
+- `p open` / `p delete` 搜索列表的 hint 中
+- `p ls` 项目列表中
+
+## 批量删除
+
+```bash
+# 多选模式：空格勾选，Enter 确认
+p delete
+
+# 通配符匹配
+p delete heroui-*
+p delete *-test
+```
 
 ## 模板管理
 
