@@ -3,14 +3,14 @@ import { Writable } from "node:stream";
 import { Command } from "commander";
 import fse from "fs-extra";
 import pc from "picocolors";
-import { confirm, spinner } from "@clack/prompts";
+import { confirm } from "@clack/prompts";
 // @ts-expect-error — sisteransi is a transitive dep of @clack/prompts
 import { cursor as ansiCursor } from "sisteransi";
 
 import { deleteProjectMeta, getProjectPath, listProjects } from "../core/project";
 import { openWithIDE } from "../utils/shell";
 import { loadConfig } from "../core/config";
-import { bgOrange, brand, formatRelativeTime, printError, printInfo } from "../utils/ui";
+import { brand, formatRelativeTime, printInfo } from "../utils/ui";
 
 const MAX_VISIBLE = 10;
 
@@ -53,6 +53,7 @@ export const recentCommand = new Command("recent")
 		let blockHeight = 0;
 		let done = false;
 		let currentProjects = recent;
+		let mode: "list" | "confirm" | "deleting" = "list";
 
 		function render() {
 			const parts: string[] = [];
@@ -74,7 +75,6 @@ export const recentCommand = new Command("recent")
 				const p = visible[i];
 				const marker = isSelected ? brand.primary("◉") : pc.dim("○");
 				const name = isSelected ? brand.bold(p.name) : p.name;
-
 				const time = pc.dim(`  ${formatRelativeTime(p.modifiedAt)}`);
 				const note = p.note ? pc.dim(` — ${p.note}`) : "";
 				const tpl = p.template ? ` ${pc.cyan(`[${p.template}]`)}` : "";
@@ -82,15 +82,15 @@ export const recentCommand = new Command("recent")
 				lines.push(`  ${brand.secondary("│")} ${marker} ${name}${tpl}${note}${time}`);
 			}
 
-			if (currentProjects.length > MAX_VISIBLE) {
-				const remaining = currentProjects.length - scrollOffset - MAX_VISIBLE;
-				if (remaining > 0) {
-					lines.push(`  ${brand.secondary("│")}   ${pc.dim(`... 还有 ${remaining} 个`)}`);
-				}
+			// 底部提示：根据模式变化
+			if (mode === "list") {
+				lines.push(`  ${brand.secondary("└")} ${pc.dim("j/k 移动 · o 打开 · d 删除 · q 退出")}`);
+			} else if (mode === "confirm") {
+				const p = currentProjects[selectedIndex];
+				lines.push(`  ${brand.secondary("└")} ${pc.yellow(`确认删除 ${p?.name}？`)} ${pc.inverse(" Y ")}/n`);
+			} else if (mode === "deleting") {
+				lines.push(`  ${brand.secondary("└")} ${pc.dim("正在删除...")}`);
 			}
-
-			// 底部提示
-			lines.push(`  ${brand.secondary("└")} ${pc.dim("j/k 移动 · o 打开 · d 删除 · q 退出")}`);
 
 			for (const line of lines) {
 				parts.push(line + "\x1b[K\n");
@@ -140,61 +140,42 @@ export const recentCommand = new Command("recent")
 			const project = currentProjects[selectedIndex];
 			if (!project) return;
 
-			// 清除列表，显示操作
 			clearBlock();
 			blockHeight = 0;
 
-			const s = spinner();
-			s.start(`正在打开 ${project.name}...`);
+			stdout.write(`  ${brand.success("✓")} 正在打开 ${brand.primary(project.name)}...\n`);
+
 			try {
 				await openWithIDE(config.ide, project.path);
-				s.stop(`${brand.success("✓")} 已打开: ${brand.primary(project.name)}`);
 			} catch (error) {
-				s.stop("打开失败");
-				printError((error as Error).message);
+				stdout.write(`  ${pc.red("✗")} ${(error as Error).message}\n`);
 			}
 
 			cleanup();
 		}
 
-		async function handleDelete() {
+		async function handleDeleteConfirm() {
 			const project = currentProjects[selectedIndex];
 			if (!project) return;
 
-			// 暂停 raw mode 进行确认
-			stdin.setRawMode(false);
-			stdin.pause();
-			stdin.removeListener("keypress", onKey);
+			mode = "deleting";
+			render();
 
-			// 清除列表，显示确认
-			clearBlock();
-			blockHeight = 0;
-
-			const shouldDelete = await confirm({
-				message: `确定删除 ${brand.primary(project.name)} 吗？`,
-				initialValue: false,
-			});
-
-			if (shouldDelete && !readline.isCancel(shouldDelete)) {
-				const s = spinner();
-				s.start(`正在删除 ${project.name}...`);
-				try {
-					await fse.remove(project.path);
-					deleteProjectMeta(project.name);
-					s.stop(`${brand.success("✓")} 已删除: ${brand.primary(project.name)}`);
-
-					// 从列表移除
-					currentProjects.splice(selectedIndex, 1);
-					if (selectedIndex >= currentProjects.length) {
-						selectedIndex = Math.max(0, currentProjects.length - 1);
-					}
-				} catch (error) {
-					s.stop("删除失败");
-					printError((error as Error).message);
+			try {
+				await fse.remove(project.path);
+				deleteProjectMeta(project.name);
+				currentProjects.splice(selectedIndex, 1);
+				if (selectedIndex >= currentProjects.length) {
+					selectedIndex = Math.max(0, currentProjects.length - 1);
 				}
+				scrollSelectedIntoView();
+			} catch (error) {
+				// 删除失败，保持列表不变
 			}
 
 			if (currentProjects.length === 0) {
+				clearBlock();
+				blockHeight = 0;
 				cleanup();
 				console.log();
 				printInfo("已无项目");
@@ -202,15 +183,31 @@ export const recentCommand = new Command("recent")
 				return;
 			}
 
-			// 恢复 raw mode，重新渲染列表
-			stdin.setRawMode(true);
-			stdin.resume();
-			stdin.on("keypress", onKey);
+			mode = "list";
 			render();
 		}
 
 		function onKey(_char: string, key: readline.Key) {
 			if (done) return;
+
+			// confirm 模式下的按键处理
+			if (mode === "confirm") {
+				if (key.name === "escape" || key.name === "q" || key.sequence === "\x03") {
+					mode = "list";
+					render();
+					return;
+				}
+				if (key.name === "return" || key.name === "y") {
+					handleDeleteConfirm();
+					return;
+				}
+				if (key.name === "n") {
+					mode = "list";
+					render();
+					return;
+				}
+				return;
+			}
 
 			if (key.sequence === "\x03" || key.name === "q" || key.name === "escape") {
 				clearBlock();
@@ -234,8 +231,8 @@ export const recentCommand = new Command("recent")
 					handleOpen();
 					return;
 				case "d":
-					handleDelete();
-					return;
+					mode = "confirm";
+					break;
 				default:
 					return;
 			}

@@ -17286,6 +17286,7 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
   let blockHeight = 0;
   let done = false;
   let currentProjects = recent;
+  let mode = "list";
   function render() {
     const parts = [];
     if (blockHeight > 0)
@@ -17306,13 +17307,14 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
       const tpl = p2.template ? ` ${import_picocolors23.default.cyan(`[${p2.template}]`)}` : "";
       lines.push(`  ${brand.secondary("\u2502")} ${marker} ${name}${tpl}${note}${time}`);
     }
-    if (currentProjects.length > MAX_VISIBLE3) {
-      const remaining = currentProjects.length - scrollOffset - MAX_VISIBLE3;
-      if (remaining > 0) {
-        lines.push(`  ${brand.secondary("\u2502")}   ${import_picocolors23.default.dim(`... \u8FD8\u6709 ${remaining} \u4E2A`)}`);
-      }
+    if (mode === "list") {
+      lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors23.default.dim("j/k \u79FB\u52A8 \xB7 o \u6253\u5F00 \xB7 d \u5220\u9664 \xB7 q \u9000\u51FA")}`);
+    } else if (mode === "confirm") {
+      const p2 = currentProjects[selectedIndex];
+      lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors23.default.yellow(`\u786E\u8BA4\u5220\u9664 ${p2?.name}\uFF1F`)} ${import_picocolors23.default.inverse(" Y ")}/n`);
+    } else if (mode === "deleting") {
+      lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors23.default.dim("\u6B63\u5728\u5220\u9664...")}`);
     }
-    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors23.default.dim("j/k \u79FB\u52A8 \xB7 o \u6253\u5F00 \xB7 d \u5220\u9664 \xB7 q \u9000\u51FA")}`);
     for (const line of lines) {
       parts.push(line + `\x1B[K
 `);
@@ -17360,61 +17362,63 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
       return;
     clearBlock();
     blockHeight = 0;
-    const s = Y2();
-    s.start(`\u6B63\u5728\u6253\u5F00 ${project.name}...`);
+    stdout.write(`  ${brand.success("\u2713")} \u6B63\u5728\u6253\u5F00 ${brand.primary(project.name)}...
+`);
     try {
       await openWithIDE(config.ide, project.path);
-      s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5F00: ${brand.primary(project.name)}`);
     } catch (error) {
-      s.stop("\u6253\u5F00\u5931\u8D25");
-      printError(error.message);
+      stdout.write(`  ${import_picocolors23.default.red("\u2717")} ${error.message}
+`);
     }
     cleanup();
   }
-  async function handleDelete() {
+  async function handleDeleteConfirm() {
     const project = currentProjects[selectedIndex];
     if (!project)
       return;
-    stdin.setRawMode(false);
-    stdin.pause();
-    stdin.removeListener("keypress", onKey);
-    clearBlock();
-    blockHeight = 0;
-    const shouldDelete = await ye({
-      message: `\u786E\u5B9A\u5220\u9664 ${brand.primary(project.name)} \u5417\uFF1F`,
-      initialValue: false
-    });
-    if (shouldDelete && !readline3.isCancel(shouldDelete)) {
-      const s = Y2();
-      s.start(`\u6B63\u5728\u5220\u9664 ${project.name}...`);
-      try {
-        await import_fs_extra17.default.remove(project.path);
-        deleteProjectMeta(project.name);
-        s.stop(`${brand.success("\u2713")} \u5DF2\u5220\u9664: ${brand.primary(project.name)}`);
-        currentProjects.splice(selectedIndex, 1);
-        if (selectedIndex >= currentProjects.length) {
-          selectedIndex = Math.max(0, currentProjects.length - 1);
-        }
-      } catch (error) {
-        s.stop("\u5220\u9664\u5931\u8D25");
-        printError(error.message);
+    mode = "deleting";
+    render();
+    try {
+      await import_fs_extra17.default.remove(project.path);
+      deleteProjectMeta(project.name);
+      currentProjects.splice(selectedIndex, 1);
+      if (selectedIndex >= currentProjects.length) {
+        selectedIndex = Math.max(0, currentProjects.length - 1);
       }
-    }
+      scrollSelectedIntoView();
+    } catch (error) {}
     if (currentProjects.length === 0) {
+      clearBlock();
+      blockHeight = 0;
       cleanup();
       console.log();
       printInfo("\u5DF2\u65E0\u9879\u76EE");
       console.log();
       return;
     }
-    stdin.setRawMode(true);
-    stdin.resume();
-    stdin.on("keypress", onKey);
+    mode = "list";
     render();
   }
   function onKey(_char, key) {
     if (done)
       return;
+    if (mode === "confirm") {
+      if (key.name === "escape" || key.name === "q" || key.sequence === "\x03") {
+        mode = "list";
+        render();
+        return;
+      }
+      if (key.name === "return" || key.name === "y") {
+        handleDeleteConfirm();
+        return;
+      }
+      if (key.name === "n") {
+        mode = "list";
+        render();
+        return;
+      }
+      return;
+    }
     if (key.sequence === "\x03" || key.name === "q" || key.name === "escape") {
       clearBlock();
       blockHeight = 0;
@@ -17438,8 +17442,8 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
         handleOpen();
         return;
       case "d":
-        handleDelete();
-        return;
+        mode = "confirm";
+        break;
       default:
         return;
     }
