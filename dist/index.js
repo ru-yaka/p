@@ -15290,7 +15290,7 @@ async function liveSearch(opts) {
     if (remaining > 0) {
       lines.push(`  ${brand.secondary("\u2502")}   ${import_picocolors9.default.dim(`... \u8FD8\u6709 ${remaining} \u4E2A`)}`);
     }
-    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim("\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4 \xB7 Esc \u53D6\u6D88")}`);
+    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim("\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4 \xB7 a \u5168\u90E8\u6253\u5F00 \xB7 Esc \u53D6\u6D88")}`);
     for (const line of lines) {
       parts.push(line + `\x1B[K
 `);
@@ -15329,7 +15329,7 @@ async function liveSearch(opts) {
 `);
       stdout.write(parts.join(""));
       cleanup();
-      resolve3(value);
+      resolve3([value]);
     }
     function doCancel() {
       const parts = [];
@@ -15362,6 +15362,23 @@ async function liveSearch(opts) {
         }
         case "escape": {
           doCancel();
+          return;
+        }
+        case "a": {
+          if (state.filtered.length > 0) {
+            const parts = [];
+            parts.push(import_sisteransi3.cursor.up(blockHeight));
+            for (let i = 0;i < blockHeight; i++) {
+              parts.push(`\x1B[K
+`);
+            }
+            parts.push(import_sisteransi3.cursor.up(blockHeight));
+            parts.push(`  ${brand.success("\u25C6")} ${opts.message} ${import_picocolors9.default.dim(`\u6253\u5F00\u5168\u90E8 ${state.filtered.length} \u4E2A`)}
+`);
+            stdout.write(parts.join(""));
+            cleanup();
+            resolve3(state.filtered.map((f) => f.value));
+          }
           return;
         }
         case "backspace": {
@@ -15488,7 +15505,7 @@ async function searchAndSelectDelete(projects, initialQuery) {
     Se(import_picocolors11.default.dim("\u5DF2\u53D6\u6D88"));
     process.exit(0);
   }
-  return result;
+  return result[0];
 }
 function wildcardMatch(projects, pattern) {
   const regexStr = `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`;
@@ -16947,21 +16964,36 @@ var openCommand = new Command2("open").alias("o").description("\u6253\u5F00\u987
     console.log();
     return;
   }
-  let projectName = name;
-  if (!projectName) {
-    projectName = await searchAndSelect(projects);
-  } else if (!projectExists(projectName)) {
-    const filtered = filterProjects(projects, projectName);
+  let projectNames;
+  if (!name) {
+    projectNames = await searchAndSelect(projects);
+  } else if (!projectExists(name)) {
+    const filtered = filterProjects(projects, name);
     if (filtered.length === 1) {
-      projectName = filtered[0].name;
+      projectNames = [filtered[0].name];
     } else if (filtered.length > 1) {
-      projectName = await searchAndSelect(projects, projectName);
+      projectNames = await searchAndSelect(projects, name);
     } else {
-      printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${projectName}`);
+      printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${name}`);
       console.log(import_picocolors20.default.dim("\u4F7F\u7528 ") + brand.primary("p ls") + import_picocolors20.default.dim(" \u67E5\u770B\u6240\u6709\u9879\u76EE"));
       process.exit(1);
     }
+  } else {
+    projectNames = [name];
   }
+  const ide = options?.ide || config.ide;
+  if (projectNames.length > 1) {
+    for (const pName of projectNames) {
+      try {
+        await openWithIDE(ide, getProjectPath(pName));
+        console.log(`${brand.success("\u2713")} \u5DF2\u6253\u5F00: ${brand.primary(pName)}`);
+      } catch (error) {
+        printError(`${pName}: ${error.message}`);
+      }
+    }
+    return;
+  }
+  const projectName = projectNames[0];
   const projectPath = getProjectPath(projectName);
   const currentDir = process.cwd();
   if (projectPath === currentDir) {
@@ -16991,7 +17023,6 @@ var openCommand = new Command2("open").alias("o").description("\u6253\u5F00\u987
     }
   }
   const s = Y2();
-  const ide = options?.ide || config.ide;
   s.start(`\u6B63\u5728\u6253\u5F00...`);
   try {
     const { resolved } = await openWithIDE(ide, projectPath, !!options?.ide);
@@ -17694,7 +17725,7 @@ async function handleAdd(target, templateNameArg) {
       Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
       process.exit(0);
     }
-    selectedProject = result;
+    selectedProject = result[0];
   } else {
     if (!projectExists(selectedProject)) {
       const filtered = filterProjects(projects, selectedProject);
@@ -17721,7 +17752,7 @@ async function handleAdd(target, templateNameArg) {
           Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
           process.exit(0);
         }
-        selectedProject = result;
+        selectedProject = result[0];
       } else {
         printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${selectedProject}`);
         console.log(import_picocolors26.default.dim("\u4F7F\u7528 ") + brand.primary("p ls") + import_picocolors26.default.dim(" \u67E5\u770B\u6240\u6709\u9879\u76EE"));

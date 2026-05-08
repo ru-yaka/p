@@ -25,12 +25,12 @@ import {
 import { brand, printError, printInfo } from "../utils/ui";
 
 /**
- * 搜索并选择项目（实时搜索）
+ * 搜索并选择项目（实时搜索），支持 a 键全部打开
  */
 async function searchAndSelect(
 	projects: ReturnType<typeof listProjects>,
 	initialQuery?: string,
-): Promise<string> {
+): Promise<string[]> {
 	const options = projects.map((p) => ({
 		value: p.name,
 		label: p.name,
@@ -58,7 +58,7 @@ async function searchAndSelect(
 		process.exit(0);
 	}
 
-	return result as string;
+	return result as string[];
 }
 
 export const openCommand = new Command("open")
@@ -76,7 +76,6 @@ export const openCommand = new Command("open")
 			s.start(`正在查找 ${ide}...`);
 
 			try {
-				// 用户手动指定，启用模糊匹配
 				const { resolved } = await openWithIDE(ide, process.cwd(), true);
 				s.stop(`${brand.success("✓")} 已用 ${brand.primary(resolved)} 打开当前目录`);
 			} catch (error) {
@@ -94,7 +93,6 @@ export const openCommand = new Command("open")
 			s.start(`正在打开...`);
 
 			try {
-				// 只有用户手动指定 -i 时才模糊匹配
 				const { resolved } = await openWithIDE(ide, process.cwd(), !!options?.ide);
 				s.stop(`${brand.success("✓")} 已用 ${brand.primary(resolved)} 打开当前目录`);
 			} catch (error) {
@@ -114,21 +112,18 @@ export const openCommand = new Command("open")
 			return;
 		}
 
-		let projectName = name;
+		let projectNames: string[];
 
-		if (!projectName) {
-			// 无参数 → 实时搜索
-			projectName = await searchAndSelect(projects);
-		} else if (!projectExists(projectName)) {
-			// 名称不精确匹配 → 尝试模糊搜索
-			const filtered = filterProjects(projects, projectName);
+		if (!name) {
+			projectNames = await searchAndSelect(projects);
+		} else if (!projectExists(name)) {
+			const filtered = filterProjects(projects, name);
 			if (filtered.length === 1) {
-				projectName = filtered[0].name;
+				projectNames = [filtered[0].name];
 			} else if (filtered.length > 1) {
-				// 多个匹配 → 打开实时搜索，预填关键词
-				projectName = await searchAndSelect(projects, projectName);
+				projectNames = await searchAndSelect(projects, name);
 			} else {
-				printError(`项目不存在: ${projectName}`);
+				printError(`项目不存在: ${name}`);
 				console.log(
 					pc.dim("使用 ") +
 						brand.primary("p ls") +
@@ -136,12 +131,30 @@ export const openCommand = new Command("open")
 				);
 				process.exit(1);
 			}
+		} else {
+			projectNames = [name];
 		}
 
+		const ide = options?.ide || config.ide;
+
+		// 批量打开
+		if (projectNames.length > 1) {
+			for (const pName of projectNames) {
+				try {
+					await openWithIDE(ide, getProjectPath(pName));
+					console.log(`${brand.success("✓")} 已打开: ${brand.primary(pName)}`);
+				} catch (error) {
+					printError(`${pName}: ${(error as Error).message}`);
+				}
+			}
+			return;
+		}
+
+		// 单个打开
+		const projectName = projectNames[0];
 		const projectPath = getProjectPath(projectName);
 		const currentDir = process.cwd();
 
-		// 检查是否已经是当前目录
 		if (projectPath === currentDir) {
 			console.log();
 			printInfo(`已在项目目录: ${brand.primary(projectName)}`);
@@ -149,7 +162,6 @@ export const openCommand = new Command("open")
 			return;
 		}
 
-		// 检查原始路径是否仍存在
 		const meta = getProjectMeta(projectName);
 		if (meta?.originalPath && fse.existsSync(meta.originalPath)) {
 			const shouldDelete = await confirm({
@@ -172,11 +184,9 @@ export const openCommand = new Command("open")
 		}
 
 		const s = spinner();
-		const ide = options?.ide || config.ide;
 		s.start(`正在打开...`);
 
 		try {
-			// 只有用户手动指定 -i 时才模糊匹配
 			const { resolved } = await openWithIDE(ide, projectPath, !!options?.ide);
 			s.stop(`${brand.success("✓")} 已用 ${brand.primary(resolved)} 打开: ${brand.secondary(projectName)}`);
 		} catch (error) {

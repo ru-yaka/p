@@ -40,7 +40,7 @@ p update
 | `p add <path>` | 添加现有项目 |
 | `p ls` | 列出所有项目 |
 | `p ls templates` / `p ls t` | 列出所有模板 |
-| `p open [name]` | 打开项目（实时搜索） |
+| `p open [name]` | 打开项目（实时搜索，按 a 全部打开） |
 | `p recent` | 最近项目列表（j/k 移动，o 打开，d 删除） |
 | `p open [name] -i <ide>` | 用指定 IDE 打开 |
 | `p open . -i <ide>` | 用指定 IDE 打开当前目录 |

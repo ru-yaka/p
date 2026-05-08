@@ -58,7 +58,7 @@ async function searchAndSelectDelete(
 		process.exit(0);
 	}
 
-	return result as string;
+	return (result as string[])[0];
 }
 
 /**

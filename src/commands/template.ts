@@ -137,7 +137,7 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 			process.exit(0);
 		}
 
-		selectedProject = result as string;
+		selectedProject = (result as string[])[0];
 	} else {
 		// 验证项目是否存在，不存在则模糊匹配
 		if (!projectExists(selectedProject)) {
@@ -165,7 +165,7 @@ async function handleAdd(target?: string, templateNameArg?: string) {
 					outro(pc.dim("已取消"));
 					process.exit(0);
 				}
-				selectedProject = result as string;
+				selectedProject = (result as string[])[0];
 			} else {
 				printError(`项目不存在: ${selectedProject}`);
 				console.log(
