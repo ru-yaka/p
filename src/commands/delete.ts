@@ -260,30 +260,39 @@ export const deleteCommand = new Command("delete")
 
 		// 通配符模式
 		if (name && name.includes("*")) {
-			const matched = wildcardMatch(projects, name);
+			let matched = wildcardMatch(projects, name);
 
 			if (matched.length === 0) {
-				// 去掉通配符，用关键词模糊搜索给出建议
+				// 去掉通配符，用关键词模糊搜索
 				const keyword = name.replace(/\*/g, "");
 				const similar = keyword
 					? filterProjects(projects, keyword).map((p) => p.name)
 					: [];
 
-				printError(`没有匹配 '${name}' 的项目`);
-				if (similar.length > 0) {
-					console.log();
-					console.log(pc.dim("  你是不是想删:"));
-					for (const n of similar) {
-						console.log(`    ${brand.secondary("•")} ${n}`);
-					}
-					console.log();
-					console.log(
-						pc.dim("  使用 ") +
-							brand.primary(`p delete ${similar.length > 1 ? similar[0].replace(/-.+$/, "") + "-*" : similar[0]}`) +
-							pc.dim(" 删除"),
-					);
+				if (similar.length === 0) {
+					printError(`没有匹配 '${name}' 的项目`);
+					process.exit(1);
 				}
-				process.exit(1);
+
+				printError(`没有匹配 '${name}' 的项目`);
+				console.log();
+				console.log(pc.dim("  是否删除以下项目？"));
+				for (const n of similar) {
+					console.log(`    ${brand.secondary("•")} ${n}`);
+				}
+				console.log();
+
+				const shouldDelete = await confirm({
+					message: `删除这 ${brand.primary(String(similar.length))} 个项目？`,
+					initialValue: true,
+				});
+
+				if (isCancel(shouldDelete) || !shouldDelete) {
+					outro(pc.dim("已取消"));
+					process.exit(0);
+				}
+
+				matched = similar;
 			}
 
 			intro(bgOrange(" 批量删除 "));
