@@ -16562,8 +16562,19 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     }
     console.log();
     if (newProjects.length > 0) {
+      const config2 = loadConfig();
       for (const n of newProjects) {
         console.log(`  ${brand.success("\u2713")} \u5DF2\u6CE8\u518C\u9879\u76EE: ${brand.primary(n)}`);
+      }
+      const firstProject = getProjectPath(newProjects[0]);
+      const s2 = Y2();
+      s2.start(`\u6B63\u5728\u6253\u5F00 ${config2.ide}...`);
+      try {
+        await openWithIDE(config2.ide, firstProject);
+        s2.stop(`${config2.ide} \u5DF2\u6253\u5F00`);
+      } catch (error) {
+        s2.stop("\u6253\u5F00\u5931\u8D25");
+        printError(error.message);
       }
     } else {
       printInfo("\u672A\u68C0\u6D4B\u5230\u65B0\u9879\u76EE\u76EE\u5F55");

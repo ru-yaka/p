@@ -82,19 +82,32 @@ export const newCommand = new Command("new")
 
 				console.log();
 				if (newProjects.length > 0) {
-					for (const n of newProjects) {
-						console.log(
-							`  ${brand.success("✓")} 已注册项目: ${brand.primary(n)}`,
-						);
+						const config = loadConfig();
+						for (const n of newProjects) {
+							console.log(
+								`  ${brand.success("✓")} 已注册项目: ${brand.primary(n)}`,
+							);
+						}
+
+						// 用 IDE 打开第一个新项目
+						const firstProject = getProjectPath(newProjects[0]);
+						const s = spinner();
+						s.start(`正在打开 ${config.ide}...`);
+						try {
+							await openWithIDE(config.ide, firstProject);
+							s.stop(`${config.ide} 已打开`);
+						} catch (error) {
+							s.stop("打开失败");
+							printError((error as Error).message);
+						}
+					} else {
+						printInfo("未检测到新项目目录");
 					}
-				} else {
-					printInfo("未检测到新项目目录");
+
+					return;
 				}
 
-				return;
-			}
-
-			const config = loadConfig();
+				const config = loadConfig();
 			const allTemplates = await getAllTemplates(config.templates);
 
 		// 快速模式：只有项目名，没有 -t / --desc 参数 → 使用 empty 模板
