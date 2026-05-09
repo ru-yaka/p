@@ -78,8 +78,9 @@ export const recentCommand = new Command("recent")
 				const time = pc.dim(`  ${formatRelativeTime(p.modifiedAt)}`);
 				const note = p.note ? pc.dim(` — ${p.note}`) : "";
 				const tpl = p.template ? ` ${pc.cyan(`[${p.template}]`)}` : "";
+				const tags = p.tags?.length ? ` ${pc.magenta(p.tags.map(t => `#${t}`).join(" "))}` : "";
 
-				lines.push(`  ${brand.secondary("│")} ${marker} ${name}${tpl}${note}${time}`);
+				lines.push(`  ${brand.secondary("│")} ${marker} ${name}${tpl}${tags}${note}${time}`);
 			}
 
 			// 底部提示：根据模式变化
