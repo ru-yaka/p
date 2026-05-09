@@ -17279,20 +17279,25 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
   const remoteUrl = await getRemoteOrigin(newPath);
   const repoSlug = remoteUrl ? extractRepoSlug(remoteUrl) : null;
   if (repoSlug) {
+    const currentRepoName = repoSlug.split("/")[1];
     console.log();
-    const shouldRename = await ye({
-      message: `\u662F\u5426\u540C\u65F6\u91CD\u547D\u540D\u8FDC\u7A0B\u4ED3\u5E93 ${import_picocolors22.default.underline(`github.com/${repoSlug}`)} \u2192 ${brand.primary(newProjectName)}\uFF1F`,
-      initialValue: true
+    console.log(import_picocolors22.default.dim("  \u5F53\u524D\u8FDC\u7A0B\u4ED3\u5E93: ") + import_picocolors22.default.underline(`github.com/${repoSlug}`));
+    console.log();
+    const remoteName = await he({
+      message: "\u8F93\u5165\u65B0\u7684\u8FDC\u7A0B\u4ED3\u5E93\u540D\u79F0\uFF08\u7559\u7A7A\u8DF3\u8FC7\uFF09:",
+      placeholder: currentRepoName,
+      initialValue: newProjectName
     });
-    if (!isCancel(shouldRename) && shouldRename) {
+    if (!pD(remoteName) && remoteName.trim()) {
+      const finalName = remoteName.trim();
       const renameSpinner = Y2();
       renameSpinner.start("\u6B63\u5728\u91CD\u547D\u540D GitHub \u4ED3\u5E93...");
-      const result = await renameGitHubRepo(repoSlug, newProjectName);
+      const result = await renameGitHubRepo(repoSlug, finalName);
       if (!result.success) {
         renameSpinner.stop("\u91CD\u547D\u540D GitHub \u4ED3\u5E93\u5931\u8D25");
         printError(result.error || "\u672A\u77E5\u9519\u8BEF");
       } else {
-        renameSpinner.stop(`${brand.success("\u2713")} GitHub \u4ED3\u5E93\u5DF2\u91CD\u547D\u540D`);
+        renameSpinner.stop(`${brand.success("\u2713")} GitHub \u4ED3\u5E93\u5DF2\u91CD\u547D\u540D\u4E3A ${brand.primary(finalName)}`);
       }
     }
   }

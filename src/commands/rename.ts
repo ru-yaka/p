@@ -1,6 +1,6 @@
 import {
-	confirm,
 	intro,
+	isCancel,
 	outro,
 	spinner,
 	text,
@@ -205,7 +205,6 @@ export const renameCommand = new Command("rename")
 			process.exit(1);
 		}
 
-		// 更新元数据
 		const oldMeta = projects.find((p) => p.name === projectName);
 		deleteProjectMeta(projectName);
 		saveProjectMeta(newProjectName, {
@@ -220,23 +219,29 @@ export const renameCommand = new Command("rename")
 		const repoSlug = remoteUrl ? extractRepoSlug(remoteUrl) : null;
 
 		if (repoSlug) {
+			const currentRepoName = repoSlug.split("/")[1];
 			console.log();
-			const shouldRename = await confirm({
-				message: `是否同时重命名远程仓库 ${pc.underline(`github.com/${repoSlug}`)} → ${brand.primary(newProjectName)}？`,
-				initialValue: true,
+			console.log(pc.dim("  当前远程仓库: ") + pc.underline(`github.com/${repoSlug}`));
+			console.log();
+
+			const remoteName = await text({
+				message: "输入新的远程仓库名称（留空跳过）:",
+				placeholder: currentRepoName,
+				initialValue: newProjectName,
 			});
 
-			if (!isCancel(shouldRename) && shouldRename) {
+			if (!isCancel(remoteName) && (remoteName as string).trim()) {
+				const finalName = (remoteName as string).trim();
 				const renameSpinner = spinner();
 				renameSpinner.start("正在重命名 GitHub 仓库...");
 
-				const result = await renameGitHubRepo(repoSlug, newProjectName);
+				const result = await renameGitHubRepo(repoSlug, finalName);
 
 				if (!result.success) {
 					renameSpinner.stop("重命名 GitHub 仓库失败");
 					printError(result.error || "未知错误");
 				} else {
-					renameSpinner.stop(`${brand.success("✓")} GitHub 仓库已重命名`);
+					renameSpinner.stop(`${brand.success("✓")} GitHub 仓库已重命名为 ${brand.primary(finalName)}`);
 				}
 			}
 		}
