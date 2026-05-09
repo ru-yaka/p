@@ -15375,29 +15375,28 @@ async function liveSearch(opts) {
           submit(selected.value, selected.label);
           return;
         }
-        case "escape": {
-          doCancel();
-          return;
-        }
-        case "a": {
-          if (!key.ctrl)
-            break;
-          if (state.filtered.length > 0) {
-            const parts = [];
-            parts.push(import_sisteransi3.cursor.up(blockHeight));
-            for (let i = 0;i < blockHeight; i++) {
-              parts.push(`\x1B[K
-`);
-            }
-            parts.push(import_sisteransi3.cursor.up(blockHeight));
-            parts.push(`  ${brand.success("\u25C6")} ${opts.message} ${import_picocolors9.default.dim(`\u6253\u5F00\u5168\u90E8 ${state.filtered.length} \u4E2A`)}
-`);
-            stdout.write(parts.join(""));
-            cleanup();
-            resolve3(state.filtered.map((f) => f.value));
+        case "escape":
+          {
+            doCancel();
+            return;
           }
-          return;
-        }
+          if (key.name === "a" && key.ctrl) {
+            if (state.filtered.length > 0) {
+              const parts = [];
+              parts.push(import_sisteransi3.cursor.up(blockHeight));
+              for (let i = 0;i < blockHeight; i++) {
+                parts.push(`\x1B[K
+`);
+              }
+              parts.push(import_sisteransi3.cursor.up(blockHeight));
+              parts.push(`  ${brand.success("\u25C6")} ${opts.message} ${import_picocolors9.default.dim(`\u6253\u5F00\u5168\u90E8 ${state.filtered.length} \u4E2A`)}
+`);
+              stdout.write(parts.join(""));
+              cleanup();
+              resolve3(state.filtered.map((f) => f.value));
+            }
+            return;
+          }
         case "backspace": {
           if (state.cursor > 0) {
             state.query = state.query.slice(0, state.cursor - 1) + state.query.slice(state.cursor);

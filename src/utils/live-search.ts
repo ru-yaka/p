@@ -278,8 +278,8 @@ export async function liveSearch(
 					doCancel();
 					return;
 				}
-				case "a": {
-					if (!key.ctrl) break;
+				// Ctrl+A: 全部打开
+				if (key.name === "a" && key.ctrl) {
 					if (state.filtered.length > 0) {
 						const parts: string[] = [];
 						parts.push(ansiCursor.up(blockHeight));
@@ -296,6 +296,7 @@ export async function liveSearch(
 					}
 					return;
 				}
+
 				case "backspace": {
 					if (state.cursor > 0) {
 						state.query =
