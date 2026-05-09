@@ -1,4 +1,4 @@
-import { intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
+import { confirm, intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
 import pc from "picocolors";
@@ -17,7 +17,7 @@ import {
 	getAllTemplates,
 	getTemplateChoices,
 } from "../core/template";
-import { execInDir, openWithIDE } from "../utils/shell";
+import { commandExists, execAndCapture, execInDir, openWithIDE } from "../utils/shell";
 import { PROJECTS_DIR, CONFIG_PATH } from "../utils/paths";
 import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 import { LLMError, generateProjectNames } from "../utils/llm";
@@ -73,12 +73,48 @@ export const newCommand = new Command("new")
 					listProjects().map((p) => p.name),
 				);
 
-				const result = await execInDir(cmd, PROJECTS_DIR);
+				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					console.log();
-					printError("命令执行失败");
-					process.exit(1);
+					// GitHub API rate limit recovery
+					if (
+						!process.env.GITHUB_TOKEN &&
+						result.stderr?.toLowerCase().includes("rate limit") &&
+						(await commandExists("gh"))
+					) {
+						const retry = await confirm({
+							message:
+								"检测到 GitHub API 速率限制，是否使用当前 gh auth 的 token 重试？",
+						});
+
+						if (!isCancel(retry) && retry) {
+							const tokenResult = await execAndCapture("gh auth token", process.cwd());
+							if (tokenResult.success && tokenResult.output) {
+								process.env.GITHUB_TOKEN = tokenResult.output.trim();
+								console.log();
+								console.log(pc.dim("  已注入 GITHUB_TOKEN，正在重试..."));
+								console.log();
+								const retryResult = await execInDir(cmd, PROJECTS_DIR);
+								if (!retryResult.success) {
+									console.log();
+									printError("重试仍然失败");
+									process.exit(1);
+								}
+							} else {
+								console.log();
+								printError("获取 gh auth token 失败");
+								process.exit(1);
+							}
+						} else {
+							console.log();
+							printError("命令执行失败");
+							process.exit(1);
+						}
+					} else {
+						console.log();
+						printError("命令执行失败");
+						process.exit(1);
+					}
 				}
 
 				// 扫描新项目目录并注册

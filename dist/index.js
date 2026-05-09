@@ -14602,16 +14602,31 @@ async function execInDir(command, cwd, options = {}) {
     const shellArgs = isWindows ? ["/c"] : ["-c"];
     const proc = Bun.spawn([shell, ...shellArgs, command], {
       cwd,
-      stdio: ["inherit", "inherit", "inherit"],
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: options.captureStderr ? "pipe" : "inherit",
       env: {
         ...process.env,
         FORCE_COLOR: "3"
       }
     });
+    let stderrOutput = "";
+    if (options.captureStderr && proc.stderr) {
+      const reader = proc.stderr.getReader();
+      const decoder = new TextDecoder;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done)
+          break;
+        stderrOutput += decoder.decode(value, { stream: true });
+        process.stderr.write(value);
+      }
+    }
     const exitCode = await proc.exited;
     return {
       success: exitCode === 0,
-      output: ""
+      output: "",
+      stderr: stderrOutput
     };
   } catch (error) {
     const err = error;
@@ -14677,6 +14692,14 @@ function resolveCommand(prefix) {
     saveIDECache();
   }
   return resolved;
+}
+async function commandExists(command) {
+  try {
+    await $2`which ${command}`.quiet();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // src/core/template.ts
@@ -16641,11 +16664,40 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     console.log();
     await import_fs_extra13.default.ensureDir(PROJECTS_DIR);
     const existingProjects = new Set(listProjects().map((p2) => p2.name));
-    const result = await execInDir(cmd, PROJECTS_DIR);
+    const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
     if (!result.success) {
-      console.log();
-      printError("\u547D\u4EE4\u6267\u884C\u5931\u8D25");
-      process.exit(1);
+      if (!process.env.GITHUB_TOKEN && result.stderr?.toLowerCase().includes("rate limit") && await commandExists("gh")) {
+        const retry = await ye({
+          message: "\u68C0\u6D4B\u5230 GitHub API \u901F\u7387\u9650\u5236\uFF0C\u662F\u5426\u4F7F\u7528\u5F53\u524D gh auth \u7684 token \u91CD\u8BD5\uFF1F"
+        });
+        if (!pD(retry) && retry) {
+          const tokenResult = await execAndCapture("gh auth token", process.cwd());
+          if (tokenResult.success && tokenResult.output) {
+            process.env.GITHUB_TOKEN = tokenResult.output.trim();
+            console.log();
+            console.log(import_picocolors18.default.dim("  \u5DF2\u6CE8\u5165 GITHUB_TOKEN\uFF0C\u6B63\u5728\u91CD\u8BD5..."));
+            console.log();
+            const retryResult = await execInDir(cmd, PROJECTS_DIR);
+            if (!retryResult.success) {
+              console.log();
+              printError("\u91CD\u8BD5\u4ECD\u7136\u5931\u8D25");
+              process.exit(1);
+            }
+          } else {
+            console.log();
+            printError("\u83B7\u53D6 gh auth token \u5931\u8D25");
+            process.exit(1);
+          }
+        } else {
+          console.log();
+          printError("\u547D\u4EE4\u6267\u884C\u5931\u8D25");
+          process.exit(1);
+        }
+      } else {
+        console.log();
+        printError("\u547D\u4EE4\u6267\u884C\u5931\u8D25");
+        process.exit(1);
+      }
     }
     const entries = await import_fs_extra13.default.readdir(PROJECTS_DIR, { withFileTypes: true });
     const newProjects = [];

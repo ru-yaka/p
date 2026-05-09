@@ -42,8 +42,8 @@ function saveIDECache(): void {
 export async function execInDir(
 	command: string,
 	cwd: string,
-	options: { silent?: boolean } = {},
-): Promise<{ success: boolean; output: string }> {
+	options: { silent?: boolean; captureStderr?: boolean } = {},
+): Promise<{ success: boolean; output: string; stderr?: string }> {
 	if (!options.silent) {
 		console.log(pc.dim("  $ ") + brand.secondary(command));
 	}
@@ -55,18 +55,33 @@ export async function execInDir(
 
 		const proc = Bun.spawn([shell, ...shellArgs, command], {
 			cwd,
-			stdio: ["inherit", "inherit", "inherit"],
+			stdin: "inherit",
+			stdout: "inherit",
+			stderr: options.captureStderr ? "pipe" : "inherit",
 			env: {
 				...process.env,
 				FORCE_COLOR: "3",
 			},
 		});
 
+		let stderrOutput = "";
+		if (options.captureStderr && proc.stderr) {
+			const reader = proc.stderr.getReader();
+			const decoder = new TextDecoder();
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				stderrOutput += decoder.decode(value, { stream: true });
+				process.stderr.write(value);
+			}
+		}
+
 		const exitCode = await proc.exited;
 
 		return {
 			success: exitCode === 0,
 			output: "",
+			stderr: stderrOutput,
 		};
 	} catch (error) {
 		const err = error as Error;
