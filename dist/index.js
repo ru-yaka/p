@@ -13066,8 +13066,8 @@ var require_adm_zip = __commonJS((exports, module) => {
       return null;
     }
     function fixPath(zipPath) {
-      const { join: join9, normalize, sep } = pth.posix;
-      return join9(pth.isAbsolute(zipPath) ? "/" : ".", normalize(sep + zipPath.split("\\").join(sep) + sep));
+      const { join: join10, normalize, sep } = pth.posix;
+      return join10(pth.isAbsolute(zipPath) ? "/" : ".", normalize(sep + zipPath.split("\\").join(sep) + sep));
     }
     function filenameFilter(filterfn) {
       if (filterfn instanceof RegExp) {
@@ -13604,7 +13604,7 @@ var {
 
 // src/index.ts
 import { readFileSync as readFileSync3 } from "fs";
-import { dirname as dirname5, join as join11 } from "path";
+import { dirname as dirname5, join as join12 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/commands/add.ts
@@ -16163,6 +16163,8 @@ var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u514
 // src/commands/new.ts
 var import_fs_extra13 = __toESM(require_lib(), 1);
 var import_picocolors18 = __toESM(require_picocolors(), 1);
+import { tmpdir } from "os";
+import { join as join9 } from "path";
 
 // src/core/hooks.ts
 var import_fs_extra12 = __toESM(require_lib(), 1);
@@ -16673,11 +16675,20 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
         if (!pD(retry) && retry) {
           const tokenResult = await execAndCapture("gh auth token", process.cwd());
           if (tokenResult.success && tokenResult.output) {
-            process.env.GITHUB_TOKEN = tokenResult.output.trim();
+            const token = tokenResult.output.trim();
+            process.env.GITHUB_TOKEN = token;
+            const patchFile = join9(tmpdir(), "p-github-auth-patch.cjs");
+            import_fs_extra13.default.writeFileSync(patchFile, `const _f=globalThis.fetch;globalThis.fetch=async(u,o={})=>{const s=typeof u==="string"?u:u?.url||"";if(s.includes("api.github.com"))o={...o,headers:{...o.headers,Authorization:"Bearer "+process.env.GITHUB_TOKEN}};return _f(u,o)};`);
+            const prevNodeOpts = process.env.NODE_OPTIONS || "";
+            process.env.NODE_OPTIONS = prevNodeOpts + ` --require ${patchFile.replace(/\\/g, "/")}`;
             console.log();
             console.log(import_picocolors18.default.dim("  \u5DF2\u6CE8\u5165 GITHUB_TOKEN\uFF0C\u6B63\u5728\u91CD\u8BD5..."));
             console.log();
             const retryResult = await execInDir(cmd, PROJECTS_DIR);
+            process.env.NODE_OPTIONS = prevNodeOpts || undefined;
+            try {
+              import_fs_extra13.default.unlinkSync(patchFile);
+            } catch {}
             if (!retryResult.success) {
               console.log();
               printError("\u91CD\u8BD5\u4ECD\u7136\u5931\u8D25");
@@ -21336,7 +21347,7 @@ Ze.glob = Ze;
 
 // src/commands/unzip.ts
 var import_picocolors27 = __toESM(require_picocolors(), 1);
-import { basename as basename4, dirname as dirname3, join as join9, parse } from "path";
+import { basename as basename4, dirname as dirname3, join as join10, parse } from "path";
 var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
   let cwd;
   if (!project || project === ".") {
@@ -21373,7 +21384,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
     const relativePath = basename4(zipFile);
     try {
       const zipName = parse(zipFile).name;
-      const destDir = join9(dirname3(zipFile), zipName);
+      const destDir = join10(dirname3(zipFile), zipName);
       if (await import_fs_extra19.default.pathExists(destDir)) {
         await import_fs_extra19.default.remove(destDir);
       }
@@ -21383,7 +21394,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
       if (options?.flatten) {
         const entries = await import_fs_extra19.default.readdir(tempDir);
         if (entries.length === 1) {
-          const singleEntry = join9(tempDir, entries[0]);
+          const singleEntry = join10(tempDir, entries[0]);
           const stat = await import_fs_extra19.default.stat(singleEntry);
           if (stat.isDirectory()) {
             await import_fs_extra19.default.move(singleEntry, destDir);
@@ -21417,12 +21428,12 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
 
 // src/commands/update.ts
 var import_picocolors28 = __toESM(require_picocolors(), 1);
-import { dirname as dirname4, join as join10, resolve as resolve5 } from "path";
+import { dirname as dirname4, join as join11, resolve as resolve5 } from "path";
 import { fileURLToPath } from "url";
 import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
 function getVersion(dir) {
   try {
-    const pkg = JSON.parse(readFileSync2(join10(dir, "package.json"), "utf-8"));
+    const pkg = JSON.parse(readFileSync2(join11(dir, "package.json"), "utf-8"));
     return pkg.version;
   } catch {
     return "unknown";
@@ -21432,7 +21443,7 @@ function findPDir() {
   const currentFile = fileURLToPath(import.meta.url);
   let dir = dirname4(currentFile);
   for (let i = 0;i < 10; i++) {
-    const pkgPath = join10(dir, "package.json");
+    const pkgPath = join11(dir, "package.json");
     if (existsSync2(pkgPath)) {
       try {
         const pkg = JSON.parse(readFileSync2(pkgPath, "utf-8"));
@@ -21478,7 +21489,7 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
 
 // src/index.ts
 var __dirname2 = dirname5(fileURLToPath2(import.meta.url));
-var pkgPath = join11(__dirname2, "..", "package.json");
+var pkgPath = join12(__dirname2, "..", "package.json");
 var pkg = JSON.parse(readFileSync3(pkgPath, "utf-8"));
 var program2 = new Command;
 await ensureInitialized();

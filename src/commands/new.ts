@@ -1,6 +1,8 @@
 import { confirm, intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import pc from "picocolors";
 
 import { loadConfig } from "../core/config";
@@ -90,11 +92,29 @@ export const newCommand = new Command("new")
 						if (!isCancel(retry) && retry) {
 							const tokenResult = await execAndCapture("gh auth token", process.cwd());
 							if (tokenResult.success && tokenResult.output) {
-								process.env.GITHUB_TOKEN = tokenResult.output.trim();
+								const token = tokenResult.output.trim();
+								process.env.GITHUB_TOKEN = token;
+
+								// 很多工具（如 create-expo-app）不读 GITHUB_TOKEN，
+								// 通过 NODE_OPTIONS 注入 fetch patch 给 api.github.com 请求加 auth
+								const patchFile = join(tmpdir(), "p-github-auth-patch.cjs");
+								fse.writeFileSync(
+									patchFile,
+									`const _f=globalThis.fetch;globalThis.fetch=async(u,o={})=>{const s=typeof u==="string"?u:u?.url||"";if(s.includes("api.github.com"))o={...o,headers:{...o.headers,Authorization:"Bearer "+process.env.GITHUB_TOKEN}};return _f(u,o)};`,
+								);
+								const prevNodeOpts = process.env.NODE_OPTIONS || "";
+								process.env.NODE_OPTIONS =
+									prevNodeOpts +
+									` --require ${patchFile.replace(/\\/g, "/")}`;
+
 								console.log();
 								console.log(pc.dim("  已注入 GITHUB_TOKEN，正在重试..."));
 								console.log();
 								const retryResult = await execInDir(cmd, PROJECTS_DIR);
+
+								process.env.NODE_OPTIONS = prevNodeOpts || undefined;
+								try { fse.unlinkSync(patchFile); } catch {}
+
 								if (!retryResult.success) {
 									console.log();
 									printError("重试仍然失败");
