@@ -16818,9 +16818,29 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
   } else if (options?.template) {
     templateKey = options.template;
     if (!allTemplates[templateKey]) {
-      printError(`\u6A21\u677F\u4E0D\u5B58\u5728: ${templateKey}`);
-      console.log(import_picocolors18.default.dim(`\u53EF\u7528\u6A21\u677F: ${Object.keys(allTemplates).join(", ")}`));
-      process.exit(1);
+      const q2 = templateKey.toLowerCase();
+      const keys = Object.keys(allTemplates);
+      const matched = keys.filter((k3) => k3.toLowerCase().includes(q2));
+      if (matched.length === 1) {
+        templateKey = matched[0];
+      } else if (matched.length > 1) {
+        const result = await ve({
+          message: `\u6A21\u677F '${options.template}' \u5339\u914D\u5230\u591A\u4E2A:`,
+          options: matched.map((k3) => ({
+            value: k3,
+            label: allTemplates[k3].name
+          }))
+        });
+        if (pD(result)) {
+          Se(import_picocolors18.default.dim("\u5DF2\u53D6\u6D88"));
+          process.exit(0);
+        }
+        templateKey = result;
+      } else {
+        printError(`\u6A21\u677F\u4E0D\u5B58\u5728: ${templateKey}`);
+        console.log(import_picocolors18.default.dim(`\u53EF\u7528\u6A21\u677F: ${keys.join(", ")}`));
+        process.exit(1);
+      }
     }
   } else {
     const result = await ve({

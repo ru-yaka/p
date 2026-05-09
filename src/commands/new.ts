@@ -317,11 +317,35 @@ export const newCommand = new Command("new")
 			// -t 有值
 			templateKey = options.template;
 			if (!allTemplates[templateKey]) {
-				printError(`模板不存在: ${templateKey}`);
-				console.log(
-					pc.dim(`可用模板: ${Object.keys(allTemplates).join(", ")}`),
+				// 模糊匹配
+				const q = templateKey.toLowerCase();
+				const keys = Object.keys(allTemplates);
+				const matched = keys.filter(
+					(k) => k.toLowerCase().includes(q),
 				);
-				process.exit(1);
+
+				if (matched.length === 1) {
+					templateKey = matched[0];
+				} else if (matched.length > 1) {
+					const result = await select({
+						message: `模板 '${options.template}' 匹配到多个:`,
+						options: matched.map((k) => ({
+							value: k,
+							label: allTemplates[k].name,
+						})),
+					});
+					if (isCancel(result)) {
+						outro(pc.dim("已取消"));
+						process.exit(0);
+					}
+					templateKey = result as string;
+				} else {
+					printError(`模板不存在: ${templateKey}`);
+					console.log(
+						pc.dim(`可用模板: ${keys.join(", ")}`),
+					);
+					process.exit(1);
+				}
 			}
 		} else {
 			// 没有 -t 参数但进入了交互模式（没有项目名）
