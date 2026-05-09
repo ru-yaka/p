@@ -17275,9 +17275,7 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
     const gitUser = await getGitUsername2();
     if (gitUser && gitUser.toLowerCase() !== owner.toLowerCase()) {
       console.log();
-      printError(`git \u7528\u6237 (${gitUser}) \u4E0E\u4ED3\u5E93 owner (${owner}) \u4E0D\u4E00\u81F4`);
-      printInfo("\u8BF7\u5148\u5207\u6362\u5230\u6B63\u786E\u7684\u8D26\u6237\u540E\u518D\u6267\u884C p rename");
-      process.exit(1);
+      printInfo(`git \u7528\u6237 (${gitUser}) \u4E0E\u4ED3\u5E93 owner (${owner}) \u4E0D\u4E00\u81F4\uFF0C\u8FDC\u7A0B\u4ED3\u5E93\u91CD\u547D\u540D\u53EF\u80FD\u5931\u8D25`);
     }
     console.log();
   }

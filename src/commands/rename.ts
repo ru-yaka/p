@@ -239,9 +239,7 @@ export const renameCommand = new Command("rename")
 
 			if (gitUser && gitUser.toLowerCase() !== owner.toLowerCase()) {
 				console.log();
-				printError(`git 用户 (${gitUser}) 与仓库 owner (${owner}) 不一致`);
-				printInfo("请先切换到正确的账户后再执行 p rename");
-				process.exit(1);
+				printInfo(`git 用户 (${gitUser}) 与仓库 owner (${owner}) 不一致，远程仓库重命名可能失败`);
 			}
 
 			console.log();
