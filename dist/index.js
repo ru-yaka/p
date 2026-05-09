@@ -14362,26 +14362,34 @@ var TEMPLATES_DIR = join(P_ROOT, "templates");
 var HOOKS_DIR = join(P_ROOT, "hooks");
 
 // src/core/config.ts
+function deepMerge(base, override) {
+  const result = { ...base };
+  for (const key of Object.keys(override)) {
+    const bVal = result[key];
+    const oVal = override[key];
+    if (typeof oVal === "object" && oVal !== null && !Array.isArray(oVal) && typeof bVal === "object" && bVal !== null && !Array.isArray(bVal)) {
+      result[key] = deepMerge(bVal, oVal);
+    } else {
+      result[key] = oVal;
+    }
+  }
+  return result;
+}
+function getDefaultConfigPath() {
+  const execPath = process.argv[1];
+  if (!execPath)
+    return "";
+  return join2(dirname(execPath), "config.yaml");
+}
 async function ensureInitialized() {
   const dirs = [P_ROOT, PROJECTS_DIR, TEMPLATES_DIR, HOOKS_DIR];
   for (const dir of dirs) {
     await import_fs_extra.default.ensureDir(dir);
   }
-  const execPath = process.argv[1];
-  if (!execPath) {
-    throw new Error("\u65E0\u6CD5\u83B7\u53D6\u5F53\u524D\u6267\u884C\u6587\u4EF6\u8DEF\u5F84\uFF0Cprocess.argv[1] \u4E3A undefined");
-  }
-  const currentDir = dirname(execPath);
-  const defaultConfigPath = join2(currentDir, "config.yaml");
-  if (await import_fs_extra.default.pathExists(defaultConfigPath)) {
-    if (!await import_fs_extra.default.pathExists(CONFIG_PATH)) {
+  if (!await import_fs_extra.default.pathExists(CONFIG_PATH)) {
+    const defaultConfigPath = getDefaultConfigPath();
+    if (await import_fs_extra.default.pathExists(defaultConfigPath)) {
       await import_fs_extra.default.copyFile(defaultConfigPath, CONFIG_PATH);
-    } else {
-      const sourceStats = await import_fs_extra.default.stat(defaultConfigPath);
-      const targetStats = await import_fs_extra.default.stat(CONFIG_PATH);
-      if (sourceStats.mtime > targetStats.mtime) {
-        await import_fs_extra.default.copyFile(defaultConfigPath, CONFIG_PATH);
-      }
     }
   }
 }
@@ -14390,8 +14398,15 @@ function loadConfig() {
     throw new Error("\u914D\u7F6E\u6587\u4EF6\u4E0D\u5B58\u5728\uFF0C\u8BF7\u8FD0\u884C p config \u521B\u5EFA\u914D\u7F6E\u6587\u4EF6");
   }
   try {
-    const content = import_fs_extra.default.readFileSync(CONFIG_PATH, "utf-8");
-    return $parse(content);
+    const userContent = import_fs_extra.default.readFileSync(CONFIG_PATH, "utf-8");
+    const userConfig = $parse(userContent) || {};
+    let defaultConfig = {};
+    const defaultConfigPath = getDefaultConfigPath();
+    if (defaultConfigPath && import_fs_extra.default.existsSync(defaultConfigPath)) {
+      const defaultContent = import_fs_extra.default.readFileSync(defaultConfigPath, "utf-8");
+      defaultConfig = $parse(defaultContent) || {};
+    }
+    return deepMerge(defaultConfig, userConfig);
   } catch (error) {
     throw new Error(`\u914D\u7F6E\u6587\u4EF6\u89E3\u6790\u5931\u8D25: ${error.message}`);
   }
@@ -17305,7 +17320,8 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
       const time = import_picocolors23.default.dim(`  ${formatRelativeTime(p2.modifiedAt)}`);
       const note = p2.note ? import_picocolors23.default.dim(` \u2014 ${p2.note}`) : "";
       const tpl = p2.template ? ` ${import_picocolors23.default.cyan(`[${p2.template}]`)}` : "";
-      lines.push(`  ${brand.secondary("\u2502")} ${marker} ${name}${tpl}${note}${time}`);
+      const tags = p2.tags?.length ? ` ${import_picocolors23.default.magenta(p2.tags.map((t) => `#${t}`).join(" "))}` : "";
+      lines.push(`  ${brand.secondary("\u2502")} ${marker} ${name}${tpl}${tags}${note}${time}`);
     }
     if (mode === "list") {
       lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors23.default.dim("j/k \u79FB\u52A8 \xB7 o \u6253\u5F00 \xB7 d \u5220\u9664 \xB7 q \u9000\u51FA")}`);
