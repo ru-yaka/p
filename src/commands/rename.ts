@@ -1,4 +1,5 @@
 import {
+	confirm,
 	intro,
 	outro,
 	spinner,
@@ -24,9 +25,6 @@ import {
 } from "../utils/project-search";
 import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 
-/**
- * 搜索并选择要重命名的项目
- */
 async function searchAndSelect(
 	projects: ReturnType<typeof listProjects>,
 	initialQuery?: string,
@@ -58,27 +56,17 @@ async function searchAndSelect(
 		process.exit(0);
 	}
 
-	return result as string;
+	return (result as string[])[0];
 }
 
-/**
- * 从 remote URL 提取 owner/repo
- */
 function extractRepoSlug(url: string): string | null {
-	// HTTPS: https://github.com/OWNER/REPO.git
 	let match = url.match(/github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
 	if (match) return match[1];
-
-	// SSH: git@github.com:OWNER/REPO.git
 	match = url.match(/git@[^:]+:([^/]+\/[^/]+?)(?:\.git)?$/);
 	if (match) return match[1];
-
 	return null;
 }
 
-/**
- * 获取项目的 git remote origin URL
- */
 async function getRemoteOrigin(projectPath: string): Promise<string | null> {
 	const result = await execAndCapture("git remote get-url origin", projectPath);
 	if (result.success && result.output.trim()) {
@@ -87,20 +75,6 @@ async function getRemoteOrigin(projectPath: string): Promise<string | null> {
 	return null;
 }
 
-/**
- * 获取当前 git 配置的用户名
- */
-async function getGitUsername(): Promise<string | null> {
-	const result = await execAndCapture("git config user.name", process.cwd());
-	if (result.success && result.output.trim()) {
-		return result.output.trim();
-	}
-	return null;
-}
-
-/**
- * 重命名 GitHub 仓库
- */
 async function renameGitHubRepo(
 	oldSlug: string,
 	newName: string,
@@ -109,16 +83,12 @@ async function renameGitHubRepo(
 		`gh repo rename ${newName} --repo ${oldSlug} --yes`,
 		process.cwd(),
 	);
-
 	if (!result.success) {
 		return { success: false, error: result.error || result.output };
 	}
 	return { success: true };
 }
 
-/**
- * 带超时的目录移动
- */
 async function moveWithTimeout(
 	src: string,
 	dest: string,
@@ -159,12 +129,10 @@ export const renameCommand = new Command("rename")
 			return;
 		}
 
-		// 选择要重命名的项目
 		let projectName = oldName;
 		if (!projectName) {
 			projectName = await searchAndSelect(projects);
 		} else if (!projectExists(projectName)) {
-			// 模糊搜索
 			const filtered = filterProjects(projects, projectName);
 			if (filtered.length === 1) {
 				projectName = filtered[0].name;
@@ -179,7 +147,6 @@ export const renameCommand = new Command("rename")
 
 		const projectPath = getProjectPath(projectName);
 
-		// 获取新名称
 		let newProjectName = newName;
 		if (!newProjectName) {
 			const result = await text({
@@ -203,7 +170,6 @@ export const renameCommand = new Command("rename")
 			newProjectName = (result as string).trim();
 		}
 
-		// 验证新名称
 		const nameCheck = validateProjectNameFormat(newProjectName);
 		if (!nameCheck.valid) {
 			printError(nameCheck.message || "项目名称无效");
@@ -226,51 +192,16 @@ export const renameCommand = new Command("rename")
 		console.log(pc.dim("  新名称:   ") + brand.primary(newProjectName));
 		console.log();
 
-		// 检查是否有远程仓库
-		const remoteUrl = await getRemoteOrigin(projectPath);
-		const repoSlug = remoteUrl ? extractRepoSlug(remoteUrl) : null;
-
-		if (repoSlug) {
-			console.log(pc.dim("  远程仓库: ") + pc.underline(`github.com/${repoSlug}`));
-
-			// 检查 git 用户与仓库 owner 是否一致
-			const owner = repoSlug.split("/")[0];
-			const gitUser = await getGitUsername();
-
-			if (gitUser && gitUser.toLowerCase() !== owner.toLowerCase()) {
-				console.log();
-				printInfo(`git 用户 (${gitUser}) 与仓库 owner (${owner}) 不一致，远程仓库重命名可能失败`);
-			}
-
-			console.log();
-		}
-
-		// 重命名远程仓库
-		if (repoSlug) {
-			const renameSpinner = spinner();
-			renameSpinner.start("正在重命名 GitHub 仓库...");
-
-			const result = await renameGitHubRepo(repoSlug, newProjectName);
-
-			if (!result.success) {
-				renameSpinner.stop("重命名 GitHub 仓库失败");
-				printError(result.error || "未知错误");
-				process.exit(1);
-			}
-
-			renameSpinner.stop(`${brand.success("✓")} GitHub 仓库已重命名`);
-		}
-
-		// 重命名本地目录（5 秒超时）
+		// 1. 重命名本地目录
 		const s = spinner();
 		s.start("正在重命名本地目录...");
 
 		const newPath = getProjectPath(newProjectName);
-		const result = await moveWithTimeout(projectPath, newPath, 5000);
+		const moveResult = await moveWithTimeout(projectPath, newPath, 5000);
 
-		if (!result.success) {
+		if (!moveResult.success) {
 			s.stop("重命名失败");
-			printError(result.error || "未知错误");
+			printError(moveResult.error || "未知错误");
 			process.exit(1);
 		}
 
@@ -283,6 +214,32 @@ export const renameCommand = new Command("rename")
 		});
 
 		s.stop(`${brand.success("✓")} 已重命名: ${brand.primary(newProjectName)}`);
+
+		// 2. 询问是否重命名远程仓库
+		const remoteUrl = await getRemoteOrigin(newPath);
+		const repoSlug = remoteUrl ? extractRepoSlug(remoteUrl) : null;
+
+		if (repoSlug) {
+			console.log();
+			const shouldRename = await confirm({
+				message: `是否同时重命名远程仓库 ${pc.underline(`github.com/${repoSlug}`)} → ${brand.primary(newProjectName)}？`,
+				initialValue: true,
+			});
+
+			if (!isCancel(shouldRename) && shouldRename) {
+				const renameSpinner = spinner();
+				renameSpinner.start("正在重命名 GitHub 仓库...");
+
+				const result = await renameGitHubRepo(repoSlug, newProjectName);
+
+				if (!result.success) {
+					renameSpinner.stop("重命名 GitHub 仓库失败");
+					printError(result.error || "未知错误");
+				} else {
+					renameSpinner.stop(`${brand.success("✓")} GitHub 仓库已重命名`);
+				}
+			}
+		}
 
 		console.log();
 		outro(brand.success("✨ 重命名完成！"));

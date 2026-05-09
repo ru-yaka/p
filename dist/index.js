@@ -17153,7 +17153,7 @@ async function searchAndSelect2(projects, initialQuery) {
     Se(import_picocolors22.default.dim("\u5DF2\u53D6\u6D88"));
     process.exit(0);
   }
-  return result;
+  return result[0];
 }
 function extractRepoSlug(url) {
   let match = url.match(/github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
@@ -17166,13 +17166,6 @@ function extractRepoSlug(url) {
 }
 async function getRemoteOrigin(projectPath) {
   const result = await execAndCapture("git remote get-url origin", projectPath);
-  if (result.success && result.output.trim()) {
-    return result.output.trim();
-  }
-  return null;
-}
-async function getGitUsername2() {
-  const result = await execAndCapture("git config user.name", process.cwd());
   if (result.success && result.output.trim()) {
     return result.output.trim();
   }
@@ -17228,7 +17221,7 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
   const projectPath = getProjectPath(projectName);
   let newProjectName = newName;
   if (!newProjectName) {
-    const result2 = await he({
+    const result = await he({
       message: "\u8F93\u5165\u65B0\u9879\u76EE\u540D\u79F0:",
       placeholder: projectName,
       initialValue: projectName,
@@ -17243,11 +17236,11 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
         return;
       }
     });
-    if (result2 === CANCEL) {
+    if (result === CANCEL) {
       Se(import_picocolors22.default.dim("\u5DF2\u53D6\u6D88"));
       process.exit(0);
     }
-    newProjectName = result2.trim();
+    newProjectName = result.trim();
   }
   const nameCheck = validateProjectNameFormat(newProjectName);
   if (!nameCheck.valid) {
@@ -17267,36 +17260,13 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
   console.log(import_picocolors22.default.dim("  \u5F53\u524D\u540D\u79F0: ") + brand.secondary(projectName));
   console.log(import_picocolors22.default.dim("  \u65B0\u540D\u79F0:   ") + brand.primary(newProjectName));
   console.log();
-  const remoteUrl = await getRemoteOrigin(projectPath);
-  const repoSlug = remoteUrl ? extractRepoSlug(remoteUrl) : null;
-  if (repoSlug) {
-    console.log(import_picocolors22.default.dim("  \u8FDC\u7A0B\u4ED3\u5E93: ") + import_picocolors22.default.underline(`github.com/${repoSlug}`));
-    const owner = repoSlug.split("/")[0];
-    const gitUser = await getGitUsername2();
-    if (gitUser && gitUser.toLowerCase() !== owner.toLowerCase()) {
-      console.log();
-      printInfo(`git \u7528\u6237 (${gitUser}) \u4E0E\u4ED3\u5E93 owner (${owner}) \u4E0D\u4E00\u81F4\uFF0C\u8FDC\u7A0B\u4ED3\u5E93\u91CD\u547D\u540D\u53EF\u80FD\u5931\u8D25`);
-    }
-    console.log();
-  }
-  if (repoSlug) {
-    const renameSpinner = Y2();
-    renameSpinner.start("\u6B63\u5728\u91CD\u547D\u540D GitHub \u4ED3\u5E93...");
-    const result2 = await renameGitHubRepo(repoSlug, newProjectName);
-    if (!result2.success) {
-      renameSpinner.stop("\u91CD\u547D\u540D GitHub \u4ED3\u5E93\u5931\u8D25");
-      printError(result2.error || "\u672A\u77E5\u9519\u8BEF");
-      process.exit(1);
-    }
-    renameSpinner.stop(`${brand.success("\u2713")} GitHub \u4ED3\u5E93\u5DF2\u91CD\u547D\u540D`);
-  }
   const s = Y2();
   s.start("\u6B63\u5728\u91CD\u547D\u540D\u672C\u5730\u76EE\u5F55...");
   const newPath = getProjectPath(newProjectName);
-  const result = await moveWithTimeout(projectPath, newPath, 5000);
-  if (!result.success) {
+  const moveResult = await moveWithTimeout(projectPath, newPath, 5000);
+  if (!moveResult.success) {
     s.stop("\u91CD\u547D\u540D\u5931\u8D25");
-    printError(result.error || "\u672A\u77E5\u9519\u8BEF");
+    printError(moveResult.error || "\u672A\u77E5\u9519\u8BEF");
     process.exit(1);
   }
   const oldMeta = projects.find((p2) => p2.name === projectName);
@@ -17306,6 +17276,26 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
     tags: oldMeta?.tags
   });
   s.stop(`${brand.success("\u2713")} \u5DF2\u91CD\u547D\u540D: ${brand.primary(newProjectName)}`);
+  const remoteUrl = await getRemoteOrigin(newPath);
+  const repoSlug = remoteUrl ? extractRepoSlug(remoteUrl) : null;
+  if (repoSlug) {
+    console.log();
+    const shouldRename = await ye({
+      message: `\u662F\u5426\u540C\u65F6\u91CD\u547D\u540D\u8FDC\u7A0B\u4ED3\u5E93 ${import_picocolors22.default.underline(`github.com/${repoSlug}`)} \u2192 ${brand.primary(newProjectName)}\uFF1F`,
+      initialValue: true
+    });
+    if (!isCancel(shouldRename) && shouldRename) {
+      const renameSpinner = Y2();
+      renameSpinner.start("\u6B63\u5728\u91CD\u547D\u540D GitHub \u4ED3\u5E93...");
+      const result = await renameGitHubRepo(repoSlug, newProjectName);
+      if (!result.success) {
+        renameSpinner.stop("\u91CD\u547D\u540D GitHub \u4ED3\u5E93\u5931\u8D25");
+        printError(result.error || "\u672A\u77E5\u9519\u8BEF");
+      } else {
+        renameSpinner.stop(`${brand.success("\u2713")} GitHub \u4ED3\u5E93\u5DF2\u91CD\u547D\u540D`);
+      }
+    }
+  }
   console.log();
   Se(brand.success("\u2728 \u91CD\u547D\u540D\u5B8C\u6210\uFF01"));
 });
