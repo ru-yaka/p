@@ -51,6 +51,7 @@ async function searchAndSelectDelete(
 			}));
 		},
 		initialQuery,
+		selectAllLabel: "全选删除",
 	});
 
 	if (result === CANCEL) {
@@ -58,7 +59,7 @@ async function searchAndSelectDelete(
 		process.exit(0);
 	}
 
-	return (result as string[])[0];
+	return result as string[];
 }
 
 /**
@@ -323,26 +324,30 @@ export const deleteCommand = new Command("delete")
 			return;
 		}
 
-		// 单个项目删除
-		let projectName = name;
+		// 搜索删除
+		let projectNames: string[];
 
-		if (!projectExists(projectName)) {
-			// 名称不精确匹配 → 模糊搜索
-			const filtered = filterProjects(projects, projectName);
-			if (filtered.length === 1) {
-				projectName = filtered[0].name;
-			} else if (filtered.length > 1) {
-				// 多个匹配 → 打开实时搜索，预填关键词
-				projectName = await searchAndSelectDelete(projects, projectName);
-			} else {
-				printError(`项目不存在: ${projectName}`);
+		if (projectExists(name)) {
+			projectNames = [name];
+		} else {
+			const filtered = filterProjects(projects, name);
+			if (filtered.length === 0) {
+				printError(`项目不存在: ${name}`);
 				console.log(
 					pc.dim("使用 ") + brand.primary("p ls") + pc.dim(" 查看所有项目"),
 				);
 				process.exit(1);
 			}
+			projectNames = await searchAndSelectDelete(projects, name);
 		}
 
+		if (projectNames.length > 1) {
+			intro(bgOrange(" 批量删除 "));
+			await batchDelete(projectNames);
+			return;
+		}
+
+		const projectName = projectNames[0];
 		const projectPath = getProjectPath(projectName);
 
 		// 确认删除
@@ -361,7 +366,6 @@ export const deleteCommand = new Command("delete")
 
 		try {
 			await fse.remove(projectPath);
-			// 删除元数据
 			deleteProjectMeta(projectName);
 			s.stop(`${brand.success("✓")} 已删除: ${brand.primary(projectName)}`);
 		} catch (error) {

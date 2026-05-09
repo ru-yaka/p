@@ -15497,13 +15497,14 @@ async function searchAndSelectDelete(projects, initialQuery) {
         hint: projectHint(p2)
       }));
     },
-    initialQuery
+    initialQuery,
+    selectAllLabel: "\u5168\u9009\u5220\u9664"
   });
   if (result === CANCEL) {
     Se(import_picocolors11.default.dim("\u5DF2\u53D6\u6D88"));
     process.exit(0);
   }
-  return result[0];
+  return result;
 }
 function wildcardMatch(projects, pattern) {
   const regexStr = `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`;
@@ -15681,19 +15682,24 @@ var deleteCommand = new Command("delete").alias("d").alias("rm").description("\u
     await batchDelete(selected);
     return;
   }
-  let projectName = name;
-  if (!projectExists(projectName)) {
-    const filtered = filterProjects(projects, projectName);
-    if (filtered.length === 1) {
-      projectName = filtered[0].name;
-    } else if (filtered.length > 1) {
-      projectName = await searchAndSelectDelete(projects, projectName);
-    } else {
-      printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${projectName}`);
+  let projectNames;
+  if (projectExists(name)) {
+    projectNames = [name];
+  } else {
+    const filtered = filterProjects(projects, name);
+    if (filtered.length === 0) {
+      printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${name}`);
       console.log(import_picocolors11.default.dim("\u4F7F\u7528 ") + brand.primary("p ls") + import_picocolors11.default.dim(" \u67E5\u770B\u6240\u6709\u9879\u76EE"));
       process.exit(1);
     }
+    projectNames = await searchAndSelectDelete(projects, name);
   }
+  if (projectNames.length > 1) {
+    Ie(bgOrange(" \u6279\u91CF\u5220\u9664 "));
+    await batchDelete(projectNames);
+    return;
+  }
+  const projectName = projectNames[0];
   const projectPath = getProjectPath(projectName);
   const shouldDelete = await ye({
     message: `\u786E\u5B9A\u8981\u5220\u9664\u9879\u76EE ${brand.primary(projectName)} \u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u6062\u590D\uFF01`,
