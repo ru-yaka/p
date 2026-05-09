@@ -15105,9 +15105,7 @@ var cloneCommand = new Command("clone").alias("cl").description("\u4ECE\u8FDC\u7
   const owner = extractOwner(normalizedUrl);
   const gitUser = await getGitUsername();
   if (owner && gitUser && gitUser.toLowerCase() !== owner.toLowerCase()) {
-    printError(`git \u7528\u6237 (${gitUser}) \u4E0E\u4ED3\u5E93 owner (${owner}) \u4E0D\u4E00\u81F4`);
-    console.log(import_picocolors7.default.dim("  \u8BF7\u5148\u5207\u6362\u5230\u6B63\u786E\u7684\u8D26\u6237\u540E\u518D\u6267\u884C p clone"));
-    process.exit(1);
+    console.log(import_picocolors7.default.dim(`  \u26A0 git \u7528\u6237 (${gitUser}) \u4E0E\u4ED3\u5E93 owner (${owner}) \u4E0D\u4E00\u81F4\uFF0C\u540E\u7EED push \u8BF7\u6CE8\u610F\u8FDC\u7A0B\u4ED3\u5E93\u5730\u5740`));
   }
   const s = Y2();
   s.start("\u6B63\u5728\u514B\u9686\u4ED3\u5E93...");

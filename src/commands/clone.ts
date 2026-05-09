@@ -116,9 +116,11 @@ export const cloneCommand = new Command("clone")
 		const gitUser = await getGitUsername();
 
 		if (owner && gitUser && gitUser.toLowerCase() !== owner.toLowerCase()) {
-			printError(`git 用户 (${gitUser}) 与仓库 owner (${owner}) 不一致`);
-			console.log(pc.dim("  请先切换到正确的账户后再执行 p clone"));
-			process.exit(1);
+			console.log(
+				pc.dim(
+					`  ⚠ git 用户 (${gitUser}) 与仓库 owner (${owner}) 不一致，后续 push 请注意远程仓库地址`,
+				),
+			);
 		}
 
 		// 执行 git clone
