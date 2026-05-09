@@ -338,6 +338,11 @@ export const deleteCommand = new Command("delete")
 				);
 				process.exit(1);
 			}
+			if (filtered.length === 1) {
+				console.log(pc.dim("  匹配到: ") + brand.primary(filtered[0].name));
+			} else {
+				console.log(pc.dim(`  匹配到 ${filtered.length} 个项目`));
+			}
 			projectNames = await searchAndSelectDelete(projects, name);
 		}
 

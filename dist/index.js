@@ -15751,6 +15751,11 @@ var deleteCommand = new Command("delete").alias("d").alias("rm").description("\u
       console.log(import_picocolors11.default.dim("\u4F7F\u7528 ") + brand.primary("p ls") + import_picocolors11.default.dim(" \u67E5\u770B\u6240\u6709\u9879\u76EE"));
       process.exit(1);
     }
+    if (filtered.length === 1) {
+      console.log(import_picocolors11.default.dim("  \u5339\u914D\u5230: ") + brand.primary(filtered[0].name));
+    } else {
+      console.log(import_picocolors11.default.dim(`  \u5339\u914D\u5230 ${filtered.length} \u4E2A\u9879\u76EE`));
+    }
     projectNames = await searchAndSelectDelete(projects, name);
   }
   if (projectNames.length > 1) {
@@ -17054,8 +17059,10 @@ var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879
   } else if (!projectExists(name)) {
     const filtered = filterProjects(projects, name);
     if (filtered.length === 1) {
+      console.log(import_picocolors20.default.dim("  \u5339\u914D\u5230: ") + brand.primary(filtered[0].name));
       projectNames = [filtered[0].name];
     } else if (filtered.length > 1) {
+      console.log(import_picocolors20.default.dim(`  \u5339\u914D\u5230 ${filtered.length} \u4E2A\u9879\u76EE`));
       projectNames = await searchAndSelect(projects, name);
     } else {
       printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${name}`);
@@ -17229,8 +17236,10 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
   } else if (!projectExists(projectName)) {
     const filtered = filterProjects(projects, projectName);
     if (filtered.length === 1) {
+      console.log(import_picocolors22.default.dim("  \u5339\u914D\u5230: ") + brand.primary(filtered[0].name));
       projectName = filtered[0].name;
     } else if (filtered.length > 1) {
+      console.log(import_picocolors22.default.dim(`  \u5339\u914D\u5230 ${filtered.length} \u4E2A\u9879\u76EE`));
       projectName = await searchAndSelect2(projects, projectName);
     } else {
       printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${projectName}`);

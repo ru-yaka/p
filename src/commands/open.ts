@@ -120,8 +120,10 @@ export const openCommand = new Command("open")
 		} else if (!projectExists(name)) {
 			const filtered = filterProjects(projects, name);
 			if (filtered.length === 1) {
+				console.log(pc.dim("  匹配到: ") + brand.primary(filtered[0].name));
 				projectNames = [filtered[0].name];
 			} else if (filtered.length > 1) {
+				console.log(pc.dim(`  匹配到 ${filtered.length} 个项目`));
 				projectNames = await searchAndSelect(projects, name);
 			} else {
 				printError(`项目不存在: ${name}`);
