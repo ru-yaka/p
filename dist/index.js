@@ -16639,7 +16639,7 @@ async function selectOrInput(opts) {
 
 // src/commands/new.ts
 var REGENERATE = Symbol("regenerate");
-var newCommand = new Command("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").allowExcessArguments(true).action(async (name, options) => {
+var newCommand = new Command("new").alias("n").alias("create").description("\u521B\u5EFA\u65B0\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\uFF08\u652F\u6301 #tag \u6DFB\u52A0\u6807\u7B7E\uFF09").option("-t, --template [template]", "\u4F7F\u7528\u6307\u5B9A\u6A21\u677F").option("-d, --desc <text>", "\u7528\u63CF\u8FF0\u751F\u6210\u9879\u76EE\u540D\uFF08AI \u547D\u540D\uFF09").option("--debug", "AI \u8C03\u8BD5\u6A21\u5F0F").allowExcessArguments(true).action(async (name, options) => {
   const rawArgs = process.argv;
   const ddIdx = rawArgs.indexOf("--");
   const newIdx = rawArgs.lastIndexOf("new");
