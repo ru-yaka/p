@@ -51,7 +51,7 @@ async function searchAndSelectDelete(
 			}));
 		},
 		initialQuery,
-		selectAllLabel: "全选删除",
+		multiSelect: true,
 	});
 
 	if (result === CANCEL) {

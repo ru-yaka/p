@@ -15250,6 +15250,7 @@ function buildInputLine(query, cursorPos, placeholder) {
 async function liveSearch(opts) {
   const stdin = process.stdin;
   const stdout = process.stdout;
+  const multi = opts.multiSelect ?? false;
   const interceptStream = new Writable({
     write(_chunk, _encoding, callback) {
       callback();
@@ -15271,17 +15272,18 @@ async function liveSearch(opts) {
     cursor: initialQuery.length,
     selectedIndex: 0,
     scrollOffset: 0,
-    filtered: initialFiltered
+    filtered: initialFiltered,
+    checked: new Set
   };
   let blockHeight = 0;
   let resolved = false;
   function render() {
     const parts = [];
-    if (blockHeight > 0) {
+    if (blockHeight > 0)
       parts.push(import_sisteransi3.cursor.up(blockHeight));
-    }
     const lines = [];
-    lines.push(`  ${brand.secondary("\u25C6")} ${opts.message}`);
+    const countTag = multi && state.checked.size > 0 ? import_picocolors9.default.dim(` (\u5DF2\u9009 ${state.checked.size})`) : "";
+    lines.push(`  ${brand.secondary("\u25C6")} ${opts.message}${countTag}`);
     const placeholder = opts.placeholder || "";
     const inputLine = buildInputLine(state.query, state.cursor, placeholder);
     lines.push(`  ${brand.secondary("\u2502")} ${inputLine}`);
@@ -15293,19 +15295,30 @@ async function liveSearch(opts) {
     } else {
       for (let i = 0;i < visible.length; i++) {
         const idx = state.scrollOffset + i;
-        const isSelected = idx === state.selectedIndex;
+        const isCursor = idx === state.selectedIndex;
         const item = visible[i];
-        const marker = isSelected ? brand.primary("\u25C9") : import_picocolors9.default.dim("\u25CB");
-        const label = isSelected ? brand.bold(item.label) : item.label;
-        const hint = item.hint ? import_picocolors9.default.dim("  ") + item.hint : "";
-        lines.push(`  ${brand.secondary("\u2502")} ${marker} ${label}${hint}`);
+        let marker;
+        if (multi) {
+          const checked = state.checked.has(item.value);
+          const box = checked ? import_picocolors9.default.green("\u25A0") : import_picocolors9.default.dim("\u25A1");
+          marker = isCursor ? brand.primary("\u25B8") + box : import_picocolors9.default.dim(" ") + box;
+        } else {
+          marker = isCursor ? brand.primary("\u25C9") : import_picocolors9.default.dim("\u25CB");
+        }
+        const label = isCursor ? brand.bold(item.label) : item.label;
+        const hint2 = item.hint ? import_picocolors9.default.dim("  ") + item.hint : "";
+        lines.push(`  ${brand.secondary("\u2502")} ${marker} ${label}${hint2}`);
       }
     }
     const remaining = state.filtered.length - state.scrollOffset - MAX_VISIBLE;
     if (remaining > 0) {
       lines.push(`  ${brand.secondary("\u2502")}   ${import_picocolors9.default.dim(`... \u8FD8\u6709 ${remaining} \u4E2A`)}`);
     }
-    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim(`\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4${opts.selectAllLabel ? " \xB7 Ctrl+A " + opts.selectAllLabel : ""} \xB7 Esc \u53D6\u6D88`)}`);
+    let hint = "\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4";
+    if (multi)
+      hint += " \xB7 Space \u5207\u6362 \xB7 Ctrl+A \u5168\u9009";
+    hint += " \xB7 Esc \u53D6\u6D88";
+    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim(hint)}`);
     for (const line of lines) {
       parts.push(line + `\x1B[K
 `);
@@ -15332,7 +15345,7 @@ async function liveSearch(opts) {
       rl.close();
       stdout.write(import_sisteransi3.cursor.show);
     }
-    function submit(value, label) {
+    function submitResult(values, label) {
       const parts = [];
       parts.push(import_sisteransi3.cursor.up(blockHeight));
       for (let i = 0;i < blockHeight; i++) {
@@ -15344,7 +15357,7 @@ async function liveSearch(opts) {
 `);
       stdout.write(parts.join(""));
       cleanup();
-      resolve3([value]);
+      resolve3(values);
     }
     function doCancel() {
       const parts = [];
@@ -15360,6 +15373,25 @@ async function liveSearch(opts) {
       cleanup();
       resolve3(CANCEL);
     }
+    function toggleCurrent() {
+      const item = state.filtered[state.selectedIndex];
+      if (!item)
+        return;
+      if (state.checked.has(item.value)) {
+        state.checked.delete(item.value);
+      } else {
+        state.checked.add(item.value);
+      }
+    }
+    function toggleAll() {
+      if (state.filtered.every((f) => state.checked.has(f.value))) {
+        for (const f of state.filtered)
+          state.checked.delete(f.value);
+      } else {
+        for (const f of state.filtered)
+          state.checked.add(f.value);
+      }
+    }
     function onKey(_char, key) {
       if (resolved)
         return;
@@ -15367,12 +15399,32 @@ async function liveSearch(opts) {
         doCancel();
         return;
       }
+      if (multi && key.name === "a" && key.ctrl) {
+        toggleAll();
+        render();
+        return;
+      }
+      if (multi && key.name === "space") {
+        toggleCurrent();
+        render();
+        return;
+      }
       switch (key.name) {
         case "return": {
           if (state.filtered.length === 0)
             return;
-          const selected = state.filtered[state.selectedIndex];
-          submit(selected.value, selected.label);
+          if (multi) {
+            if (state.checked.size > 0) {
+              const values = [...state.checked];
+              submitResult(values, `${values.length} \u4E2A\u9879\u76EE`);
+            } else {
+              const item = state.filtered[state.selectedIndex];
+              submitResult([item.value], item.label);
+            }
+          } else {
+            const selected = state.filtered[state.selectedIndex];
+            submitResult([selected.value], selected.label);
+          }
           return;
         }
         case "escape": {
@@ -15443,6 +15495,13 @@ async function liveSearch(opts) {
       state.filtered = state.query ? opts.filterFn(state.query) : opts.options;
       state.selectedIndex = 0;
       state.scrollOffset = 0;
+      if (multi) {
+        const visible = new Set(state.filtered.map((f) => f.value));
+        for (const v2 of state.checked) {
+          if (!visible.has(v2))
+            state.checked.delete(v2);
+        }
+      }
     }
     stdin.on("keypress", onKey);
   });
@@ -15498,7 +15557,7 @@ async function searchAndSelectDelete(projects, initialQuery) {
       }));
     },
     initialQuery,
-    selectAllLabel: "\u5168\u9009\u5220\u9664"
+    multiSelect: true
   });
   if (result === CANCEL) {
     Se(import_picocolors11.default.dim("\u5DF2\u53D6\u6D88"));
@@ -16924,7 +16983,7 @@ async function searchAndSelect(projects, initialQuery) {
       }));
     },
     initialQuery,
-    selectAllLabel: "\u5168\u90E8\u6253\u5F00"
+    multiSelect: true
   });
   if (result === CANCEL) {
     Se(import_picocolors20.default.dim("\u5DF2\u53D6\u6D88"));
