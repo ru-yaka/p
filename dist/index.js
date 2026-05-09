@@ -15305,7 +15305,7 @@ async function liveSearch(opts) {
     if (remaining > 0) {
       lines.push(`  ${brand.secondary("\u2502")}   ${import_picocolors9.default.dim(`... \u8FD8\u6709 ${remaining} \u4E2A`)}`);
     }
-    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim("\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4 \xB7 a \u5168\u90E8\u6253\u5F00 \xB7 Esc \u53D6\u6D88")}`);
+    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim("\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4 \xB7 Ctrl+A \u5168\u90E8\u6253\u5F00 \xB7 Esc \u53D6\u6D88")}`);
     for (const line of lines) {
       parts.push(line + `\x1B[K
 `);
@@ -15380,6 +15380,8 @@ async function liveSearch(opts) {
           return;
         }
         case "a": {
+          if (!key.ctrl)
+            break;
           if (state.filtered.length > 0) {
             const parts = [];
             parts.push(import_sisteransi3.cursor.up(blockHeight));

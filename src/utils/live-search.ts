@@ -190,7 +190,7 @@ export async function liveSearch(
 
 		// 底部
 		lines.push(
-			`  ${brand.secondary("└")} ${pc.dim("输入筛选 · ↑↓ 选择 · Enter 确认 · a 全部打开 · Esc 取消")}`,
+			`  ${brand.secondary("└")} ${pc.dim("输入筛选 · ↑↓ 选择 · Enter 确认 · Ctrl+A 全部打开 · Esc 取消")}`,
 		);
 
 		// 逐行覆写（\x1b[K 清行尾残留字符）
@@ -279,6 +279,7 @@ export async function liveSearch(
 					return;
 				}
 				case "a": {
+					if (!key.ctrl) break;
 					if (state.filtered.length > 0) {
 						const parts: string[] = [];
 						parts.push(ansiCursor.up(blockHeight));
