@@ -16739,14 +16739,17 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
   }
   const config = loadConfig();
   const allTemplates = await getAllTemplates(config.templates);
-  const isQuickMode = name && !options?.template && !options?.desc;
+  const nameParts = (name || "").split(/\s+/);
+  const tags = nameParts.filter((p2) => p2.startsWith("#")).map((t) => t.slice(1).toLowerCase());
+  const cleanName = nameParts.filter((p2) => !p2.startsWith("#")).join(" ") || name;
+  const isQuickMode = cleanName && !options?.template && !options?.desc;
   if (isQuickMode) {
-    const validation = validateProjectName(name);
+    const validation = validateProjectName(cleanName);
     if (!validation.valid) {
       printError(validation.message);
       process.exit(1);
     }
-    const projectPath2 = getProjectPath(name);
+    const projectPath2 = getProjectPath(cleanName);
     try {
       await import_fs_extra13.default.ensureDir(projectPath2);
     } catch (error) {
@@ -16756,9 +16759,9 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     }
     const emptyTemplate = config.templates.empty;
     if (emptyTemplate?.hooks && emptyTemplate.hooks.length > 0) {
-      await runHooks(config, "empty", projectPath2, name);
+      await runHooks(config, "empty", projectPath2, cleanName);
     }
-    saveProjectMeta(name, { template: "empty" });
+    saveProjectMeta(cleanName, { template: "empty", tags });
     try {
       await openWithIDE(config.ide, projectPath2);
       console.log(brand.success("\u2713") + " " + brand.primary(name) + import_picocolors18.default.dim(" \u5DF2\u521B\u5EFA\u5E76\u6253\u5F00"));
@@ -16772,7 +16775,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     return;
   }
   Ie(bgOrange(" \u521B\u5EFA\u65B0\u9879\u76EE "));
-  let projectName = name;
+  let projectName = cleanName;
   if (options?.desc) {
     if (options?.debug) {
       await generateProjectNames(options.desc, { debug: true });
@@ -16863,7 +16866,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     }
     projectName = result;
   } else {
-    const validation = validateProjectName(projectName);
+    const validation = validateProjectName(cleanName);
     if (!validation.valid) {
       printError(validation.message);
       process.exit(1);
@@ -16945,7 +16948,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     process.exit(1);
   }
   await runHooks(config, templateKey, projectPath, projectName);
-  saveProjectMeta(projectName, { template: templateKey });
+  saveProjectMeta(projectName, { template: templateKey, tags });
   console.log();
   const s = Y2();
   s.start(`\u6B63\u5728\u6253\u5F00 ${config.ide}...`);

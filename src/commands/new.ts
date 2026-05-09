@@ -178,18 +178,25 @@ export const newCommand = new Command("new")
 				const config = loadConfig();
 			const allTemplates = await getAllTemplates(config.templates);
 
+		// 从名称参数中提取 #tag（如 p new myproj #clone #pnpm）
+		const nameParts = (name || "").split(/\s+/);
+		const tags = nameParts
+			.filter((p) => p.startsWith("#"))
+			.map((t) => t.slice(1).toLowerCase());
+		const cleanName = nameParts.filter((p) => !p.startsWith("#")).join(" ") || name;
+
 		// 快速模式：只有项目名，没有 -t / --desc 参数 → 使用 empty 模板
-		const isQuickMode = name && !options?.template && !options?.desc;
+		const isQuickMode = cleanName && !options?.template && !options?.desc;
 
 		if (isQuickMode) {
 			// 验证项目名称
-			const validation = validateProjectName(name);
+			const validation = validateProjectName(cleanName);
 			if (!validation.valid) {
 				printError(validation.message!);
 				process.exit(1);
 			}
 
-			const projectPath = getProjectPath(name);
+			const projectPath = getProjectPath(cleanName);
 
 			// 创建空目录
 			try {
@@ -204,11 +211,11 @@ export const newCommand = new Command("new")
 			const emptyTemplate = config.templates.empty;
 
 			if (emptyTemplate?.hooks && emptyTemplate.hooks.length > 0) {
-				await runHooks(config, "empty", projectPath, name);
+				await runHooks(config, "empty", projectPath, cleanName);
 			}
 
 			// 保存项目元数据
-			saveProjectMeta(name, { template: "empty" });
+			saveProjectMeta(cleanName, { template: "empty", tags });
 
 			// 打开 IDE
 			try {
@@ -233,7 +240,7 @@ export const newCommand = new Command("new")
 		intro(bgOrange(" 创建新项目 "));
 
 		// 1. 获取项目名称
-		let projectName = name;
+		let projectName = cleanName;
 
 		// AI 命名模式
 		if (options?.desc) {
@@ -346,7 +353,7 @@ export const newCommand = new Command("new")
 			projectName = result as string;
 		} else {
 			// 验证传入的名称
-			const validation = validateProjectName(projectName);
+			const validation = validateProjectName(cleanName);
 			if (!validation.valid) {
 				printError(validation.message!);
 				process.exit(1);
@@ -458,7 +465,7 @@ export const newCommand = new Command("new")
 		await runHooks(config, templateKey, projectPath, projectName);
 
 		// 7. 保存项目元数据
-		saveProjectMeta(projectName, { template: templateKey });
+		saveProjectMeta(projectName, { template: templateKey, tags });
 
 		// 8. 打开 IDE
 		console.log();

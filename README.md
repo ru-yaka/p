@@ -32,6 +32,7 @@ p update
 | 命令 | 说明 |
 |------|------|
 | `p new <name>` | 创建新项目 |
+| `p new <name> #tag1 #tag2` | 创建新项目并添加标签 |
 | `p new -- <command>` | 在项目目录执行 CLI 初始化（如框架脚手架） |
 | `p new -- <alias> <name>` | 使用 config.yaml 中配置的快捷方式初始化 |
 | `p new -d "描述"` | AI 生成项目名称 |
@@ -81,7 +82,7 @@ p clone https://github.com/owner/repo
 p cl <url>
 ```
 
-自动检查 `git config user.name` 与仓库 owner 是否一致，不一致则提示切换账户。
+自动检查 `git config user.name` 与仓库 owner 是否一致，不一致则警告提示。
 
 ## Copy 命令
 
