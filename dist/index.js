@@ -15305,7 +15305,7 @@ async function liveSearch(opts) {
     if (remaining > 0) {
       lines.push(`  ${brand.secondary("\u2502")}   ${import_picocolors9.default.dim(`... \u8FD8\u6709 ${remaining} \u4E2A`)}`);
     }
-    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim("\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4 \xB7 Ctrl+A \u5168\u90E8\u6253\u5F00 \xB7 Esc \u53D6\u6D88")}`);
+    lines.push(`  ${brand.secondary("\u2514")} ${import_picocolors9.default.dim(`\u8F93\u5165\u7B5B\u9009 \xB7 \u2191\u2193 \u9009\u62E9 \xB7 Enter \u786E\u8BA4${opts.selectAllLabel ? " \xB7 Ctrl+A " + opts.selectAllLabel : ""} \xB7 Esc \u53D6\u6D88`)}`);
     for (const line of lines) {
       parts.push(line + `\x1B[K
 `);
@@ -15375,28 +15375,10 @@ async function liveSearch(opts) {
           submit(selected.value, selected.label);
           return;
         }
-        case "escape":
-          {
-            doCancel();
-            return;
-          }
-          if (key.name === "a" && key.ctrl) {
-            if (state.filtered.length > 0) {
-              const parts = [];
-              parts.push(import_sisteransi3.cursor.up(blockHeight));
-              for (let i = 0;i < blockHeight; i++) {
-                parts.push(`\x1B[K
-`);
-              }
-              parts.push(import_sisteransi3.cursor.up(blockHeight));
-              parts.push(`  ${brand.success("\u25C6")} ${opts.message} ${import_picocolors9.default.dim(`\u6253\u5F00\u5168\u90E8 ${state.filtered.length} \u4E2A`)}
-`);
-              stdout.write(parts.join(""));
-              cleanup();
-              resolve3(state.filtered.map((f) => f.value));
-            }
-            return;
-          }
+        case "escape": {
+          doCancel();
+          return;
+        }
         case "backspace": {
           if (state.cursor > 0) {
             state.query = state.query.slice(0, state.cursor - 1) + state.query.slice(state.cursor);
@@ -16935,7 +16917,8 @@ async function searchAndSelect(projects, initialQuery) {
         hint: projectHint(p2)
       }));
     },
-    initialQuery
+    initialQuery,
+    selectAllLabel: "\u5168\u90E8\u6253\u5F00"
   });
   if (result === CANCEL) {
     Se(import_picocolors20.default.dim("\u5DF2\u53D6\u6D88"));

@@ -51,6 +51,7 @@ async function searchAndSelect(
 			}));
 		},
 		initialQuery,
+		selectAllLabel: "全部打开",
 	});
 
 	if (result === CANCEL) {

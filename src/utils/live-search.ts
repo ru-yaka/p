@@ -18,6 +18,7 @@ export interface LiveSearchOptions {
 	options: LiveSearchOption[];
 	filterFn: (query: string) => LiveSearchOption[];
 	initialQuery?: string;
+	selectAllLabel?: string;
 }
 
 interface SearchState {
@@ -190,7 +191,7 @@ export async function liveSearch(
 
 		// 底部
 		lines.push(
-			`  ${brand.secondary("└")} ${pc.dim("输入筛选 · ↑↓ 选择 · Enter 确认 · Ctrl+A 全部打开 · Esc 取消")}`,
+			`  ${brand.secondary("└")} ${pc.dim(`输入筛选 · ↑↓ 选择 · Enter 确认${opts.selectAllLabel ? " · Ctrl+A " + opts.selectAllLabel : ""} · Esc 取消`)}`,
 		);
 
 		// 逐行覆写（\x1b[K 清行尾残留字符）
@@ -278,25 +279,6 @@ export async function liveSearch(
 					doCancel();
 					return;
 				}
-				// Ctrl+A: 全部打开
-				if (key.name === "a" && key.ctrl) {
-					if (state.filtered.length > 0) {
-						const parts: string[] = [];
-						parts.push(ansiCursor.up(blockHeight));
-						for (let i = 0; i < blockHeight; i++) {
-							parts.push("\x1b[K\n");
-						}
-						parts.push(ansiCursor.up(blockHeight));
-						parts.push(
-							`  ${brand.success("◆")} ${opts.message} ${pc.dim(`打开全部 ${state.filtered.length} 个`)}\n`,
-						);
-						stdout.write(parts.join(""));
-						cleanup();
-						resolve(state.filtered.map((f) => f.value));
-					}
-					return;
-				}
-
 				case "backspace": {
 					if (state.cursor > 0) {
 						state.query =
