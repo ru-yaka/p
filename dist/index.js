@@ -18093,10 +18093,11 @@ async function handlePublish(nameArg) {
       }
       templateName = result.trim();
     }
-    const isUpdate = await templateExists(templateName);
-    await createOrUpdateTemplate(currentDir, templateName, isUpdate);
-    if (currentProject)
-      saveSavedTemplate(currentProject.name, templateName);
+    if (!await templateExists(templateName)) {
+      await createOrUpdateTemplate(currentDir, templateName, false);
+      if (currentProject)
+        saveSavedTemplate(currentProject.name, templateName);
+    }
     await doPublish(templateName);
     return;
   }

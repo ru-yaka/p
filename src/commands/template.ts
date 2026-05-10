@@ -335,7 +335,7 @@ async function handleUpdate(target?: string) {
 }
 
 async function handlePublish(nameArg?: string) {
-	// 处理 "publish ." —— 先将当前项目保存为模板，再发布
+	// 处理 "publish ." —— 当前项目发布为模板
 	if (nameArg === ".") {
 		const currentDir = process.cwd();
 		const projects = listProjects();
@@ -356,9 +356,11 @@ async function handlePublish(nameArg?: string) {
 			templateName = (result as string).trim();
 		}
 
-		const isUpdate = await templateExists(templateName);
-		await createOrUpdateTemplate(currentDir, templateName, isUpdate);
-		if (currentProject) saveSavedTemplate(currentProject.name, templateName);
+		// 模板不存在则先保存
+		if (!(await templateExists(templateName))) {
+			await createOrUpdateTemplate(currentDir, templateName, false);
+			if (currentProject) saveSavedTemplate(currentProject.name, templateName);
+		}
 
 		await doPublish(templateName);
 		return;
