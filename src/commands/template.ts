@@ -441,38 +441,13 @@ async function doPublish(selectedTemplate: string) {
 	const templatePath = resolve(TEMPLATES_DIR, selectedTemplate);
 	intro(bgOrange(" 发布模板 "));
 
-	if (!(await commandExists("gh"))) {
-		printError("需要安装 GitHub CLI (gh)");
-		console.log(pc.dim("  https://cli.github.com/"));
-		process.exit(1);
-	}
-
-	// 并行检查登录状态和获取用户名
-	const [authResult, whoamiResult] = await Promise.all([
-		execAndCapture("gh auth status", process.cwd()),
-		execAndCapture("gh api user --jq .login", process.cwd()),
-	]);
-
-	if (!authResult.success) {
-		printError("请先登录 GitHub CLI: gh auth login");
-		process.exit(1);
-	}
-
-	const owner = whoamiResult.success ? whoamiResult.output.trim() : "";
-	if (!owner) {
-		printError("无法获取 GitHub 用户名");
-		process.exit(1);
-	}
-
 	const shouldPublish = await confirm({
-		message: `确认将模板 ${brand.primary(selectedTemplate)} 发布到 GitHub (${owner}/${selectedTemplate})？`,
+		message: `确认将模板 ${brand.primary(selectedTemplate)} 发布到 GitHub？`,
 	});
 	if (isCancel(shouldPublish) || !shouldPublish) {
 		outro(pc.dim("已取消"));
 		return;
 	}
-
-	const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
 
 	const s = spinner();
 	s.start("正在创建 GitHub 仓库...");
@@ -482,15 +457,38 @@ async function doPublish(selectedTemplate: string) {
 		{ cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
 	);
 	const exitCode = await proc.exited;
+	const stdout = await new Response(proc.stdout).text();
 	const stderr = await new Response(proc.stderr).text();
+	const output = stdout + stderr;
 
-	if (exitCode !== 0 && !stderr.includes("Name already exists")) {
-		s.stop("创建仓库失败");
+	// 从输出或 API 获取 owner
+	let owner = "";
+	const urlMatch = output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+	if (urlMatch) {
+		owner = urlMatch[1];
+	} else {
+		// 仓库已存在时从 API 获取
+		const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
+		owner = whoami.success ? whoami.output.trim() : "";
+	}
+
+	if (!owner) {
+		s.stop("获取 GitHub 用户名失败");
 		console.log();
-		printError(stderr || "未知错误");
+		printError(output || "请确认已安装并登录 GitHub CLI (gh)");
 		console.log();
 		process.exit(1);
 	}
+
+	if (exitCode !== 0 && !output.includes("Name already exists")) {
+		s.stop("创建仓库失败");
+		console.log();
+		printError(output);
+		console.log();
+		process.exit(1);
+	}
+
+	const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
 
 	if (exitCode === 0) {
 		s.stop(`${brand.success("✓")} 仓库已创建: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
