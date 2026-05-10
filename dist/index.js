@@ -31,6 +31,20 @@ var __toESM = (mod, isNodeMode, target) => {
   return to;
 };
 var __commonJS = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+var __returnValue = (v) => v;
+function __exportSetter(name, newValue) {
+  this[name] = __returnValue.bind(null, newValue);
+}
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, {
+      get: all[name],
+      enumerable: true,
+      configurable: true,
+      set: __exportSetter.bind(all, name)
+    });
+};
+var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
 var __require = import.meta.require;
 
 // node_modules/commander/lib/error.js
@@ -2124,6 +2138,39 @@ var require_commander = __commonJS((exports) => {
   exports.CommanderError = CommanderError;
   exports.InvalidArgumentError = InvalidArgumentError;
   exports.InvalidOptionArgumentError = InvalidArgumentError;
+});
+
+// node_modules/commander/esm.mjs
+var exports_esm = {};
+__export(exports_esm, {
+  program: () => program,
+  createOption: () => createOption,
+  createCommand: () => createCommand,
+  createArgument: () => createArgument,
+  Option: () => Option,
+  InvalidOptionArgumentError: () => InvalidOptionArgumentError,
+  InvalidArgumentError: () => InvalidArgumentError,
+  Help: () => Help,
+  CommanderError: () => CommanderError,
+  Command: () => Command,
+  Argument: () => Argument
+});
+var import__, program, createCommand, createArgument, createOption, CommanderError, InvalidArgumentError, InvalidOptionArgumentError, Command, Argument, Option, Help;
+var init_esm = __esm(() => {
+  import__ = __toESM(require_commander(), 1);
+  ({
+    program,
+    createCommand,
+    createArgument,
+    createOption,
+    CommanderError,
+    InvalidArgumentError,
+    InvalidOptionArgumentError,
+    Command,
+    Argument,
+    Option,
+    Help
+  } = import__.default);
 });
 
 // node_modules/sisteransi/src/index.js
@@ -13586,23 +13633,8 @@ var require_adm_zip = __commonJS((exports, module) => {
   };
 });
 
-// node_modules/commander/esm.mjs
-var import__ = __toESM(require_commander(), 1);
-var {
-  program,
-  createCommand,
-  createArgument,
-  createOption,
-  CommanderError,
-  InvalidArgumentError,
-  InvalidOptionArgumentError,
-  Command,
-  Argument,
-  Option,
-  Help
-} = import__.default;
-
 // src/index.ts
+init_esm();
 import { readFileSync as readFileSync3 } from "fs";
 import { dirname as dirname5, join as join12 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
@@ -14298,6 +14330,7 @@ var Y2 = ({ indicator: t = "dots" } = {}) => {
 };
 
 // src/commands/add.ts
+init_esm();
 var import_fs_extra4 = __toESM(require_lib(), 1);
 var import_picocolors6 = __toESM(require_picocolors(), 1);
 
@@ -15043,6 +15076,7 @@ var addCommand = new Command("add").description("\u5C06\u6A21\u677F\u6216\u9879\
 });
 
 // src/commands/clone.ts
+init_esm();
 var import_picocolors7 = __toESM(require_picocolors(), 1);
 function normalizeUrl(input) {
   if (input.startsWith("https://") || input.startsWith("http://") || input.startsWith("git@") || input.startsWith("ssh://")) {
@@ -15139,6 +15173,7 @@ var cloneCommand = new Command("clone").alias("cl").description("\u4ECE\u8FDC\u7
 });
 
 // src/commands/config.ts
+init_esm();
 var configCommand = new Command("config").description("\u7F16\u8F91\u914D\u7F6E\u6587\u4EF6").action(async () => {
   const config = loadConfig();
   console.log();
@@ -15164,6 +15199,7 @@ var configCommand = new Command("config").description("\u7F16\u8F91\u914D\u7F6E\
 
 // src/commands/copy.ts
 import { basename, resolve as resolve2 } from "path";
+init_esm();
 var import_fs_extra5 = __toESM(require_lib(), 1);
 var import_picocolors8 = __toESM(require_picocolors(), 1);
 var copyCommand = new Command("copy").alias("cp").description("\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
@@ -15248,6 +15284,7 @@ var copyCommand = new Command("copy").alias("cp").description("\u590D\u5236\u76E
 });
 
 // src/commands/delete.ts
+init_esm();
 var import_fs_extra6 = __toESM(require_lib(), 1);
 var import_picocolors11 = __toESM(require_picocolors(), 1);
 
@@ -15809,6 +15846,7 @@ var deleteCommand = new Command("delete").alias("d").alias("rm").description("\u
 });
 
 // src/commands/hook.ts
+init_esm();
 var import_fs_extra7 = __toESM(require_lib(), 1);
 var import_picocolors12 = __toESM(require_picocolors(), 1);
 var EXAMPLE_HOOK = `// \u81EA\u5B9A\u4E49 Hook \u811A\u672C\u793A\u4F8B
@@ -15860,6 +15898,7 @@ var hookCommand = new Command("hook").alias("hooks").description("\u7BA1\u7406\u
 
 // src/commands/import.ts
 import { basename as basename2, resolve as resolve3 } from "path";
+init_esm();
 var import_fs_extra9 = __toESM(require_lib(), 1);
 var import_picocolors13 = __toESM(require_picocolors(), 1);
 
@@ -16070,6 +16109,7 @@ var importCommand = new Command("import").alias("i").description("\u5BFC\u5165\u
 });
 
 // src/commands/ls.ts
+init_esm();
 var import_fs_extra10 = __toESM(require_lib(), 1);
 var import_picocolors14 = __toESM(require_picocolors(), 1);
 async function listTemplates() {
@@ -16129,6 +16169,7 @@ var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\
 });
 
 // src/commands/meta.ts
+init_esm();
 var import_fs_extra11 = __toESM(require_lib(), 1);
 var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u5143\u6570\u636E").action(async () => {
   const config = loadConfig();
@@ -16159,6 +16200,7 @@ var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u514
 });
 
 // src/commands/new.ts
+init_esm();
 var import_fs_extra13 = __toESM(require_lib(), 1);
 var import_picocolors18 = __toESM(require_picocolors(), 1);
 import { tmpdir } from "os";
@@ -16966,6 +17008,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
 });
 
 // src/commands/note.ts
+init_esm();
 var import_picocolors19 = __toESM(require_picocolors(), 1);
 function resolveProjectName(name) {
   if (name === ".") {
@@ -17049,6 +17092,7 @@ var noteCommand = new Command("note").alias("notes").description("\u7BA1\u7406\u
 });
 
 // src/commands/open.ts
+init_esm();
 var import_fs_extra14 = __toESM(require_lib(), 1);
 var import_picocolors20 = __toESM(require_picocolors(), 1);
 async function searchAndSelect(projects, initialQuery) {
@@ -17194,6 +17238,7 @@ var openCommand = new Command("open").alias("o").description("\u6253\u5F00\u9879
 });
 
 // src/commands/project.ts
+init_esm();
 var import_fs_extra15 = __toESM(require_lib(), 1);
 var import_picocolors21 = __toESM(require_picocolors(), 1);
 var projectCommand = new Command("project").alias("projects").description("\u6253\u5F00\u9879\u76EE\u76EE\u5F55").action(async () => {
@@ -17216,6 +17261,7 @@ var projectCommand = new Command("project").alias("projects").description("\u625
 });
 
 // src/commands/rename.ts
+init_esm();
 var import_fs_extra16 = __toESM(require_lib(), 1);
 var import_picocolors22 = __toESM(require_picocolors(), 1);
 async function searchAndSelect2(projects, initialQuery) {
@@ -17399,11 +17445,12 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
 });
 
 // src/commands/recent.ts
-import * as readline3 from "readline";
-import { Writable as Writable3 } from "stream";
+init_esm();
 var import_fs_extra17 = __toESM(require_lib(), 1);
 var import_picocolors23 = __toESM(require_picocolors(), 1);
 var import_sisteransi5 = __toESM(require_src(), 1);
+import * as readline3 from "readline";
+import { Writable as Writable3 } from "stream";
 var MAX_VISIBLE3 = 10;
 var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\u6700\u8FD1\u9879\u76EE").action(async () => {
   const config = loadConfig();
@@ -17608,6 +17655,7 @@ var recentCommand = new Command("recent").alias("re").description("\u67E5\u770B\
 });
 
 // src/commands/run.ts
+init_esm();
 var import_picocolors24 = __toESM(require_picocolors(), 1);
 var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u9879\u76EE\u6267\u884C hooks").argument("[hooks...]", "\u8981\u6267\u884C\u7684 hook \u540D\u79F0").action(async (hookKeys) => {
   const config = loadConfig();
@@ -17658,6 +17706,7 @@ var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u
 });
 
 // src/commands/tag.ts
+init_esm();
 var import_picocolors25 = __toESM(require_picocolors(), 1);
 function getCurrentProjectName() {
   const currentDir = process.cwd();
@@ -17796,6 +17845,7 @@ var tagCommand = new Command("tag").alias("t").alias("tags").description("\u7BA1
 
 // src/commands/template.ts
 import { resolve as resolve4 } from "path";
+init_esm();
 var import_fs_extra18 = __toESM(require_lib(), 1);
 var import_picocolors26 = __toESM(require_picocolors(), 1);
 async function templateExists(templateName) {
@@ -18196,6 +18246,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
 }
 
 // src/commands/unzip.ts
+init_esm();
 var import_adm_zip = __toESM(require_adm_zip(), 1);
 var import_fs_extra19 = __toESM(require_lib(), 1);
 
@@ -21569,6 +21620,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
 });
 
 // src/commands/update.ts
+init_esm();
 var import_picocolors28 = __toESM(require_picocolors(), 1);
 import { dirname as dirname4, join as join11, resolve as resolve5 } from "path";
 import { fileURLToPath } from "url";
@@ -21635,7 +21687,14 @@ var pkgPath = join12(__dirname2, "..", "package.json");
 var pkg = JSON.parse(readFileSync3(pkgPath, "utf-8"));
 var program2 = new Command;
 await ensureInitialized();
-program2.name("p").description(brand.primary("\u26A1 P - \u9879\u76EE\u7BA1\u7406\u5DE5\u5177")).version(pkg.version);
+program2.name("p").description(`${brand.primary("\u26A1 P")} v${pkg.version} \u2014 \u9879\u76EE\u7BA1\u7406\u5DE5\u5177`).version(pkg.version);
+var Help2 = (await Promise.resolve().then(() => (init_esm(), exports_esm))).Help;
+Help2.prototype.subcommandTerm = function(cmd) {
+  const aliases = cmd.aliases();
+  if (aliases.length === 0)
+    return cmd.name();
+  return `${cmd.name()}|${aliases.join("|")}`;
+};
 program2.addCommand(addCommand);
 program2.addCommand(cloneCommand);
 program2.addCommand(copyCommand);

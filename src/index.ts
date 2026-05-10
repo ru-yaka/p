@@ -38,8 +38,16 @@ await ensureInitialized();
 
 program
 	.name("p")
-	.description(brand.primary("⚡ P - 项目管理工具"))
+	.description(`${brand.primary("⚡ P")} v${pkg.version} — 项目管理工具`)
 	.version(pkg.version);
+
+// 显示所有 alias，而非仅第一个
+const Help = (await import("commander")).Help;
+Help.prototype.subcommandTerm = function (cmd: any) {
+	const aliases = cmd.aliases();
+	if (aliases.length === 0) return cmd.name();
+	return `${cmd.name()}|${aliases.join("|")}`;
+};
 
 // 注册子命令
 program.addCommand(addCommand);
