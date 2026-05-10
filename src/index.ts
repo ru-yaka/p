@@ -25,6 +25,7 @@ import { unzipCommand } from "./commands/unzip";
 import { updateCommand } from "./commands/update";
 import { ensureInitialized } from "./core/config";
 import { brand } from "./utils/ui";
+import pc from "picocolors";
 
 // 读取版本号
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -47,6 +48,12 @@ Help.prototype.subcommandTerm = function (cmd: any) {
 	const all = [cmd.name(), ...cmd.aliases()];
 	all.sort((a: string, b: string) => b.length - a.length);
 	return all.join("|");
+};
+const origFormatHelp = Help.prototype.formatHelp;
+Help.prototype.formatHelp = function (cmd: any, helper: any) {
+	let output = origFormatHelp.call(this, cmd, helper);
+	output += `\n  ${pc.dim("查看子命令详情:")} p ${pc.cyan("<command>")} -h\n`;
+	return output;
 };
 
 // 注册子命令

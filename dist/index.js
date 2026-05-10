@@ -21691,6 +21691,7 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
 });
 
 // src/index.ts
+var import_picocolors29 = __toESM(require_picocolors(), 1);
 var __dirname2 = dirname5(fileURLToPath2(import.meta.url));
 var pkgPath = join12(__dirname2, "..", "package.json");
 var pkg = JSON.parse(readFileSync3(pkgPath, "utf-8"));
@@ -21702,6 +21703,14 @@ Help2.prototype.subcommandTerm = function(cmd) {
   const all = [cmd.name(), ...cmd.aliases()];
   all.sort((a, b3) => b3.length - a.length);
   return all.join("|");
+};
+var origFormatHelp = Help2.prototype.formatHelp;
+Help2.prototype.formatHelp = function(cmd, helper) {
+  let output = origFormatHelp.call(this, cmd, helper);
+  output += `
+  ${import_picocolors29.default.dim("\u67E5\u770B\u5B50\u547D\u4EE4\u8BE6\u60C5:")} p ${import_picocolors29.default.cyan("<command>")} -h
+`;
+  return output;
 };
 program2.addCommand(addCommand);
 program2.addCommand(cloneCommand);
