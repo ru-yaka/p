@@ -335,6 +335,35 @@ async function handleUpdate(target?: string) {
 }
 
 async function handlePublish(nameArg?: string) {
+	// 处理 "publish ." —— 先将当前项目保存为模板，再发布
+	if (nameArg === ".") {
+		const currentDir = process.cwd();
+		const projects = listProjects();
+		const currentProject = projects.find((p) => p.path === currentDir);
+
+		let templateName: string;
+		if (currentProject?.savedTemplate) {
+			templateName = currentProject.savedTemplate;
+		} else {
+			const result = await text({
+				message: "请输入模板名称:",
+				placeholder: "my-template",
+			});
+			if (isCancel(result) || !(result as string).trim()) {
+				outro(pc.dim("已取消"));
+				return;
+			}
+			templateName = (result as string).trim();
+		}
+
+		const isUpdate = await templateExists(templateName);
+		await createOrUpdateTemplate(currentDir, templateName, isUpdate);
+		if (currentProject) saveSavedTemplate(currentProject.name, templateName);
+
+		await doPublish(templateName);
+		return;
+	}
+
 	await fse.ensureDir(TEMPLATES_DIR);
 	const entries = await fse.readdir(TEMPLATES_DIR).catch(() => []);
 	const localTemplates: string[] = [];
@@ -392,8 +421,20 @@ async function handlePublish(nameArg?: string) {
 		selectedTemplate = (result as string[])[0];
 	}
 
+	await doPublish(selectedTemplate);
+}
+
+async function doPublish(selectedTemplate: string) {
 	const templatePath = resolve(TEMPLATES_DIR, selectedTemplate);
 	intro(bgOrange(" 发布模板 "));
+
+	const shouldPublish = await confirm({
+		message: `确认将模板 ${brand.primary(selectedTemplate)} 发布到 GitHub？`,
+	});
+	if (isCancel(shouldPublish) || !shouldPublish) {
+		outro(pc.dim("已取消"));
+		return;
+	}
 
 	if (!(await commandExists("gh"))) {
 		printError("需要安装 GitHub CLI (gh)");
@@ -504,66 +545,4 @@ async function countFiles(dir: string): Promise<number> {
 		}
 	}
 	return count;
-}
-
-async function createOrUpdateTemplate(
-	sourcePath: string,
-	templateName: string,
-	isUpdate: boolean,
-) {
-	intro(isUpdate ? bgOrange(" 更新模板 ") : bgOrange(" 添加模板 "));
-
-	// 同名模板已存在时提示将覆盖
-	if (!isUpdate && (await templateExists(templateName))) {
-		printInfo(`模板 ${brand.primary(templateName)} 已存在，将被覆盖`);
-		console.log();
-	}
-
-	// 获取需要复制的文件
-	const s = spinner();
-	s.start("正在分析文件...");
-
-	const { success, files, message } = await collectProjectFiles(sourcePath);
-
-	if (!success) {
-		s.stop("分析失败");
-		console.log();
-		printError(message || "无法获取文件列表");
-		console.log();
-		process.exit(1);
-	}
-
-	s.stop(
-		`${brand.success("✓")} 找到 ${brand.primary(files.length.toString())} 个文件`,
-	);
-
-	// 复制文件
-	const targetPath = resolve(TEMPLATES_DIR, templateName);
-
-	const copySpinner = spinner();
-	copySpinner.start(
-		isUpdate ? "正在更新模板..." : "正在复制文件到模板目录...",
-	);
-
-	try {
-		// 目标目录已存在则先清空，避免残留旧文件
-		if (await fse.pathExists(targetPath)) {
-			await fse.emptyDir(targetPath);
-		}
-		await copyFiles(sourcePath, targetPath, files);
-
-		copySpinner.stop(
-			`${brand.success("✓")} ${isUpdate ? "已更新" : "已创建"} ${brand.primary(templateName)} (${files.length} 个文件)`,
-		);
-	} catch (error) {
-		copySpinner.stop("操作失败");
-		console.log();
-		printError((error as Error).message);
-		console.log();
-		process.exit(1);
-	}
-
-	console.log();
-	console.log(pc.dim("  模板位置: ") + pc.underline(targetPath));
-	console.log();
 }

@@ -219,7 +219,11 @@ p tp update .
 
 # 发布模板到 GitHub（创建公开仓库并推送，返回克隆链接）
 p templates publish <name>
-p tp publish
+p tp publish <name>
+
+# 将当前项目保存为模板并发布
+p templates publish .
+p tp publish .
 
 # 打开模板目录
 p templates

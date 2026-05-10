@@ -18075,6 +18075,31 @@ async function handleUpdate(target) {
   }
 }
 async function handlePublish(nameArg) {
+  if (nameArg === ".") {
+    const currentDir = process.cwd();
+    const projects = listProjects();
+    const currentProject = projects.find((p2) => p2.path === currentDir);
+    let templateName;
+    if (currentProject?.savedTemplate) {
+      templateName = currentProject.savedTemplate;
+    } else {
+      const result = await he({
+        message: "\u8BF7\u8F93\u5165\u6A21\u677F\u540D\u79F0:",
+        placeholder: "my-template"
+      });
+      if (pD(result) || !result.trim()) {
+        Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
+        return;
+      }
+      templateName = result.trim();
+    }
+    const isUpdate = await templateExists(templateName);
+    await createOrUpdateTemplate(currentDir, templateName, isUpdate);
+    if (currentProject)
+      saveSavedTemplate(currentProject.name, templateName);
+    await doPublish(templateName);
+    return;
+  }
   await import_fs_extra18.default.ensureDir(TEMPLATES_DIR);
   const entries = await import_fs_extra18.default.readdir(TEMPLATES_DIR).catch(() => []);
   const localTemplates = [];
@@ -18122,8 +18147,18 @@ async function handlePublish(nameArg) {
     }
     selectedTemplate = result[0];
   }
+  await doPublish(selectedTemplate);
+}
+async function doPublish(selectedTemplate) {
   const templatePath = resolve4(TEMPLATES_DIR, selectedTemplate);
   Ie(bgOrange(" \u53D1\u5E03\u6A21\u677F "));
+  const shouldPublish = await ye({
+    message: `\u786E\u8BA4\u5C06\u6A21\u677F ${brand.primary(selectedTemplate)} \u53D1\u5E03\u5230 GitHub\uFF1F`
+  });
+  if (pD(shouldPublish) || !shouldPublish) {
+    Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
+    return;
+  }
   if (!await commandExists("gh")) {
     printError("\u9700\u8981\u5B89\u88C5 GitHub CLI (gh)");
     console.log(import_picocolors26.default.dim("  https://cli.github.com/"));
@@ -18206,43 +18241,6 @@ async function countFiles(dir) {
     }
   }
   return count;
-}
-async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
-  Ie(isUpdate ? bgOrange(" \u66F4\u65B0\u6A21\u677F ") : bgOrange(" \u6DFB\u52A0\u6A21\u677F "));
-  if (!isUpdate && await templateExists(templateName)) {
-    printInfo(`\u6A21\u677F ${brand.primary(templateName)} \u5DF2\u5B58\u5728\uFF0C\u5C06\u88AB\u8986\u76D6`);
-    console.log();
-  }
-  const s = Y2();
-  s.start("\u6B63\u5728\u5206\u6790\u6587\u4EF6...");
-  const { success, files, message } = await collectProjectFiles(sourcePath);
-  if (!success) {
-    s.stop("\u5206\u6790\u5931\u8D25");
-    console.log();
-    printError(message || "\u65E0\u6CD5\u83B7\u53D6\u6587\u4EF6\u5217\u8868");
-    console.log();
-    process.exit(1);
-  }
-  s.stop(`${brand.success("\u2713")} \u627E\u5230 ${brand.primary(files.length.toString())} \u4E2A\u6587\u4EF6`);
-  const targetPath = resolve4(TEMPLATES_DIR, templateName);
-  const copySpinner = Y2();
-  copySpinner.start(isUpdate ? "\u6B63\u5728\u66F4\u65B0\u6A21\u677F..." : "\u6B63\u5728\u590D\u5236\u6587\u4EF6\u5230\u6A21\u677F\u76EE\u5F55...");
-  try {
-    if (await import_fs_extra18.default.pathExists(targetPath)) {
-      await import_fs_extra18.default.emptyDir(targetPath);
-    }
-    await copyFiles(sourcePath, targetPath, files);
-    copySpinner.stop(`${brand.success("\u2713")} ${isUpdate ? "\u5DF2\u66F4\u65B0" : "\u5DF2\u521B\u5EFA"} ${brand.primary(templateName)} (${files.length} \u4E2A\u6587\u4EF6)`);
-  } catch (error) {
-    copySpinner.stop("\u64CD\u4F5C\u5931\u8D25");
-    console.log();
-    printError(error.message);
-    console.log();
-    process.exit(1);
-  }
-  console.log();
-  console.log(import_picocolors26.default.dim("  \u6A21\u677F\u4F4D\u7F6E: ") + import_picocolors26.default.underline(targetPath));
-  console.log();
 }
 
 // src/commands/unzip.ts
