@@ -18163,13 +18163,6 @@ async function handlePublish(nameArg) {
 async function doPublish(selectedTemplate) {
   const templatePath = resolve4(TEMPLATES_DIR, selectedTemplate);
   Ie(bgOrange(" \u53D1\u5E03\u6A21\u677F "));
-  const shouldPublish = await ye({
-    message: `\u786E\u8BA4\u5C06\u6A21\u677F ${brand.primary(selectedTemplate)} \u53D1\u5E03\u5230 GitHub\uFF1F`
-  });
-  if (pD(shouldPublish) || !shouldPublish) {
-    Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
-    return;
-  }
   if (!await commandExists("gh")) {
     printError("\u9700\u8981\u5B89\u88C5 GitHub CLI (gh)");
     console.log(import_picocolors26.default.dim("  https://cli.github.com/"));
@@ -18180,31 +18173,37 @@ async function doPublish(selectedTemplate) {
     printError("\u8BF7\u5148\u767B\u5F55 GitHub CLI: gh auth login");
     process.exit(1);
   }
+  const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
+  const owner = whoami.success ? whoami.output.trim() : "";
+  if (!owner) {
+    printError("\u65E0\u6CD5\u83B7\u53D6 GitHub \u7528\u6237\u540D");
+    process.exit(1);
+  }
+  const shouldPublish = await ye({
+    message: `\u786E\u8BA4\u5C06\u6A21\u677F ${brand.primary(selectedTemplate)} \u53D1\u5E03\u5230 GitHub (${owner}/${selectedTemplate})\uFF1F`
+  });
+  if (pD(shouldPublish) || !shouldPublish) {
+    Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
+    return;
+  }
+  const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
   const s = Y2();
   s.start("\u6B63\u5728\u521B\u5EFA GitHub \u4ED3\u5E93...");
   const proc = Bun.spawn(["gh", "repo", "create", selectedTemplate, "--public", "--description", `p template: ${selectedTemplate}`], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" });
   const exitCode = await proc.exited;
-  const stdout = await new Response(proc.stdout).text();
   const stderr = await new Response(proc.stderr).text();
-  if (exitCode !== 0) {
+  if (exitCode !== 0 && !stderr.includes("Name already exists")) {
     s.stop("\u521B\u5EFA\u4ED3\u5E93\u5931\u8D25");
     console.log();
-    printError(stderr || stdout || "\u672A\u77E5\u9519\u8BEF");
+    printError(stderr || "\u672A\u77E5\u9519\u8BEF");
     console.log();
     process.exit(1);
   }
-  const output = stdout + stderr;
-  const urlMatch = output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
-  if (!urlMatch) {
-    s.stop("\u89E3\u6790\u4ED3\u5E93\u5730\u5740\u5931\u8D25");
-    console.log();
-    printError(output);
-    console.log();
-    process.exit(1);
+  if (exitCode === 0) {
+    s.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u521B\u5EFA: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
+  } else {
+    s.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u5B58\u5728: ${brand.primary(`${owner}/${selectedTemplate}`)}\uFF0C\u5C06\u66F4\u65B0\u5185\u5BB9`);
   }
-  const owner = urlMatch[1];
-  const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
-  s.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u521B\u5EFA: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
   const pushSpinner = Y2();
   pushSpinner.start("\u6B63\u5728\u63A8\u9001\u6587\u4EF6...");
   async function git(args) {

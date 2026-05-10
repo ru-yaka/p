@@ -441,14 +441,7 @@ async function doPublish(selectedTemplate: string) {
 	const templatePath = resolve(TEMPLATES_DIR, selectedTemplate);
 	intro(bgOrange(" 发布模板 "));
 
-	const shouldPublish = await confirm({
-		message: `确认将模板 ${brand.primary(selectedTemplate)} 发布到 GitHub？`,
-	});
-	if (isCancel(shouldPublish) || !shouldPublish) {
-		outro(pc.dim("已取消"));
-		return;
-	}
-
+	// 前置检查：gh CLI 和登录状态（在 confirm 之前，减少等待感）
 	if (!(await commandExists("gh"))) {
 		printError("需要安装 GitHub CLI (gh)");
 		console.log(pc.dim("  https://cli.github.com/"));
@@ -461,6 +454,24 @@ async function doPublish(selectedTemplate: string) {
 		process.exit(1);
 	}
 
+	// 获取 GitHub 用户名
+	const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
+	const owner = whoami.success ? whoami.output.trim() : "";
+	if (!owner) {
+		printError("无法获取 GitHub 用户名");
+		process.exit(1);
+	}
+
+	const shouldPublish = await confirm({
+		message: `确认将模板 ${brand.primary(selectedTemplate)} 发布到 GitHub (${owner}/${selectedTemplate})？`,
+	});
+	if (isCancel(shouldPublish) || !shouldPublish) {
+		outro(pc.dim("已取消"));
+		return;
+	}
+
+	const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
+
 	const s = spinner();
 	s.start("正在创建 GitHub 仓库...");
 
@@ -469,30 +480,21 @@ async function doPublish(selectedTemplate: string) {
 		{ cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
 	);
 	const exitCode = await proc.exited;
-	const stdout = await new Response(proc.stdout).text();
 	const stderr = await new Response(proc.stderr).text();
 
-	if (exitCode !== 0) {
+	if (exitCode !== 0 && !stderr.includes("Name already exists")) {
 		s.stop("创建仓库失败");
 		console.log();
-		printError(stderr || stdout || "未知错误");
+		printError(stderr || "未知错误");
 		console.log();
 		process.exit(1);
 	}
 
-	const output = stdout + stderr;
-	const urlMatch = output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
-	if (!urlMatch) {
-		s.stop("解析仓库地址失败");
-		console.log();
-		printError(output);
-		console.log();
-		process.exit(1);
+	if (exitCode === 0) {
+		s.stop(`${brand.success("✓")} 仓库已创建: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
+	} else {
+		s.stop(`${brand.success("✓")} 仓库已存在: ${brand.primary(`${owner}/${selectedTemplate}`)}，将更新内容`);
 	}
-
-	const owner = urlMatch[1];
-	const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
-	s.stop(`${brand.success("✓")} 仓库已创建: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
 
 	const pushSpinner = spinner();
 	pushSpinner.start("正在推送文件...");
