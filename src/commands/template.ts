@@ -523,6 +523,9 @@ async function doPublish(selectedTemplate: string) {
 		process.exit(1);
 	}
 
+	// 设置 remote origin
+	await git(["remote", "add", "origin", cloneUrl]);
+
 	// git add + commit
 	await git(["add", "-A"]);
 	result = await git(["commit", "-m", "init: p template"]);

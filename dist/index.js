@@ -18227,6 +18227,7 @@ async function doPublish(selectedTemplate) {
     await cleanupGitDir(templatePath);
     process.exit(1);
   }
+  await git(["remote", "add", "origin", cloneUrl]);
   await git(["add", "-A"]);
   result = await git(["commit", "-m", "init: p template"]);
   if (!result.ok) {
