@@ -338,14 +338,10 @@ async function createOrUpdateTemplate(
 ) {
 	intro(isUpdate ? bgOrange(" 更新模板 ") : bgOrange(" 添加模板 "));
 
-	// 同名模板已存在时确认覆盖
+	// 同名模板已存在时提示将覆盖
 	if (!isUpdate && (await templateExists(templateName))) {
-		printInfo(`模板 ${brand.primary(templateName)} 已存在`);
-		const overwrite = await confirm({ message: "是否覆盖？" });
-		if (isCancel(overwrite) || !overwrite) {
-			outro(pc.dim("已取消"));
-			return;
-		}
+		printInfo(`模板 ${brand.primary(templateName)} 已存在，将被覆盖`);
+		console.log();
 	}
 
 	// 获取需要复制的文件

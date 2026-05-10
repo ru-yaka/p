@@ -18025,12 +18025,8 @@ async function handleUpdate(target) {
 async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   Ie(isUpdate ? bgOrange(" \u66F4\u65B0\u6A21\u677F ") : bgOrange(" \u6DFB\u52A0\u6A21\u677F "));
   if (!isUpdate && await templateExists(templateName)) {
-    printInfo(`\u6A21\u677F ${brand.primary(templateName)} \u5DF2\u5B58\u5728`);
-    const overwrite = await ye({ message: "\u662F\u5426\u8986\u76D6\uFF1F" });
-    if (pD(overwrite) || !overwrite) {
-      Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
-      return;
-    }
+    printInfo(`\u6A21\u677F ${brand.primary(templateName)} \u5DF2\u5B58\u5728\uFF0C\u5C06\u88AB\u8986\u76D6`);
+    console.log();
   }
   const s = Y2();
   s.start("\u6B63\u5728\u5206\u6790\u6587\u4EF6...");
