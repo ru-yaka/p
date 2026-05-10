@@ -1,4 +1,4 @@
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import { confirm, intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
@@ -9,9 +9,9 @@ import { getProjectMeta, getProjectPath, listProjects, projectExists, saveProjec
 import { collectProjectFiles, copyFiles } from "../utils/files";
 import { liveSearch, CANCEL } from "../utils/live-search";
 import { TEMPLATES_DIR } from "../utils/paths";
-import { openWithIDE } from "../utils/shell";
+import { commandExists, execAndCapture, execInDir, openWithIDE } from "../utils/shell";
 import { filterProjects } from "../utils/project-search";
-import { bgOrange, brand, printError, printInfo, printSuccess } from "../utils/ui";
+import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 
 /**
  * 检查模板是否存在
@@ -35,7 +35,7 @@ function buildTemplateOptions(projects: ReturnType<typeof listProjects>) {
 export const templateCommand = new Command("template")
 	.alias("templates")
 	.description("管理本地模板")
-	.argument("[action]", "操作: add, update")
+	.argument("[action]", "操作: add, update, publish")
 	.argument("[target]", "项目名称或 . 表示当前目录")
 	.argument("[name]", "模板名称")
 	.action(async (action?: string, target?: string, name?: string) => {
@@ -72,9 +72,11 @@ export const templateCommand = new Command("template")
 			await handleAdd(target, name);
 		} else if (action === "update") {
 			await handleUpdate(target);
+		} else if (action === "publish") {
+			await handlePublish(target);
 		} else {
 			printError(`未知操作: ${action}`);
-			console.log(pc.dim("  支持的操作: add, update"));
+			console.log(pc.dim("  支持的操作: add, update, publish"));
 			process.exit(1);
 		}
 	});
@@ -329,6 +331,178 @@ async function handleUpdate(target?: string) {
 		);
 		process.exit(1);
 	}
+}
+
+async function handlePublish(nameArg?: string) {
+	await fse.ensureDir(TEMPLATES_DIR);
+	const entries = await fse.readdir(TEMPLATES_DIR).catch(() => []);
+	const localTemplates: string[] = [];
+
+	for (const entry of entries) {
+		const stat = await fse.stat(resolve(TEMPLATES_DIR, entry));
+		if (stat.isDirectory()) localTemplates.push(entry);
+	}
+
+	if (localTemplates.length === 0) {
+		printInfo("暂无本地模板");
+		console.log(
+			pc.dim("  使用 ") +
+				brand.primary("p templates add <project>") +
+				pc.dim(" 添加模板"),
+		);
+		return;
+	}
+
+	let selectedTemplate: string;
+
+	if (nameArg) {
+		const lower = nameArg.toLowerCase();
+		const matched = localTemplates.filter((t) => t.toLowerCase().includes(lower));
+		if (matched.length === 1) {
+			selectedTemplate = matched[0];
+		} else if (matched.length > 1) {
+			printError(`多个模板匹配 "${nameArg}": ${matched.join(", ")}`);
+			process.exit(1);
+		} else {
+			printError(`模板不存在: ${nameArg}`);
+			process.exit(1);
+		}
+	} else {
+		const options = localTemplates.map((name) => ({
+			value: name,
+			label: name,
+		}));
+
+		const result = await liveSearch({
+			message: "选择要发布的模板:",
+			placeholder: "输入模板名称筛选",
+			options,
+			filterFn: (query: string) => {
+				if (!query) return options;
+				return options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()));
+			},
+		});
+
+		if (result === CANCEL) {
+			outro(pc.dim("已取消"));
+			process.exit(0);
+		}
+
+		selectedTemplate = (result as string[])[0];
+	}
+
+	const templatePath = resolve(TEMPLATES_DIR, selectedTemplate);
+	intro(bgOrange(" 发布模板 "));
+
+	if (!(await commandExists("gh"))) {
+		printError("需要安装 GitHub CLI (gh)");
+		console.log(pc.dim("  https://cli.github.com/"));
+		process.exit(1);
+	}
+
+	const authCheck = await execAndCapture("gh auth status", process.cwd());
+	if (!authCheck.success) {
+		printError("请先登录 GitHub CLI: gh auth login");
+		process.exit(1);
+	}
+
+	const s = spinner();
+	s.start("正在创建 GitHub 仓库...");
+
+	const repoResult = await execInDir(
+		`gh repo create ${selectedTemplate} --public --description "p template: ${selectedTemplate}"`,
+		process.cwd(),
+		{ silent: true },
+	);
+
+	if (!repoResult.success) {
+		s.stop("创建仓库失败");
+		console.log();
+		printError(repoResult.stderr || repoResult.output || "未知错误");
+		console.log();
+		process.exit(1);
+	}
+
+	const urlMatch = repoResult.output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+	if (!urlMatch) {
+		s.stop("解析仓库地址失败");
+		console.log();
+		printError(repoResult.output);
+		console.log();
+		process.exit(1);
+	}
+
+	const owner = urlMatch[1];
+	const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
+	s.stop(`${brand.success("✓")} 仓库已创建: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
+
+	const pushSpinner = spinner();
+	pushSpinner.start("正在推送文件...");
+
+	const initResult = await execInDir("git init", templatePath, { silent: true });
+	if (!initResult.success) {
+		pushSpinner.stop("git init 失败");
+		console.log();
+		printError(initResult.stderr || initResult.output);
+		console.log();
+		await cleanupGitDir(templatePath);
+		process.exit(1);
+	}
+
+	await execInDir("git add -A", templatePath, { silent: true });
+	await execInDir('git commit -m "init: p template"', templatePath, { silent: true });
+
+	const pushResult = await execInDir(
+		"git push -u origin main",
+		templatePath,
+		{ silent: true },
+	);
+
+	if (!pushResult.success) {
+		const masterResult = await execInDir(
+			"git branch -M master && git push -u origin master",
+			templatePath,
+			{ silent: true },
+		);
+		if (!masterResult.success) {
+			pushSpinner.stop("推送失败");
+			console.log();
+			printError(masterResult.stderr || masterResult.output);
+			console.log();
+			await cleanupGitDir(templatePath);
+			process.exit(1);
+		}
+	}
+
+	await cleanupGitDir(templatePath);
+
+	const fileCount = await countFiles(templatePath);
+	pushSpinner.stop(`${brand.success("✓")} 已推送 ${brand.primary(fileCount.toString())} 个文件`);
+
+	console.log();
+	console.log(pc.dim("  克隆链接: ") + pc.underline(cloneUrl));
+	console.log();
+}
+
+async function cleanupGitDir(dir: string) {
+	const gitDir = resolve(dir, ".git");
+	if (await fse.pathExists(gitDir)) {
+		await fse.remove(gitDir);
+	}
+}
+
+async function countFiles(dir: string): Promise<number> {
+	let count = 0;
+	const entries = await fse.readdir(dir, { withFileTypes: true });
+	for (const entry of entries) {
+		if (entry.name === ".git") continue;
+		if (entry.isDirectory()) {
+			count += await countFiles(resolve(dir, entry.name));
+		} else {
+			count++;
+		}
+	}
+	return count;
 }
 
 async function createOrUpdateTemplate(

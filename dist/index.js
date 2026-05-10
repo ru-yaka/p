@@ -17809,7 +17809,7 @@ function buildTemplateOptions(projects) {
     hint: p2.savedTemplate ? import_picocolors26.default.cyan(p2.savedTemplate) : undefined
   }));
 }
-var templateCommand = new Command("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
+var templateCommand = new Command("template").alias("templates").description("\u7BA1\u7406\u672C\u5730\u6A21\u677F").argument("[action]", "\u64CD\u4F5C: add, update, publish").argument("[target]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").argument("[name]", "\u6A21\u677F\u540D\u79F0").action(async (action, target, name) => {
   if (!action) {
     const config = loadConfig();
     await import_fs_extra18.default.ensureDir(TEMPLATES_DIR);
@@ -17833,9 +17833,11 @@ var templateCommand = new Command("template").alias("templates").description("\u
     await handleAdd(target, name);
   } else if (action === "update") {
     await handleUpdate(target);
+  } else if (action === "publish") {
+    await handlePublish(target);
   } else {
     printError(`\u672A\u77E5\u64CD\u4F5C: ${action}`);
-    console.log(import_picocolors26.default.dim("  \u652F\u6301\u7684\u64CD\u4F5C: add, update"));
+    console.log(import_picocolors26.default.dim("  \u652F\u6301\u7684\u64CD\u4F5C: add, update, publish"));
     process.exit(1);
   }
 });
@@ -18021,6 +18023,139 @@ async function handleUpdate(target) {
     console.log(import_picocolors26.default.dim("  \u6A21\u677F\u76EE\u5F55: ") + import_picocolors26.default.underline(templatePath));
     process.exit(1);
   }
+}
+async function handlePublish(nameArg) {
+  await import_fs_extra18.default.ensureDir(TEMPLATES_DIR);
+  const entries = await import_fs_extra18.default.readdir(TEMPLATES_DIR).catch(() => []);
+  const localTemplates = [];
+  for (const entry of entries) {
+    const stat = await import_fs_extra18.default.stat(resolve4(TEMPLATES_DIR, entry));
+    if (stat.isDirectory())
+      localTemplates.push(entry);
+  }
+  if (localTemplates.length === 0) {
+    printInfo("\u6682\u65E0\u672C\u5730\u6A21\u677F");
+    console.log(import_picocolors26.default.dim("  \u4F7F\u7528 ") + brand.primary("p templates add <project>") + import_picocolors26.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
+    return;
+  }
+  let selectedTemplate;
+  if (nameArg) {
+    const lower = nameArg.toLowerCase();
+    const matched = localTemplates.filter((t) => t.toLowerCase().includes(lower));
+    if (matched.length === 1) {
+      selectedTemplate = matched[0];
+    } else if (matched.length > 1) {
+      printError(`\u591A\u4E2A\u6A21\u677F\u5339\u914D "${nameArg}": ${matched.join(", ")}`);
+      process.exit(1);
+    } else {
+      printError(`\u6A21\u677F\u4E0D\u5B58\u5728: ${nameArg}`);
+      process.exit(1);
+    }
+  } else {
+    const options = localTemplates.map((name) => ({
+      value: name,
+      label: name
+    }));
+    const result = await liveSearch({
+      message: "\u9009\u62E9\u8981\u53D1\u5E03\u7684\u6A21\u677F:",
+      placeholder: "\u8F93\u5165\u6A21\u677F\u540D\u79F0\u7B5B\u9009",
+      options,
+      filterFn: (query) => {
+        if (!query)
+          return options;
+        return options.filter((o2) => o2.label.toLowerCase().includes(query.toLowerCase()));
+      }
+    });
+    if (result === CANCEL) {
+      Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
+      process.exit(0);
+    }
+    selectedTemplate = result[0];
+  }
+  const templatePath = resolve4(TEMPLATES_DIR, selectedTemplate);
+  Ie(bgOrange(" \u53D1\u5E03\u6A21\u677F "));
+  if (!await commandExists("gh")) {
+    printError("\u9700\u8981\u5B89\u88C5 GitHub CLI (gh)");
+    console.log(import_picocolors26.default.dim("  https://cli.github.com/"));
+    process.exit(1);
+  }
+  const authCheck = await execAndCapture("gh auth status", process.cwd());
+  if (!authCheck.success) {
+    printError("\u8BF7\u5148\u767B\u5F55 GitHub CLI: gh auth login");
+    process.exit(1);
+  }
+  const s = Y2();
+  s.start("\u6B63\u5728\u521B\u5EFA GitHub \u4ED3\u5E93...");
+  const repoResult = await execInDir(`gh repo create ${selectedTemplate} --public --description "p template: ${selectedTemplate}"`, process.cwd(), { silent: true });
+  if (!repoResult.success) {
+    s.stop("\u521B\u5EFA\u4ED3\u5E93\u5931\u8D25");
+    console.log();
+    printError(repoResult.stderr || repoResult.output || "\u672A\u77E5\u9519\u8BEF");
+    console.log();
+    process.exit(1);
+  }
+  const urlMatch = repoResult.output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+  if (!urlMatch) {
+    s.stop("\u89E3\u6790\u4ED3\u5E93\u5730\u5740\u5931\u8D25");
+    console.log();
+    printError(repoResult.output);
+    console.log();
+    process.exit(1);
+  }
+  const owner = urlMatch[1];
+  const cloneUrl = `https://github.com/${owner}/${selectedTemplate}.git`;
+  s.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u521B\u5EFA: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
+  const pushSpinner = Y2();
+  pushSpinner.start("\u6B63\u5728\u63A8\u9001\u6587\u4EF6...");
+  const initResult = await execInDir("git init", templatePath, { silent: true });
+  if (!initResult.success) {
+    pushSpinner.stop("git init \u5931\u8D25");
+    console.log();
+    printError(initResult.stderr || initResult.output);
+    console.log();
+    await cleanupGitDir(templatePath);
+    process.exit(1);
+  }
+  await execInDir("git add -A", templatePath, { silent: true });
+  await execInDir('git commit -m "init: p template"', templatePath, { silent: true });
+  const pushResult = await execInDir("git push -u origin main", templatePath, { silent: true });
+  if (!pushResult.success) {
+    const masterResult = await execInDir("git branch -M master && git push -u origin master", templatePath, { silent: true });
+    if (!masterResult.success) {
+      pushSpinner.stop("\u63A8\u9001\u5931\u8D25");
+      console.log();
+      printError(masterResult.stderr || masterResult.output);
+      console.log();
+      await cleanupGitDir(templatePath);
+      process.exit(1);
+    }
+  }
+  await cleanupGitDir(templatePath);
+  const fileCount = await countFiles(templatePath);
+  pushSpinner.stop(`${brand.success("\u2713")} \u5DF2\u63A8\u9001 ${brand.primary(fileCount.toString())} \u4E2A\u6587\u4EF6`);
+  console.log();
+  console.log(import_picocolors26.default.dim("  \u514B\u9686\u94FE\u63A5: ") + import_picocolors26.default.underline(cloneUrl));
+  console.log();
+}
+async function cleanupGitDir(dir) {
+  const gitDir = resolve4(dir, ".git");
+  if (await import_fs_extra18.default.pathExists(gitDir)) {
+    await import_fs_extra18.default.remove(gitDir);
+  }
+}
+async function countFiles(dir) {
+  let count = 0;
+  const entries = await import_fs_extra18.default.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === ".git")
+      continue;
+    if (entry.isDirectory()) {
+      count += await countFiles(resolve4(dir, entry.name));
+    } else {
+      count++;
+    }
+  }
+  return count;
 }
 async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   Ie(isUpdate ? bgOrange(" \u66F4\u65B0\u6A21\u677F ") : bgOrange(" \u6DFB\u52A0\u6A21\u677F "));
@@ -21354,7 +21489,7 @@ Ze.glob = Ze;
 
 // src/commands/unzip.ts
 var import_picocolors27 = __toESM(require_picocolors(), 1);
-import { basename as basename4, dirname as dirname3, join as join10, parse } from "path";
+import { basename as basename3, dirname as dirname3, join as join10, parse } from "path";
 var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
   let cwd;
   if (!project || project === ".") {
@@ -21380,7 +21515,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   console.log();
   console.log(import_picocolors27.default.dim(`  \u627E\u5230 ${zipFiles.length} \u4E2A zip \u6587\u4EF6:`));
   for (const file of zipFiles) {
-    console.log(`  ${brand.secondary("\u2022")} ${basename4(file)}`);
+    console.log(`  ${brand.secondary("\u2022")} ${basename3(file)}`);
   }
   console.log();
   const s = Y2();
@@ -21388,7 +21523,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   let successCount = 0;
   const errors2 = [];
   for (const zipFile of zipFiles) {
-    const relativePath = basename4(zipFile);
+    const relativePath = basename3(zipFile);
     try {
       const zipName = parse(zipFile).name;
       const destDir = join10(dirname3(zipFile), zipName);
