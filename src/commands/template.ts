@@ -563,6 +563,69 @@ async function doPublish(selectedTemplate: string) {
 	console.log();
 }
 
+async function createOrUpdateTemplate(
+	sourcePath: string,
+	templateName: string,
+	isUpdate: boolean,
+) {
+	intro(isUpdate ? bgOrange(" 更新模板 ") : bgOrange(" 添加模板 "));
+
+	const s = spinner();
+	s.start("正在分析文件...");
+
+	const { success, files, message } = await collectProjectFiles(sourcePath);
+
+	if (!success) {
+		s.stop("分析失败");
+		console.log();
+		printError(message || "无法获取文件列表");
+		console.log();
+		process.exit(1);
+	}
+
+	s.stop(
+		`${brand.success("✓")} 找到 ${brand.primary(files.length.toString())} 个文件`,
+	);
+
+	const targetPath = resolve(TEMPLATES_DIR, templateName);
+	const exists = await fse.pathExists(targetPath);
+
+	if (exists) {
+		await fse.emptyDir(targetPath);
+	} else {
+		await fse.ensureDir(targetPath);
+	}
+
+	const copySpinner = spinner();
+	copySpinner.start(
+		isUpdate ? "正在更新模板..." : "正在复制文件到模板目录...",
+	);
+
+	try {
+		await copyFiles(sourcePath, targetPath, files);
+
+		copySpinner.stop(
+			`${brand.success("✓")} 模板${isUpdate ? "已更新" : "已创建"}: ${brand.primary(templateName)}`,
+		);
+	} catch (error) {
+		copySpinner.stop("操作失败");
+		console.log();
+		printError((error as Error).message);
+		console.log();
+		process.exit(1);
+	}
+
+	console.log();
+	outro(
+		brand.success(
+			`✓ 模板${isUpdate ? "更新" : "添加"}成功: ${brand.primary(templateName)}`,
+		),
+	);
+	console.log();
+	console.log(pc.dim("  模板位置: ") + pc.underline(targetPath));
+	console.log();
+}
+
 async function cleanupGitDir(dir: string) {
 	const gitDir = resolve(dir, ".git");
 	if (await fse.pathExists(gitDir)) {

@@ -18257,6 +18257,44 @@ async function doPublish(selectedTemplate) {
   console.log(import_picocolors26.default.dim("  \u514B\u9686\u94FE\u63A5: ") + import_picocolors26.default.underline(cloneUrl));
   console.log();
 }
+async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
+  Ie(isUpdate ? bgOrange(" \u66F4\u65B0\u6A21\u677F ") : bgOrange(" \u6DFB\u52A0\u6A21\u677F "));
+  const s = Y2();
+  s.start("\u6B63\u5728\u5206\u6790\u6587\u4EF6...");
+  const { success, files, message } = await collectProjectFiles(sourcePath);
+  if (!success) {
+    s.stop("\u5206\u6790\u5931\u8D25");
+    console.log();
+    printError(message || "\u65E0\u6CD5\u83B7\u53D6\u6587\u4EF6\u5217\u8868");
+    console.log();
+    process.exit(1);
+  }
+  s.stop(`${brand.success("\u2713")} \u627E\u5230 ${brand.primary(files.length.toString())} \u4E2A\u6587\u4EF6`);
+  const targetPath = resolve4(TEMPLATES_DIR, templateName);
+  const exists = await import_fs_extra18.default.pathExists(targetPath);
+  if (exists) {
+    await import_fs_extra18.default.emptyDir(targetPath);
+  } else {
+    await import_fs_extra18.default.ensureDir(targetPath);
+  }
+  const copySpinner = Y2();
+  copySpinner.start(isUpdate ? "\u6B63\u5728\u66F4\u65B0\u6A21\u677F..." : "\u6B63\u5728\u590D\u5236\u6587\u4EF6\u5230\u6A21\u677F\u76EE\u5F55...");
+  try {
+    await copyFiles(sourcePath, targetPath, files);
+    copySpinner.stop(`${brand.success("\u2713")} \u6A21\u677F${isUpdate ? "\u5DF2\u66F4\u65B0" : "\u5DF2\u521B\u5EFA"}: ${brand.primary(templateName)}`);
+  } catch (error) {
+    copySpinner.stop("\u64CD\u4F5C\u5931\u8D25");
+    console.log();
+    printError(error.message);
+    console.log();
+    process.exit(1);
+  }
+  console.log();
+  Se(brand.success(`\u2713 \u6A21\u677F${isUpdate ? "\u66F4\u65B0" : "\u6DFB\u52A0"}\u6210\u529F: ${brand.primary(templateName)}`));
+  console.log();
+  console.log(import_picocolors26.default.dim("  \u6A21\u677F\u4F4D\u7F6E: ") + import_picocolors26.default.underline(targetPath));
+  console.log();
+}
 async function cleanupGitDir(dir) {
   const gitDir = resolve4(dir, ".git");
   if (await import_fs_extra18.default.pathExists(gitDir)) {
