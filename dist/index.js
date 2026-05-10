@@ -18207,28 +18207,47 @@ async function doPublish(selectedTemplate) {
   s.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u521B\u5EFA: ${brand.primary(`${owner}/${selectedTemplate}`)} (public)`);
   const pushSpinner = Y2();
   pushSpinner.start("\u6B63\u5728\u63A8\u9001\u6587\u4EF6...");
-  const initResult = await execInDir("git init", templatePath, { silent: true });
-  if (!initResult.success) {
+  async function git(args) {
+    const proc2 = Bun.spawn(["git", ...args], {
+      cwd: templatePath,
+      stdout: "pipe",
+      stderr: "pipe"
+    });
+    const code = await proc2.exited;
+    const out = await new Response(proc2.stdout).text();
+    const err = await new Response(proc2.stderr).text();
+    return { ok: code === 0, output: err || out };
+  }
+  let result = await git(["init"]);
+  if (!result.ok) {
     pushSpinner.stop("git init \u5931\u8D25");
     console.log();
-    printError(initResult.stderr || initResult.output);
-    console.log();
+    printError(result.output);
     await cleanupGitDir(templatePath);
     process.exit(1);
   }
-  await execInDir("git add -A", templatePath, { silent: true });
-  await execInDir('git commit -m "init: p template"', templatePath, { silent: true });
-  const pushResult = await execInDir("git push -u origin main", templatePath, { silent: true });
-  if (!pushResult.success) {
-    const masterResult = await execInDir("git branch -M master && git push -u origin master", templatePath, { silent: true });
-    if (!masterResult.success) {
-      pushSpinner.stop("\u63A8\u9001\u5931\u8D25");
-      console.log();
-      printError(masterResult.stderr || masterResult.output);
-      console.log();
-      await cleanupGitDir(templatePath);
-      process.exit(1);
-    }
+  await git(["add", "-A"]);
+  result = await git(["commit", "-m", "init: p template"]);
+  if (!result.ok) {
+    pushSpinner.stop("git commit \u5931\u8D25");
+    console.log();
+    printError(result.output);
+    await cleanupGitDir(templatePath);
+    process.exit(1);
+  }
+  const branchResult = await git(["branch", "--show-current"]);
+  const branch = branchResult.output.trim() || "main";
+  result = await git(["push", "-u", "origin", branch]);
+  if (!result.ok && branch === "main") {
+    await git(["branch", "-M", "master"]);
+    result = await git(["push", "-u", "origin", "master"]);
+  }
+  if (!result.ok) {
+    pushSpinner.stop("\u63A8\u9001\u5931\u8D25");
+    console.log();
+    printError(result.output);
+    await cleanupGitDir(templatePath);
+    process.exit(1);
   }
   await cleanupGitDir(templatePath);
   const fileCount = await countFiles(templatePath);

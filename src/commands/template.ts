@@ -497,39 +497,55 @@ async function doPublish(selectedTemplate: string) {
 	const pushSpinner = spinner();
 	pushSpinner.start("正在推送文件...");
 
-	const initResult = await execInDir("git init", templatePath, { silent: true });
-	if (!initResult.success) {
+	async function git(args: string[]): Promise<{ ok: boolean; output: string }> {
+		const proc = Bun.spawn(["git", ...args], {
+			cwd: templatePath,
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		const code = await proc.exited;
+		const out = await new Response(proc.stdout).text();
+		const err = await new Response(proc.stderr).text();
+		return { ok: code === 0, output: err || out };
+	}
+
+	// git init
+	let result = await git(["init"]);
+	if (!result.ok) {
 		pushSpinner.stop("git init 失败");
 		console.log();
-		printError(initResult.stderr || initResult.output);
-		console.log();
+		printError(result.output);
 		await cleanupGitDir(templatePath);
 		process.exit(1);
 	}
 
-	await execInDir("git add -A", templatePath, { silent: true });
-	await execInDir('git commit -m "init: p template"', templatePath, { silent: true });
+	// git add + commit
+	await git(["add", "-A"]);
+	result = await git(["commit", "-m", "init: p template"]);
+	if (!result.ok) {
+		pushSpinner.stop("git commit 失败");
+		console.log();
+		printError(result.output);
+		await cleanupGitDir(templatePath);
+		process.exit(1);
+	}
 
-	const pushResult = await execInDir(
-		"git push -u origin main",
-		templatePath,
-		{ silent: true },
-	);
+	// git push — 先尝试 main，再 master
+	const branchResult = await git(["branch", "--show-current"]);
+	const branch = branchResult.output.trim() || "main";
 
-	if (!pushResult.success) {
-		const masterResult = await execInDir(
-			"git branch -M master && git push -u origin master",
-			templatePath,
-			{ silent: true },
-		);
-		if (!masterResult.success) {
-			pushSpinner.stop("推送失败");
-			console.log();
-			printError(masterResult.stderr || masterResult.output);
-			console.log();
-			await cleanupGitDir(templatePath);
-			process.exit(1);
-		}
+	result = await git(["push", "-u", "origin", branch]);
+	if (!result.ok && branch === "main") {
+		await git(["branch", "-M", "master"]);
+		result = await git(["push", "-u", "origin", "master"]);
+	}
+
+	if (!result.ok) {
+		pushSpinner.stop("推送失败");
+		console.log();
+		printError(result.output);
+		await cleanupGitDir(templatePath);
+		process.exit(1);
 	}
 
 	await cleanupGitDir(templatePath);
