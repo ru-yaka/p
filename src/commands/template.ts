@@ -464,25 +464,24 @@ async function doPublish(selectedTemplate: string) {
 	const s = spinner();
 	s.start("正在创建 GitHub 仓库...");
 
-	const repoResult = await execInDir(
+	const repoResult = await execAndCapture(
 		`gh repo create ${selectedTemplate} --public --description "p template: ${selectedTemplate}"`,
 		process.cwd(),
-		{ silent: true },
 	);
 
 	if (!repoResult.success) {
 		s.stop("创建仓库失败");
 		console.log();
-		printError(repoResult.stderr || repoResult.output || "未知错误");
+		printError(repoResult.error || repoResult.output || "未知错误");
 		console.log();
 		process.exit(1);
 	}
 
-	const urlMatch = repoResult.output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+	const urlMatch = (repoResult.output || repoResult.error).match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
 	if (!urlMatch) {
 		s.stop("解析仓库地址失败");
 		console.log();
-		printError(repoResult.output);
+		printError(repoResult.output || repoResult.error);
 		console.log();
 		process.exit(1);
 	}

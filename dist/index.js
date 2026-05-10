@@ -18182,19 +18182,19 @@ async function doPublish(selectedTemplate) {
   }
   const s = Y2();
   s.start("\u6B63\u5728\u521B\u5EFA GitHub \u4ED3\u5E93...");
-  const repoResult = await execInDir(`gh repo create ${selectedTemplate} --public --description "p template: ${selectedTemplate}"`, process.cwd(), { silent: true });
+  const repoResult = await execAndCapture(`gh repo create ${selectedTemplate} --public --description "p template: ${selectedTemplate}"`, process.cwd());
   if (!repoResult.success) {
     s.stop("\u521B\u5EFA\u4ED3\u5E93\u5931\u8D25");
     console.log();
-    printError(repoResult.stderr || repoResult.output || "\u672A\u77E5\u9519\u8BEF");
+    printError(repoResult.error || repoResult.output || "\u672A\u77E5\u9519\u8BEF");
     console.log();
     process.exit(1);
   }
-  const urlMatch = repoResult.output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+  const urlMatch = (repoResult.output || repoResult.error).match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
   if (!urlMatch) {
     s.stop("\u89E3\u6790\u4ED3\u5E93\u5730\u5740\u5931\u8D25");
     console.log();
-    printError(repoResult.output);
+    printError(repoResult.output || repoResult.error);
     console.log();
     process.exit(1);
   }
