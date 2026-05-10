@@ -342,9 +342,20 @@ async function handlePublish(nameArg?: string) {
 		const currentProject = projects.find((p) => p.path === currentDir);
 
 		let templateName: string;
+		let needSave = false;
+
 		if (currentProject?.savedTemplate) {
+			// 已关联模板 → 询问是否更新
 			templateName = currentProject.savedTemplate;
+			printInfo(`当前项目已关联模板: ${brand.primary(templateName)}`);
+			const shouldUpdate = await confirm({ message: "是否更新模板？" });
+			if (isCancel(shouldUpdate)) {
+				outro(pc.dim("已取消"));
+				return;
+			}
+			if (shouldUpdate) needSave = true;
 		} else {
+			// 未关联 → 输入名称并创建
 			const result = await text({
 				message: "请输入模板名称:",
 				placeholder: "my-template",
@@ -354,11 +365,11 @@ async function handlePublish(nameArg?: string) {
 				return;
 			}
 			templateName = (result as string).trim();
+			needSave = true;
 		}
 
-		// 模板不存在则先保存
-		if (!(await templateExists(templateName))) {
-			await createOrUpdateTemplate(currentDir, templateName, false);
+		if (needSave) {
+			await createOrUpdateTemplate(currentDir, templateName, await templateExists(templateName));
 			if (currentProject) saveSavedTemplate(currentProject.name, templateName);
 		}
 

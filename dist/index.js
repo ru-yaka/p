@@ -18080,8 +18080,17 @@ async function handlePublish(nameArg) {
     const projects = listProjects();
     const currentProject = projects.find((p2) => p2.path === currentDir);
     let templateName;
+    let needSave = false;
     if (currentProject?.savedTemplate) {
       templateName = currentProject.savedTemplate;
+      printInfo(`\u5F53\u524D\u9879\u76EE\u5DF2\u5173\u8054\u6A21\u677F: ${brand.primary(templateName)}`);
+      const shouldUpdate = await ye({ message: "\u662F\u5426\u66F4\u65B0\u6A21\u677F\uFF1F" });
+      if (pD(shouldUpdate)) {
+        Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
+        return;
+      }
+      if (shouldUpdate)
+        needSave = true;
     } else {
       const result = await he({
         message: "\u8BF7\u8F93\u5165\u6A21\u677F\u540D\u79F0:",
@@ -18092,9 +18101,10 @@ async function handlePublish(nameArg) {
         return;
       }
       templateName = result.trim();
+      needSave = true;
     }
-    if (!await templateExists(templateName)) {
-      await createOrUpdateTemplate(currentDir, templateName, false);
+    if (needSave) {
+      await createOrUpdateTemplate(currentDir, templateName, await templateExists(templateName));
       if (currentProject)
         saveSavedTemplate(currentProject.name, templateName);
     }
@@ -21689,10 +21699,9 @@ await ensureInitialized();
 program2.name("p").description(`${brand.primary("\u26A1 P")} v${pkg.version} \u2014 \u9879\u76EE\u7BA1\u7406\u5DE5\u5177`).version(pkg.version);
 var Help2 = (await Promise.resolve().then(() => (init_esm(), exports_esm))).Help;
 Help2.prototype.subcommandTerm = function(cmd) {
-  const aliases = cmd.aliases();
-  if (aliases.length === 0)
-    return cmd.name();
-  return `${cmd.name()}|${aliases.join("|")}`;
+  const all = [cmd.name(), ...cmd.aliases()];
+  all.sort((a, b3) => b3.length - a.length);
+  return all.join("|");
 };
 program2.addCommand(addCommand);
 program2.addCommand(cloneCommand);
