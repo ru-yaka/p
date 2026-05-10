@@ -18168,13 +18168,15 @@ async function doPublish(selectedTemplate) {
     console.log(import_picocolors26.default.dim("  https://cli.github.com/"));
     process.exit(1);
   }
-  const authCheck = await execAndCapture("gh auth status", process.cwd());
-  if (!authCheck.success) {
+  const [authResult, whoamiResult] = await Promise.all([
+    execAndCapture("gh auth status", process.cwd()),
+    execAndCapture("gh api user --jq .login", process.cwd())
+  ]);
+  if (!authResult.success) {
     printError("\u8BF7\u5148\u767B\u5F55 GitHub CLI: gh auth login");
     process.exit(1);
   }
-  const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
-  const owner = whoami.success ? whoami.output.trim() : "";
+  const owner = whoamiResult.success ? whoamiResult.output.trim() : "";
   if (!owner) {
     printError("\u65E0\u6CD5\u83B7\u53D6 GitHub \u7528\u6237\u540D");
     process.exit(1);

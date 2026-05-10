@@ -441,22 +441,24 @@ async function doPublish(selectedTemplate: string) {
 	const templatePath = resolve(TEMPLATES_DIR, selectedTemplate);
 	intro(bgOrange(" 发布模板 "));
 
-	// 前置检查：gh CLI 和登录状态（在 confirm 之前，减少等待感）
 	if (!(await commandExists("gh"))) {
 		printError("需要安装 GitHub CLI (gh)");
 		console.log(pc.dim("  https://cli.github.com/"));
 		process.exit(1);
 	}
 
-	const authCheck = await execAndCapture("gh auth status", process.cwd());
-	if (!authCheck.success) {
+	// 并行检查登录状态和获取用户名
+	const [authResult, whoamiResult] = await Promise.all([
+		execAndCapture("gh auth status", process.cwd()),
+		execAndCapture("gh api user --jq .login", process.cwd()),
+	]);
+
+	if (!authResult.success) {
 		printError("请先登录 GitHub CLI: gh auth login");
 		process.exit(1);
 	}
 
-	// 获取 GitHub 用户名
-	const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
-	const owner = whoami.success ? whoami.output.trim() : "";
+	const owner = whoamiResult.success ? whoamiResult.output.trim() : "";
 	if (!owner) {
 		printError("无法获取 GitHub 用户名");
 		process.exit(1);
