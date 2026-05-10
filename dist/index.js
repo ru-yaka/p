@@ -18035,7 +18035,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   const copySpinner = Y2();
   copySpinner.start(isUpdate ? "\u6B63\u5728\u66F4\u65B0\u6A21\u677F..." : "\u6B63\u5728\u590D\u5236\u6587\u4EF6\u5230\u6A21\u677F\u76EE\u5F55...");
   try {
-    if (isUpdate) {
+    if (await import_fs_extra18.default.pathExists(targetPath)) {
       await import_fs_extra18.default.emptyDir(targetPath);
     }
     await copyFiles(sourcePath, targetPath, files);

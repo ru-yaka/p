@@ -365,8 +365,8 @@ async function createOrUpdateTemplate(
 	);
 
 	try {
-		// 如果是更新，先清空目标目录
-		if (isUpdate) {
+		// 目标目录已存在则先清空，避免残留旧文件
+		if (await fse.pathExists(targetPath)) {
 			await fse.emptyDir(targetPath);
 		}
 		await copyFiles(sourcePath, targetPath, files);
