@@ -338,6 +338,16 @@ async function createOrUpdateTemplate(
 ) {
 	intro(isUpdate ? bgOrange(" 更新模板 ") : bgOrange(" 添加模板 "));
 
+	// 同名模板已存在时确认覆盖
+	if (!isUpdate && (await templateExists(templateName))) {
+		printInfo(`模板 ${brand.primary(templateName)} 已存在`);
+		const overwrite = await confirm({ message: "是否覆盖？" });
+		if (isCancel(overwrite) || !overwrite) {
+			outro(pc.dim("已取消"));
+			return;
+		}
+	}
+
 	// 获取需要复制的文件
 	const s = spinner();
 	s.start("正在分析文件...");
@@ -372,7 +382,7 @@ async function createOrUpdateTemplate(
 		await copyFiles(sourcePath, targetPath, files);
 
 		copySpinner.stop(
-			`${brand.success("✓")} 模板${isUpdate ? "已更新" : "已创建"}: ${brand.primary(templateName)}`,
+			`${brand.success("✓")} ${isUpdate ? "已更新" : "已创建"} ${brand.primary(templateName)} (${files.length} 个文件)`,
 		);
 	} catch (error) {
 		copySpinner.stop("操作失败");
@@ -382,12 +392,6 @@ async function createOrUpdateTemplate(
 		process.exit(1);
 	}
 
-	console.log();
-	outro(
-		brand.success(
-			`✓ 模板${isUpdate ? "更新" : "添加"}成功: ${brand.primary(templateName)}`,
-		),
-	);
 	console.log();
 	console.log(pc.dim("  模板位置: ") + pc.underline(targetPath));
 	console.log();

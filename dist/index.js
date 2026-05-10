@@ -17798,6 +17798,10 @@ var tagCommand = new Command("tag").alias("t").alias("tags").description("\u7BA1
 import { resolve as resolve4 } from "path";
 var import_fs_extra18 = __toESM(require_lib(), 1);
 var import_picocolors26 = __toESM(require_picocolors(), 1);
+async function templateExists(templateName) {
+  const templatePath = resolve4(TEMPLATES_DIR, templateName);
+  return import_fs_extra18.default.pathExists(templatePath);
+}
 function buildTemplateOptions(projects) {
   return projects.map((p2) => ({
     value: p2.name,
@@ -18020,6 +18024,14 @@ async function handleUpdate(target) {
 }
 async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   Ie(isUpdate ? bgOrange(" \u66F4\u65B0\u6A21\u677F ") : bgOrange(" \u6DFB\u52A0\u6A21\u677F "));
+  if (!isUpdate && await templateExists(templateName)) {
+    printInfo(`\u6A21\u677F ${brand.primary(templateName)} \u5DF2\u5B58\u5728`);
+    const overwrite = await ye({ message: "\u662F\u5426\u8986\u76D6\uFF1F" });
+    if (pD(overwrite) || !overwrite) {
+      Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
+      return;
+    }
+  }
   const s = Y2();
   s.start("\u6B63\u5728\u5206\u6790\u6587\u4EF6...");
   const { success, files, message } = await collectProjectFiles(sourcePath);
@@ -18039,7 +18051,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
       await import_fs_extra18.default.emptyDir(targetPath);
     }
     await copyFiles(sourcePath, targetPath, files);
-    copySpinner.stop(`${brand.success("\u2713")} \u6A21\u677F${isUpdate ? "\u5DF2\u66F4\u65B0" : "\u5DF2\u521B\u5EFA"}: ${brand.primary(templateName)}`);
+    copySpinner.stop(`${brand.success("\u2713")} ${isUpdate ? "\u5DF2\u66F4\u65B0" : "\u5DF2\u521B\u5EFA"} ${brand.primary(templateName)} (${files.length} \u4E2A\u6587\u4EF6)`);
   } catch (error) {
     copySpinner.stop("\u64CD\u4F5C\u5931\u8D25");
     console.log();
@@ -18047,8 +18059,6 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
     console.log();
     process.exit(1);
   }
-  console.log();
-  Se(brand.success(`\u2713 \u6A21\u677F${isUpdate ? "\u66F4\u65B0" : "\u6DFB\u52A0"}\u6210\u529F: ${brand.primary(templateName)}`));
   console.log();
   console.log(import_picocolors26.default.dim("  \u6A21\u677F\u4F4D\u7F6E: ") + import_picocolors26.default.underline(targetPath));
   console.log();
