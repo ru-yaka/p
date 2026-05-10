@@ -34,7 +34,7 @@ function buildTemplateOptions(projects: ReturnType<typeof listProjects>) {
 
 export const templateCommand = new Command("template")
 	.alias("templates")
-	.alias("t")
+	.alias("tp")
 	.description("管理本地模板")
 	.argument("[action]", "操作: add, update, publish")
 	.argument("[target]", "项目名称或 . 表示当前目录")

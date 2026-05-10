@@ -52,7 +52,7 @@ p update
 | `p delete <pattern*>` | 通配符匹配删除（如 `p delete test-*`） |
 | `p note <project> <text>` | 设置项目备注 |
 | `p note <project> --clear` | 清除备注 |
-| `p templates` / `p t` | 管理模板 |
+| `p templates` / `p tp` | 管理模板 |
 | `p hooks` | 管理 hooks |
 | `p config` | 打开配置文件 |
 | `p update` | 更新 p |
@@ -211,19 +211,19 @@ p delete *-test
 ```bash
 # 添加当前目录为模板
 p templates add .
-p t add .
+p tp add .
 
 # 更新模板
 p templates update .
-p t update .
+p tp update .
 
 # 发布模板到 GitHub（创建公开仓库并推送，返回克隆链接）
 p templates publish <name>
-p t publish
+p tp publish
 
 # 打开模板目录
 p templates
-p t
+p tp
 ```
 
 ## 配置
