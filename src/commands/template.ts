@@ -464,24 +464,28 @@ async function doPublish(selectedTemplate: string) {
 	const s = spinner();
 	s.start("正在创建 GitHub 仓库...");
 
-	const repoResult = await execAndCapture(
-		`gh repo create ${selectedTemplate} --public --description "p template: ${selectedTemplate}"`,
-		process.cwd(),
+	const proc = Bun.spawn(
+		["gh", "repo", "create", selectedTemplate, "--public", "--description", `p template: ${selectedTemplate}`],
+		{ cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
 	);
+	const exitCode = await proc.exited;
+	const stdout = await new Response(proc.stdout).text();
+	const stderr = await new Response(proc.stderr).text();
 
-	if (!repoResult.success) {
+	if (exitCode !== 0) {
 		s.stop("创建仓库失败");
 		console.log();
-		printError(repoResult.error || repoResult.output || "未知错误");
+		printError(stderr || stdout || "未知错误");
 		console.log();
 		process.exit(1);
 	}
 
-	const urlMatch = (repoResult.output || repoResult.error).match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+	const output = stdout + stderr;
+	const urlMatch = output.match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
 	if (!urlMatch) {
 		s.stop("解析仓库地址失败");
 		console.log();
-		printError(repoResult.output || repoResult.error);
+		printError(output);
 		console.log();
 		process.exit(1);
 	}
