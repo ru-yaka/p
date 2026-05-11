@@ -153,7 +153,7 @@ export const newCommand = new Command("new")
 						const config = loadConfig();
 						for (const n of newProjects) {
 							console.log(
-								`  ${brand.success("✓")} 已注册项目: ${brand.primary(n)}`,
+								`  ${brand.success("✓")} 已创建项目: ${brand.primary(n)}`,
 							);
 						}
 
@@ -163,7 +163,7 @@ export const newCommand = new Command("new")
 						s.start(`正在打开 ${config.ide}...`);
 						try {
 							await openWithIDE(config.ide, firstProject);
-							s.stop(`${config.ide} 已打开`);
+							s.stop(`已用 ${config.ide} 打开`);
 						} catch (error) {
 							s.stop("打开失败");
 							printError((error as Error).message);
@@ -473,7 +473,7 @@ export const newCommand = new Command("new")
 		s.start(`正在打开 ${config.ide}...`);
 		try {
 			await openWithIDE(config.ide, projectPath);
-			s.stop(`${config.ide} 已打开`);
+			s.stop(`已用 ${config.ide} 打开`);
 		} catch (error) {
 			s.stop(`打开 ${config.ide} 失败`);
 			console.log();
