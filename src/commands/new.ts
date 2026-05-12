@@ -78,18 +78,27 @@ export const newCommand = new Command("new")
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// [DEBUG]
-					const afterAll = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
-					const afterDirNames = afterAll.filter((e) => e.isDirectory()).map((e) => e.name);
-					console.log();
-					console.log(pc.red(`  [DEBUG] existingProjects: [${[...existingProjects].join(", ")}]`));
-					console.log(pc.red(`  [DEBUG] afterDirNames: [${afterDirNames.join(", ")}]`));
-					const createdDirs = afterDirNames.filter((name) => !existingProjects.has(name));
-					console.log(pc.red(`  [DEBUG] createdDirs: [${createdDirs.join(", ")}]`));
-					console.log(pc.red(`  [DEBUG] stderr: ${JSON.stringify(result.stderr?.slice(0, 300))}`));
-					console.log();
+					// [DEBUG] 写文件排查
+					let createdDirs: string[] = [];
+					try {
+						const afterAll = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
+						const afterDirNames = afterAll.filter((e) => e.isDirectory()).map((e) => e.name);
+						createdDirs = afterDirNames.filter((name) => !existingProjects.has(name));
+						const debugInfo = [
+							`existingProjects: [${[...existingProjects].join(", ")}]`,
+							`afterDirNames: [${afterDirNames.join(", ")}]`,
+							`createdDirs: [${createdDirs.join(", ")}]`,
+							`stderr: ${JSON.stringify(result.stderr?.slice(0, 300))}`,
+							`result.success: ${result.success}`,
+						].join("\n");
+						fse.writeFileSync(join(tmpdir(), "p-debug.log"), debugInfo);
+						process.stderr.write(`\n[DEBUG] see ${join(tmpdir(), "p-debug.log")}\n`);
+					} catch (debugErr) {
+						process.stderr.write(`\n[DEBUG] readdir failed: ${(debugErr as Error).message}\n`);
+					}
 
 					if (createdDirs.length === 0) {
+
 						// GitHub API rate limit recovery
 						if (
 							!process.env.GITHUB_TOKEN &&
