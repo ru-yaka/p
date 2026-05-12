@@ -75,16 +75,28 @@ export const newCommand = new Command("new")
 					listProjects().map((p) => p.name),
 				);
 
+				// 记录命令执行前的目录快照（用于失败时判断是否有新/修改的项目）
+				const beforeDirs = new Map<string, number>();
+				for (const e of await fse.readdir(PROJECTS_DIR, { withFileTypes: true })) {
+					if (e.isDirectory()) {
+						beforeDirs.set(e.name, (await fse.stat(join(PROJECTS_DIR, e.name))).mtimeMs);
+					}
+				}
+
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// 命令报错但项目已创建（如 pnpm ignored builds），继续正常流程
-					const scanEntries = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
-					const createdDirs = scanEntries
-						.filter((e) => e.isDirectory() && !existingProjects.has(e.name))
-						.map((e) => e.name);
+					// 检查是否有目录被新建或修改，有则说明命令实际执行了有效工作
+					let hasChanges = false;
+					for (const e of await fse.readdir(PROJECTS_DIR, { withFileTypes: true })) {
+						if (e.isDirectory()) {
+							const prev = beforeDirs.get(e.name);
+							if (prev === undefined) { hasChanges = true; break; }
+							if ((await fse.stat(join(PROJECTS_DIR, e.name))).mtimeMs > prev) { hasChanges = true; break; }
+						}
+					}
 
-					if (createdDirs.length === 0) {
+					if (!hasChanges) {
 						// GitHub API rate limit recovery
 						if (
 							!process.env.GITHUB_TOKEN &&
