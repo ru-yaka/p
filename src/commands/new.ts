@@ -78,8 +78,22 @@ export const newCommand = new Command("new")
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// GitHub API rate limit recovery
+					// pnpm ignored builds — 项目已创建成功，自动 approve 并继续
 					if (
+						result.stderr?.includes("ERR_PNPM_IGNORED_BUILDS") &&
+						cmd.includes("pnpm")
+					) {
+						const approveResult = await execInDir("pnpm approve-builds", PROJECTS_DIR);
+						if (approveResult.success) {
+							// approve 成功，继续正常流程
+						} else {
+							console.log();
+							printError("pnpm approve-builds 执行失败");
+							process.exit(1);
+						}
+					}
+					// GitHub API rate limit recovery
+					else if (
 						!process.env.GITHUB_TOKEN &&
 						result.stderr?.toLowerCase().includes("rate limit") &&
 						(await commandExists("gh"))
