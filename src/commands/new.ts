@@ -78,74 +78,61 @@ export const newCommand = new Command("new")
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// 项目已创建但命令报错（如 pnpm ignored builds）
+					// 命令报错但项目已创建（如 pnpm ignored builds），继续正常流程
 					const scanEntries = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
 					const createdDirs = scanEntries
 						.filter((e) => e.isDirectory() && !existingProjects.has(e.name))
 						.map((e) => e.name);
 
-					if (createdDirs.length > 0) {
-						if (cmd.includes("pnpm")) {
-							const doApprove = await confirm({
-								message: "检测到 pnpm 忽略的构建脚本，是否运行 pnpm approve-builds？",
+					if (createdDirs.length === 0) {
+						// GitHub API rate limit recovery
+						if (
+							!process.env.GITHUB_TOKEN &&
+							result.stderr?.toLowerCase().includes("rate limit") &&
+							(await commandExists("gh"))
+						) {
+							const retry = await confirm({
+								message:
+									"检测到 GitHub API 速率限制，是否使用当前 gh auth 的 token 重试？",
 							});
-							if (!isCancel(doApprove) && doApprove) {
-								const projectDir = getProjectPath(createdDirs[0]);
-								const approveResult = await execInDir("pnpm approve-builds", projectDir);
-								if (!approveResult.success) {
+
+							if (!isCancel(retry) && retry) {
+								const tokenResult = await execAndCapture("gh auth token", process.cwd());
+								if (tokenResult.success && tokenResult.output) {
+									const token = tokenResult.output.trim();
+									process.env.GITHUB_TOKEN = token;
+
+									const patchFile = join(tmpdir(), "p-github-auth-patch.cjs");
+									fse.writeFileSync(
+										patchFile,
+										`const _f=globalThis.fetch;globalThis.fetch=async(u,o={})=>{const s=typeof u==="string"?u:u?.url||"";if(s.includes("api.github.com"))o={...o,headers:{...o.headers,Authorization:"Bearer "+process.env.GITHUB_TOKEN}};return _f(u,o)};`,
+									);
+									const prevNodeOpts = process.env.NODE_OPTIONS || "";
+									process.env.NODE_OPTIONS =
+										prevNodeOpts +
+										` --require ${patchFile.replace(/\\/g, "/")}`;
+
 									console.log();
-									printError("pnpm approve-builds 执行失败");
-									process.exit(1);
-								}
-							}
-						}
-						// 项目已创建，继续正常流程
-					}
-					// GitHub API rate limit recovery
-					else if (
-						!process.env.GITHUB_TOKEN &&
-						result.stderr?.toLowerCase().includes("rate limit") &&
-						(await commandExists("gh"))
-					) {
-						const retry = await confirm({
-							message:
-								"检测到 GitHub API 速率限制，是否使用当前 gh auth 的 token 重试？",
-						});
-
-						if (!isCancel(retry) && retry) {
-							const tokenResult = await execAndCapture("gh auth token", process.cwd());
-							if (tokenResult.success && tokenResult.output) {
-								const token = tokenResult.output.trim();
-								process.env.GITHUB_TOKEN = token;
-
-								// 很多工具（如 create-expo-app）不读 GITHUB_TOKEN，
-								// 通过 NODE_OPTIONS 注入 fetch patch 给 api.github.com 请求加 auth
-								const patchFile = join(tmpdir(), "p-github-auth-patch.cjs");
-								fse.writeFileSync(
-									patchFile,
-									`const _f=globalThis.fetch;globalThis.fetch=async(u,o={})=>{const s=typeof u==="string"?u:u?.url||"";if(s.includes("api.github.com"))o={...o,headers:{...o.headers,Authorization:"Bearer "+process.env.GITHUB_TOKEN}};return _f(u,o)};`,
-								);
-								const prevNodeOpts = process.env.NODE_OPTIONS || "";
-								process.env.NODE_OPTIONS =
-									prevNodeOpts +
-									` --require ${patchFile.replace(/\\/g, "/")}`;
-
-								console.log();
-								console.log(pc.dim("  已注入 GITHUB_TOKEN，正在重试..."));
-								console.log();
-								const retryResult = await execInDir(cmd, PROJECTS_DIR);
-
-								process.env.NODE_OPTIONS = prevNodeOpts || undefined;
-								try { fse.unlinkSync(patchFile); } catch {}
-
-								if (!retryResult.success) {
+									console.log(pc.dim("  已注入 GITHUB_TOKEN，正在重试..."));
 									console.log();
-									printError("重试仍然失败");
+									const retryResult = await execInDir(cmd, PROJECTS_DIR);
+
+									process.env.NODE_OPTIONS = prevNodeOpts || undefined;
+									try { fse.unlinkSync(patchFile); } catch {}
+
+									if (!retryResult.success) {
+											console.log();
+											printError("重试仍然失败");
+											process.exit(1);
+									}
+								} else {
+									console.log();
+									printError("获取 gh auth token 失败");
 									process.exit(1);
 								}
 							} else {
 								console.log();
-								printError("获取 gh auth token 失败");
+								printError("命令执行失败");
 								process.exit(1);
 							}
 						} else {
@@ -153,12 +140,9 @@ export const newCommand = new Command("new")
 							printError("命令执行失败");
 							process.exit(1);
 						}
-					} else {
-						console.log();
-						printError("命令执行失败");
-						process.exit(1);
 					}
 				}
+
 
 				// 扫描新项目目录并注册
 				const entries = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
