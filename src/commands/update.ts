@@ -53,9 +53,9 @@ export const updateCommand = new Command("update")
 		const s = spinner();
 		s.start("正在更新...");
 
-		// 先移除旧版本，再重新安装
+		// 先移除旧版本，再强制重新安装（--force 绕过缓存）
 		await execAndCapture("bun remove -g p", process.cwd());
-		const installResult = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
+		const installResult = await execAndCapture("bun install -g ru-yaka/p --force", process.cwd());
 
 		if (!installResult.success) {
 			s.stop("更新失败");
