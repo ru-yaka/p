@@ -78,9 +78,16 @@ export const newCommand = new Command("new")
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// 命令失败但可能有新项目目录被创建（如 pnpm ignored builds）
-					const createdDirs = (await fse.readdir(PROJECTS_DIR, { withFileTypes: true }))
-						.filter((e) => e.isDirectory() && !existingProjects.has(e.name));
+					// [DEBUG]
+					const afterAll = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
+					const afterDirNames = afterAll.filter((e) => e.isDirectory()).map((e) => e.name);
+					console.log();
+					console.log(pc.red(`  [DEBUG] existingProjects: [${[...existingProjects].join(", ")}]`));
+					console.log(pc.red(`  [DEBUG] afterDirNames: [${afterDirNames.join(", ")}]`));
+					const createdDirs = afterDirNames.filter((name) => !existingProjects.has(name));
+					console.log(pc.red(`  [DEBUG] createdDirs: [${createdDirs.join(", ")}]`));
+					console.log(pc.red(`  [DEBUG] stderr: ${JSON.stringify(result.stderr?.slice(0, 300))}`));
+					console.log();
 
 					if (createdDirs.length === 0) {
 						// GitHub API rate limit recovery
