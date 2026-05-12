@@ -75,42 +75,14 @@ export const newCommand = new Command("new")
 					listProjects().map((p) => p.name),
 				);
 
-				// 记录命令执行前各项目目录内最新文件的 mtime（目录 mtime 不会因覆盖文件而改变）
-				const beforeDirs = new Map<string, number>();
-				for (const e of await fse.readdir(PROJECTS_DIR, { withFileTypes: true })) {
-					if (e.isDirectory()) {
-						let maxMtime = 0;
-						try {
-							for (const f of await fse.readdir(join(PROJECTS_DIR, e.name))) {
-								const s = await fse.stat(join(PROJECTS_DIR, e.name, f));
-								if (s.mtimeMs > maxMtime) maxMtime = s.mtimeMs;
-							}
-						} catch {}
-						beforeDirs.set(e.name, maxMtime);
-					}
-				}
-
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// 检查是否有目录被新建或内部文件被修改
-					let hasChanges = false;
-					for (const e of await fse.readdir(PROJECTS_DIR, { withFileTypes: true })) {
-						if (e.isDirectory()) {
-							const prev = beforeDirs.get(e.name);
-							if (prev === undefined) { hasChanges = true; break; }
-							let maxMtime = 0;
-							try {
-								for (const f of await fse.readdir(join(PROJECTS_DIR, e.name))) {
-									const s = await fse.stat(join(PROJECTS_DIR, e.name, f));
-									if (s.mtimeMs > maxMtime) maxMtime = s.mtimeMs;
-								}
-							} catch {}
-							if (maxMtime > prev) { hasChanges = true; break; }
-						}
-					}
+					// 命令失败但可能有新项目目录被创建（如 pnpm ignored builds）
+					const createdDirs = (await fse.readdir(PROJECTS_DIR, { withFileTypes: true }))
+						.filter((e) => e.isDirectory() && !existingProjects.has(e.name));
 
-					if (!hasChanges) {
+					if (createdDirs.length === 0) {
 						// GitHub API rate limit recovery
 						if (
 							!process.env.GITHUB_TOKEN &&
