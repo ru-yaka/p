@@ -78,19 +78,23 @@ export const newCommand = new Command("new")
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// pnpm ignored builds — 项目已创建成功，自动 approve 并继续
+					// pnpm ignored builds — 项目已创建成功，询问用户是否 approve
 					if (
 						result.stderr?.includes("ERR_PNPM_IGNORED_BUILDS") &&
 						cmd.includes("pnpm")
 					) {
-						const approveResult = await execInDir("pnpm approve-builds", PROJECTS_DIR);
-						if (approveResult.success) {
-							// approve 成功，继续正常流程
-						} else {
-							console.log();
-							printError("pnpm approve-builds 执行失败");
-							process.exit(1);
+						const doApprove = await confirm({
+							message: "检测到 pnpm 忽略的构建脚本，是否运行 pnpm approve-builds？",
+						});
+						if (!isCancel(doApprove) && doApprove) {
+							const approveResult = await execInDir("pnpm approve-builds", PROJECTS_DIR);
+							if (!approveResult.success) {
+								console.log();
+								printError("pnpm approve-builds 执行失败");
+								process.exit(1);
+							}
 						}
+						// 无论是否 approve 都继续正常流程
 					}
 					// GitHub API rate limit recovery
 					else if (
