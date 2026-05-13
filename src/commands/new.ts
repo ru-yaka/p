@@ -93,14 +93,12 @@ export const newCommand = new Command("new")
 						const projectDir = join(PROJECTS_DIR, createdDirs[0]);
 						console.log();
 						const runApprove = await confirm({
-							message: `检测到 pnpm 需要批准构建脚本 (${createdDirs[0]})，是否运行 pnpm approve-builds？`,
+						message: "检测到 pnpm 需要批准构建脚本，是否运行 pnpm approve-builds？",
 						});
 
 						if (!isCancel(runApprove) && runApprove) {
 							console.log();
 							await execInDir("pnpm approve-builds", projectDir);
-							console.log();
-							await execInDir("pnpm install", projectDir);
 						}
 					} else if (createdDirs.length === 0) {
 

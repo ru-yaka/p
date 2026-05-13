@@ -16718,13 +16718,11 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
         const projectDir = join9(PROJECTS_DIR, createdDirs[0]);
         console.log();
         const runApprove = await ye({
-          message: `\u68C0\u6D4B\u5230 pnpm \u9700\u8981\u6279\u51C6\u6784\u5EFA\u811A\u672C (${createdDirs[0]})\uFF0C\u662F\u5426\u8FD0\u884C pnpm approve-builds\uFF1F`
+          message: "\u68C0\u6D4B\u5230 pnpm \u9700\u8981\u6279\u51C6\u6784\u5EFA\u811A\u672C\uFF0C\u662F\u5426\u8FD0\u884C pnpm approve-builds\uFF1F"
         });
         if (!pD(runApprove) && runApprove) {
           console.log();
           await execInDir("pnpm approve-builds", projectDir);
-          console.log();
-          await execInDir("pnpm install", projectDir);
         }
       } else if (createdDirs.length === 0) {
         if (!process.env.GITHUB_TOKEN && result.stderr?.toLowerCase().includes("rate limit") && await commandExists("gh")) {
