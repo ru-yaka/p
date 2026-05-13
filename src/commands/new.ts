@@ -78,26 +78,31 @@ export const newCommand = new Command("new")
 				const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
 
 				if (!result.success) {
-					// [DEBUG] 写文件排查
+					// 扫描新创建的目录
 					let createdDirs: string[] = [];
 					try {
 						const afterAll = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
 						const afterDirNames = afterAll.filter((e) => e.isDirectory()).map((e) => e.name);
 						createdDirs = afterDirNames.filter((name) => !existingProjects.has(name));
-						const debugInfo = [
-							`existingProjects: [${[...existingProjects].join(", ")}]`,
-							`afterDirNames: [${afterDirNames.join(", ")}]`,
-							`createdDirs: [${createdDirs.join(", ")}]`,
-							`stderr: ${JSON.stringify(result.stderr?.slice(0, 300))}`,
-							`result.success: ${result.success}`,
-						].join("\n");
-						fse.writeFileSync(join(tmpdir(), "p-debug.log"), debugInfo);
-						process.stderr.write(`\n[DEBUG] see ${join(tmpdir(), "p-debug.log")}\n`);
-					} catch (debugErr) {
-						process.stderr.write(`\n[DEBUG] readdir failed: ${(debugErr as Error).message}\n`);
+					} catch {
+						// ignore
 					}
 
-					if (createdDirs.length === 0) {
+					// pnpm ignored builds recovery
+					if (result.stderr?.includes("ERR_PNPM_IGNORED_BUILDS") && createdDirs.length > 0) {
+						const projectDir = join(PROJECTS_DIR, createdDirs[0]);
+						console.log();
+						const runApprove = await confirm({
+							message: `检测到 pnpm 需要批准构建脚本 (${createdDirs[0]})，是否运行 pnpm approve-builds？`,
+						});
+
+						if (!isCancel(runApprove) && runApprove) {
+							console.log();
+							await execInDir("pnpm approve-builds", projectDir);
+							console.log();
+							await execInDir("pnpm install", projectDir);
+						}
+					} else if (createdDirs.length === 0) {
 
 						// GitHub API rate limit recovery
 						if (
@@ -158,7 +163,7 @@ export const newCommand = new Command("new")
 				}
 
 
-				// 扫描新项目目录并注册
+				// 扫描新项目目录并创建
 				const entries = await fse.readdir(PROJECTS_DIR, { withFileTypes: true });
 				const newProjects: string[] = [];
 

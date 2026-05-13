@@ -16708,35 +16708,59 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     const existingProjects = new Set(listProjects().map((p2) => p2.name));
     const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
     if (!result.success) {
-      if (!process.env.GITHUB_TOKEN && result.stderr?.toLowerCase().includes("rate limit") && await commandExists("gh")) {
-        const retry = await ye({
-          message: "\u68C0\u6D4B\u5230 GitHub API \u901F\u7387\u9650\u5236\uFF0C\u662F\u5426\u4F7F\u7528\u5F53\u524D gh auth \u7684 token \u91CD\u8BD5\uFF1F"
+      let createdDirs = [];
+      try {
+        const afterAll = await import_fs_extra13.default.readdir(PROJECTS_DIR, { withFileTypes: true });
+        const afterDirNames = afterAll.filter((e2) => e2.isDirectory()).map((e2) => e2.name);
+        createdDirs = afterDirNames.filter((name2) => !existingProjects.has(name2));
+      } catch {}
+      if (result.stderr?.includes("ERR_PNPM_IGNORED_BUILDS") && createdDirs.length > 0) {
+        const projectDir = join9(PROJECTS_DIR, createdDirs[0]);
+        console.log();
+        const runApprove = await ye({
+          message: `\u68C0\u6D4B\u5230 pnpm \u9700\u8981\u6279\u51C6\u6784\u5EFA\u811A\u672C (${createdDirs[0]})\uFF0C\u662F\u5426\u8FD0\u884C pnpm approve-builds\uFF1F`
         });
-        if (!pD(retry) && retry) {
-          const tokenResult = await execAndCapture("gh auth token", process.cwd());
-          if (tokenResult.success && tokenResult.output) {
-            const token = tokenResult.output.trim();
-            process.env.GITHUB_TOKEN = token;
-            const patchFile = join9(tmpdir(), "p-github-auth-patch.cjs");
-            import_fs_extra13.default.writeFileSync(patchFile, `const _f=globalThis.fetch;globalThis.fetch=async(u,o={})=>{const s=typeof u==="string"?u:u?.url||"";if(s.includes("api.github.com"))o={...o,headers:{...o.headers,Authorization:"Bearer "+process.env.GITHUB_TOKEN}};return _f(u,o)};`);
-            const prevNodeOpts = process.env.NODE_OPTIONS || "";
-            process.env.NODE_OPTIONS = prevNodeOpts + ` --require ${patchFile.replace(/\\/g, "/")}`;
-            console.log();
-            console.log(import_picocolors18.default.dim("  \u5DF2\u6CE8\u5165 GITHUB_TOKEN\uFF0C\u6B63\u5728\u91CD\u8BD5..."));
-            console.log();
-            const retryResult = await execInDir(cmd, PROJECTS_DIR);
-            process.env.NODE_OPTIONS = prevNodeOpts || undefined;
-            try {
-              import_fs_extra13.default.unlinkSync(patchFile);
-            } catch {}
-            if (!retryResult.success) {
+        if (!pD(runApprove) && runApprove) {
+          console.log();
+          await execInDir("pnpm approve-builds", projectDir);
+          console.log();
+          await execInDir("pnpm install", projectDir);
+        }
+      } else if (createdDirs.length === 0) {
+        if (!process.env.GITHUB_TOKEN && result.stderr?.toLowerCase().includes("rate limit") && await commandExists("gh")) {
+          const retry = await ye({
+            message: "\u68C0\u6D4B\u5230 GitHub API \u901F\u7387\u9650\u5236\uFF0C\u662F\u5426\u4F7F\u7528\u5F53\u524D gh auth \u7684 token \u91CD\u8BD5\uFF1F"
+          });
+          if (!pD(retry) && retry) {
+            const tokenResult = await execAndCapture("gh auth token", process.cwd());
+            if (tokenResult.success && tokenResult.output) {
+              const token = tokenResult.output.trim();
+              process.env.GITHUB_TOKEN = token;
+              const patchFile = join9(tmpdir(), "p-github-auth-patch.cjs");
+              import_fs_extra13.default.writeFileSync(patchFile, `const _f=globalThis.fetch;globalThis.fetch=async(u,o={})=>{const s=typeof u==="string"?u:u?.url||"";if(s.includes("api.github.com"))o={...o,headers:{...o.headers,Authorization:"Bearer "+process.env.GITHUB_TOKEN}};return _f(u,o)};`);
+              const prevNodeOpts = process.env.NODE_OPTIONS || "";
+              process.env.NODE_OPTIONS = prevNodeOpts + ` --require ${patchFile.replace(/\\/g, "/")}`;
               console.log();
-              printError("\u91CD\u8BD5\u4ECD\u7136\u5931\u8D25");
+              console.log(import_picocolors18.default.dim("  \u5DF2\u6CE8\u5165 GITHUB_TOKEN\uFF0C\u6B63\u5728\u91CD\u8BD5..."));
+              console.log();
+              const retryResult = await execInDir(cmd, PROJECTS_DIR);
+              process.env.NODE_OPTIONS = prevNodeOpts || undefined;
+              try {
+                import_fs_extra13.default.unlinkSync(patchFile);
+              } catch {}
+              if (!retryResult.success) {
+                console.log();
+                printError("\u91CD\u8BD5\u4ECD\u7136\u5931\u8D25");
+                process.exit(1);
+              }
+            } else {
+              console.log();
+              printError("\u83B7\u53D6 gh auth token \u5931\u8D25");
               process.exit(1);
             }
           } else {
             console.log();
-            printError("\u83B7\u53D6 gh auth token \u5931\u8D25");
+            printError("\u547D\u4EE4\u6267\u884C\u5931\u8D25");
             process.exit(1);
           }
         } else {
@@ -16744,10 +16768,6 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
           printError("\u547D\u4EE4\u6267\u884C\u5931\u8D25");
           process.exit(1);
         }
-      } else {
-        console.log();
-        printError("\u547D\u4EE4\u6267\u884C\u5931\u8D25");
-        process.exit(1);
       }
     }
     const entries = await import_fs_extra13.default.readdir(PROJECTS_DIR, { withFileTypes: true });
@@ -16762,14 +16782,14 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     if (newProjects.length > 0) {
       const config3 = loadConfig();
       for (const n of newProjects) {
-        console.log(`  ${brand.success("\u2713")} \u5DF2\u6CE8\u518C\u9879\u76EE: ${brand.primary(n)}`);
+        console.log(`  ${brand.success("\u2713")} \u5DF2\u521B\u5EFA\u9879\u76EE: ${brand.primary(n)}`);
       }
       const firstProject = getProjectPath(newProjects[0]);
       const s2 = Y2();
       s2.start(`\u6B63\u5728\u6253\u5F00 ${config3.ide}...`);
       try {
         await openWithIDE(config3.ide, firstProject);
-        s2.stop(`${config3.ide} \u5DF2\u6253\u5F00`);
+        s2.stop(`\u5DF2\u7528 ${config3.ide} \u6253\u5F00`);
       } catch (error) {
         s2.stop("\u6253\u5F00\u5931\u8D25");
         printError(error.message);
@@ -16996,7 +17016,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
   s.start(`\u6B63\u5728\u6253\u5F00 ${config.ide}...`);
   try {
     await openWithIDE(config.ide, projectPath);
-    s.stop(`${config.ide} \u5DF2\u6253\u5F00`);
+    s.stop(`\u5DF2\u7528 ${config.ide} \u6253\u5F00`);
   } catch (error) {
     s.stop(`\u6253\u5F00 ${config.ide} \u5931\u8D25`);
     console.log();
@@ -21731,8 +21751,8 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
   console.log();
   const s = Y2();
   s.start("\u6B63\u5728\u66F4\u65B0...");
-  const removeResult = await execAndCapture("bun remove -g p", process.cwd());
-  const installResult = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
+  await execAndCapture("bun remove -g p", process.cwd());
+  const installResult = await execAndCapture("bun install -g ru-yaka/p --force", process.cwd());
   if (!installResult.success) {
     s.stop("\u66F4\u65B0\u5931\u8D25");
     console.log();
