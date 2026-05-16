@@ -3,12 +3,45 @@ import fse from "fs-extra";
 import pc from "picocolors";
 
 import { listProjects } from "../core/project";
-import { getLocalTemplates } from "../core/template";
+import { getLocalTemplates, getPublishedTemplates } from "../core/template";
 import { loadConfig } from "../core/config";
 import { TEMPLATES_DIR } from "../utils/paths";
 import { brand, formatRelativeTime, printInfo } from "../utils/ui";
 
-async function listTemplates() {
+async function listTemplates(remoteOnly: boolean) {
+	const published = getPublishedTemplates();
+
+	if (remoteOnly) {
+		const entries = Object.entries(published);
+		if (entries.length === 0) {
+			console.log();
+			printInfo(`暂无远程模板，使用 ${brand.primary("p templates publish")} 发布模板`);
+			console.log();
+			return;
+		}
+
+		console.log();
+		console.log(
+			brand.primary("  📦 远程模板") + pc.dim(` (${entries.length} 个)`),
+		);
+		console.log(pc.dim("  ─".repeat(20)));
+		console.log();
+
+		for (const [, meta] of entries) {
+			console.log("  " + brand.secondary("◆") + " " + brand.bold(meta.repo));
+			console.log(pc.dim(`    ${meta.url}`));
+			console.log();
+		}
+
+		console.log(
+			pc.dim("  提示: 使用 ") +
+				brand.primary("p templates add") +
+				pc.dim(" 添加模板"),
+		);
+		console.log();
+		return;
+	}
+
 	if (!(await fse.pathExists(TEMPLATES_DIR))) {
 		console.log();
 		printInfo(`暂无模板，使用 ${brand.primary("p templates add")} 添加模板`);
@@ -34,13 +67,20 @@ async function listTemplates() {
 	console.log();
 
 	for (const tpl of entries) {
+		const meta = published[tpl.name];
+		const remoteTag = meta ? pc.cyan("  🌐 remote") : "";
+
 		console.log(
 			"  " +
 				brand.secondary("◆") +
 				" " +
-				brand.bold(tpl.name),
+				brand.bold(tpl.name) +
+				remoteTag,
 		);
 		console.log(pc.dim(`    ${TEMPLATES_DIR}/${tpl.dir || tpl.name}`));
+		if (meta) {
+			console.log(pc.dim(`    ${meta.url}`));
+		}
 		console.log();
 	}
 
@@ -56,9 +96,10 @@ export const lsCommand = new Command("ls")
 	.alias("list")
 	.description("列出所有项目")
 	.argument("[filter]", "templates / t 列出模板")
-	.action(async (filter?: string) => {
+	.option("-r, --remote", "只列出已发布的远程模板")
+	.action(async (filter?: string, options?: { remote?: boolean }) => {
 		if (filter === "templates" || filter === "t") {
-			await listTemplates();
+			await listTemplates(!!options?.remote);
 			return;
 		}
 

@@ -27,6 +27,11 @@ export const PROJECTS_DIR = join(P_ROOT, "projects");
 export const TEMPLATES_DIR = join(P_ROOT, "templates");
 
 /**
+ * 模板元数据文件路径（记录发布信息）
+ */
+export const TEMPLATES_META_PATH = join(P_ROOT, "templates-meta.json");
+
+/**
  * Hooks 目录（自定义脚本）
  */
 export const HOOKS_DIR = join(P_ROOT, "hooks");

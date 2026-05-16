@@ -39,6 +39,23 @@ export interface Config {
 }
 
 /**
+ * 模板发布元数据
+ */
+export interface TemplateMeta {
+	owner: string;
+	repo: string;
+	url: string;
+	publishedAt: string;
+}
+
+/**
+ * 模板元数据文件结构
+ */
+export interface TemplatesMeta {
+	[templateName: string]: TemplateMeta;
+}
+
+/**
  * 项目元数据（存储在 metadata.json 中的单个项目）
  */
 export interface ProjectMetaData {

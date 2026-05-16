@@ -6,6 +6,7 @@ import pc from "picocolors";
 
 import { loadConfig } from "../core/config";
 import { getProjectMeta, getProjectPath, listProjects, projectExists, saveProjectMeta } from "../core/project";
+import { markTemplatePublished } from "../core/template";
 import { collectProjectFiles, copyFiles } from "../utils/files";
 import { liveSearch, CANCEL } from "../utils/live-search";
 import { TEMPLATES_DIR } from "../utils/paths";
@@ -557,6 +558,8 @@ async function doPublish(selectedTemplate: string) {
 
 	const fileCount = await countFiles(templatePath);
 	pushSpinner.stop(`${brand.success("✓")} 已推送 ${brand.primary(fileCount.toString())} 个文件`);
+
+	markTemplatePublished(selectedTemplate, owner, selectedTemplate);
 
 	console.log();
 	console.log(pc.dim("  克隆链接: ") + pc.underline(cloneUrl));

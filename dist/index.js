@@ -14392,6 +14392,7 @@ var CONFIG_PATH = join(P_ROOT, "config.yaml");
 var METADATA_PATH = join(P_ROOT, "meta.json");
 var PROJECTS_DIR = join(P_ROOT, "projects");
 var TEMPLATES_DIR = join(P_ROOT, "templates");
+var TEMPLATES_META_PATH = join(P_ROOT, "templates-meta.json");
 var HOOKS_DIR = join(P_ROOT, "hooks");
 
 // src/core/config.ts
@@ -14821,6 +14822,28 @@ function getTemplateChoices(templates) {
       hint
     };
   });
+}
+function loadTemplatesMeta() {
+  if (!import_fs_extra3.default.existsSync(TEMPLATES_META_PATH)) {
+    return {};
+  }
+  try {
+    return JSON.parse(import_fs_extra3.default.readFileSync(TEMPLATES_META_PATH, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+function saveTemplatesMeta(meta) {
+  import_fs_extra3.default.writeFileSync(TEMPLATES_META_PATH, JSON.stringify(meta, null, 2), "utf-8");
+}
+function markTemplatePublished(name, owner, repo) {
+  const meta = loadTemplatesMeta();
+  const url = `https://github.com/${owner}/${repo}`;
+  meta[name] = { owner, repo, url, publishedAt: new Date().toISOString() };
+  saveTemplatesMeta(meta);
+}
+function getPublishedTemplates() {
+  return loadTemplatesMeta();
 }
 
 // src/commands/add.ts
@@ -16112,7 +16135,29 @@ var importCommand = new Command("import").alias("i").description("\u5BFC\u5165\u
 init_esm();
 var import_fs_extra10 = __toESM(require_lib(), 1);
 var import_picocolors14 = __toESM(require_picocolors(), 1);
-async function listTemplates() {
+async function listTemplates(remoteOnly) {
+  const published = getPublishedTemplates();
+  if (remoteOnly) {
+    const entries2 = Object.entries(published);
+    if (entries2.length === 0) {
+      console.log();
+      printInfo(`\u6682\u65E0\u8FDC\u7A0B\u6A21\u677F\uFF0C\u4F7F\u7528 ${brand.primary("p templates publish")} \u53D1\u5E03\u6A21\u677F`);
+      console.log();
+      return;
+    }
+    console.log();
+    console.log(brand.primary("  \uD83D\uDCE6 \u8FDC\u7A0B\u6A21\u677F") + import_picocolors14.default.dim(` (${entries2.length} \u4E2A)`));
+    console.log(import_picocolors14.default.dim("  \u2500".repeat(20)));
+    console.log();
+    for (const [, meta] of entries2) {
+      console.log("  " + brand.secondary("\u25C6") + " " + brand.bold(meta.repo));
+      console.log(import_picocolors14.default.dim(`    ${meta.url}`));
+      console.log();
+    }
+    console.log(import_picocolors14.default.dim("  \u63D0\u793A: \u4F7F\u7528 ") + brand.primary("p templates add") + import_picocolors14.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
+    console.log();
+    return;
+  }
   if (!await import_fs_extra10.default.pathExists(TEMPLATES_DIR)) {
     console.log();
     printInfo(`\u6682\u65E0\u6A21\u677F\uFF0C\u4F7F\u7528 ${brand.primary("p templates add")} \u6DFB\u52A0\u6A21\u677F`);
@@ -16132,16 +16177,21 @@ async function listTemplates() {
   console.log(import_picocolors14.default.dim("  \u2500".repeat(20)));
   console.log();
   for (const tpl of entries) {
-    console.log("  " + brand.secondary("\u25C6") + " " + brand.bold(tpl.name));
+    const meta = published[tpl.name];
+    const remoteTag = meta ? import_picocolors14.default.cyan("  \uD83C\uDF10 remote") : "";
+    console.log("  " + brand.secondary("\u25C6") + " " + brand.bold(tpl.name) + remoteTag);
     console.log(import_picocolors14.default.dim(`    ${TEMPLATES_DIR}/${tpl.dir || tpl.name}`));
+    if (meta) {
+      console.log(import_picocolors14.default.dim(`    ${meta.url}`));
+    }
     console.log();
   }
   console.log(import_picocolors14.default.dim("  \u63D0\u793A: \u4F7F\u7528 ") + brand.primary("p templates add") + import_picocolors14.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
   console.log();
 }
-var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").action(async (filter) => {
+var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").option("-r, --remote", "\u53EA\u5217\u51FA\u5DF2\u53D1\u5E03\u7684\u8FDC\u7A0B\u6A21\u677F").action(async (filter, options) => {
   if (filter === "templates" || filter === "t") {
-    await listTemplates();
+    await listTemplates(!!options?.remote);
     return;
   }
   const projects = listProjects();
@@ -18271,6 +18321,7 @@ async function doPublish(selectedTemplate) {
   await cleanupGitDir(templatePath);
   const fileCount = await countFiles(templatePath);
   pushSpinner.stop(`${brand.success("\u2713")} \u5DF2\u63A8\u9001 ${brand.primary(fileCount.toString())} \u4E2A\u6587\u4EF6`);
+  markTemplatePublished(selectedTemplate, owner, selectedTemplate);
   console.log();
   console.log(import_picocolors26.default.dim("  \u514B\u9686\u94FE\u63A5: ") + import_picocolors26.default.underline(cloneUrl));
   console.log();

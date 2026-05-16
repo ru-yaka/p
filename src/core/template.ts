@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import fse from "fs-extra";
 import pc from "picocolors";
-import type { TemplateConfig } from "../types";
-import { TEMPLATES_DIR } from "../utils/paths";
+import type { TemplateConfig, TemplateMeta, TemplatesMeta } from "../types";
+import { TEMPLATES_DIR, TEMPLATES_META_PATH } from "../utils/paths";
 import { execInDir } from "../utils/shell";
 import { brand } from "../utils/ui";
 
@@ -139,4 +139,42 @@ export function getTemplateChoices(
 			hint,
 		};
 	});
+}
+
+/**
+ * 读取模板发布元数据
+ */
+export function loadTemplatesMeta(): TemplatesMeta {
+	if (!fse.existsSync(TEMPLATES_META_PATH)) {
+		return {};
+	}
+	try {
+		return JSON.parse(fse.readFileSync(TEMPLATES_META_PATH, "utf-8"));
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * 保存模板发布元数据
+ */
+function saveTemplatesMeta(meta: TemplatesMeta): void {
+	fse.writeFileSync(TEMPLATES_META_PATH, JSON.stringify(meta, null, 2), "utf-8");
+}
+
+/**
+ * 标记模板已发布到 GitHub
+ */
+export function markTemplatePublished(name: string, owner: string, repo: string): void {
+	const meta = loadTemplatesMeta();
+	const url = `https://github.com/${owner}/${repo}`;
+	meta[name] = { owner, repo, url, publishedAt: new Date().toISOString() };
+	saveTemplatesMeta(meta);
+}
+
+/**
+ * 获取所有已发布的模板名列表
+ */
+export function getPublishedTemplates(): TemplatesMeta {
+	return loadTemplatesMeta();
 }
