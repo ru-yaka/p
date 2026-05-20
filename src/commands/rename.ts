@@ -244,6 +244,18 @@ export const renameCommand = new Command("rename")
 					printError(result.error || "未知错误");
 				} else {
 					renameSpinner.stop(`${brand.success("✓")} GitHub 仓库已重命名为 ${brand.primary(finalName)}`);
+
+					// 更新本地 git remote URL
+					const owner = repoSlug.split("/")[0];
+					let newRemoteUrl: string;
+					if (remoteUrl!.includes("@")) {
+						newRemoteUrl = `git@github.com:${owner}/${finalName}.git`;
+					} else {
+						const tokenMatch = remoteUrl!.match(/^(https?:\/\/[^@]*@)?github\.com/);
+						const prefix = tokenMatch ? tokenMatch[1]! : "https://github.com/";
+						newRemoteUrl = `${prefix}github.com/${owner}/${finalName}.git`;
+					}
+					await execAndCapture(`git remote set-url origin ${newRemoteUrl}`, newPath);
 				}
 			}
 		}
