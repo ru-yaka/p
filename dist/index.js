@@ -15187,6 +15187,10 @@ var cloneCommand = new Command("clone").alias("cl").description("\u4ECE\u8FDC\u7
     process.exit(1);
   }
   console.log();
+  if (options?.degit) {
+    console.log(import_picocolors7.default.dim("  degit \u6A21\u5F0F\uFF1A\u4E0D\u5305\u542B .git \u76EE\u5F55\uFF08\u65E0\u5386\u53F2\u63D0\u4EA4\u8BB0\u5F55\uFF09"));
+    console.log();
+  }
   const projectPath = getProjectPath(projectName);
   const s = Y2();
   s.start(`\u6B63\u5728\u514B\u9686\u9879\u76EE\uFF1A${projectName}...`);

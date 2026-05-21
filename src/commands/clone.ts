@@ -156,6 +156,11 @@ export const cloneCommand = new Command("clone")
 
 		console.log();
 
+		if (options?.degit) {
+			console.log(pc.dim("  degit 模式：不包含 .git 目录（无历史提交记录）"));
+			console.log();
+		}
+
 		const projectPath = getProjectPath(projectName);
 		const s = spinner();
 		s.start(`正在克隆项目：${projectName}...`);
