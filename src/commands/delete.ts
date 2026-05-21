@@ -340,10 +340,11 @@ export const deleteCommand = new Command("delete")
 			}
 			if (filtered.length === 1) {
 				console.log(pc.dim("  匹配到: ") + brand.primary(filtered[0].name));
+				projectNames = [filtered[0].name];
 			} else {
 				console.log(pc.dim(`  匹配到 ${filtered.length} 个项目`));
+				projectNames = await searchAndSelectDelete(projects, name);
 			}
-			projectNames = await searchAndSelectDelete(projects, name);
 		}
 
 		if (projectNames.length > 1) {

@@ -15893,10 +15893,11 @@ var deleteCommand = new Command("delete").alias("d").alias("rm").description("\u
     }
     if (filtered.length === 1) {
       console.log(import_picocolors11.default.dim("  \u5339\u914D\u5230: ") + brand.primary(filtered[0].name));
+      projectNames = [filtered[0].name];
     } else {
       console.log(import_picocolors11.default.dim(`  \u5339\u914D\u5230 ${filtered.length} \u4E2A\u9879\u76EE`));
+      projectNames = await searchAndSelectDelete(projects, name);
     }
-    projectNames = await searchAndSelectDelete(projects, name);
   }
   if (projectNames.length > 1) {
     Ie(bgOrange(" \u6279\u91CF\u5220\u9664 "));
