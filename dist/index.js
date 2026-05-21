@@ -14576,7 +14576,7 @@ var brand = {
   dim: import_picocolors3.default.dim,
   bold: import_picocolors3.default.bold
 };
-var bgOrange = (text) => `\x1B[48;5;166m\x1B[38;2;255;255;255m${text}\x1B[0m`;
+var bgOrange = (text) => `\x1B[48;2;180;80;20m\x1B[38;2;255;255;255m\x1B[1m${text}\x1B[0m`;
 function printSuccess(message) {
   console.log(`${brand.success("\u2713")} ${message}`);
 }
