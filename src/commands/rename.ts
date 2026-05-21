@@ -207,6 +207,11 @@ export const renameCommand = new Command("rename")
 			process.exit(1);
 		}
 
+		// 清理残留的源目录（如 .next 等被锁定的文件可能残留）
+		if (await fse.pathExists(projectPath)) {
+			await fse.remove(projectPath);
+		}
+
 		const oldMeta = projects.find((p) => p.name === projectName);
 		deleteProjectMeta(projectName);
 		saveProjectMeta(newProjectName, {

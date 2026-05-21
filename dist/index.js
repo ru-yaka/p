@@ -17535,6 +17535,9 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
     printError(moveResult.error || "\u672A\u77E5\u9519\u8BEF");
     process.exit(1);
   }
+  if (await import_fs_extra17.default.pathExists(projectPath)) {
+    await import_fs_extra17.default.remove(projectPath);
+  }
   const oldMeta = projects.find((p2) => p2.name === projectName);
   deleteProjectMeta(projectName);
   saveProjectMeta(newProjectName, {
