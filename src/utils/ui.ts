@@ -20,7 +20,7 @@ export const brand = {
  * 橙色背景
  */
 export const bgOrange = (text: string) =>
-	`\x1b[48;5;166m\x1b[97m${text}\x1b[0m`;
+	`\x1b[48;5;166m\x1b[38;2;255;255;255m${text}\x1b[0m`;
 
 /**
  * 打印欢迎横幅
