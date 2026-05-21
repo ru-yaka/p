@@ -75,7 +75,7 @@ export const templateCommand = new Command("template")
 		} else if (action === "update") {
 			await handleUpdate(target);
 		} else if (action === "publish") {
-			await handlePublish(target);
+			await handlePublish(target, name);
 		} else {
 			printError(`未知操作: ${action}`);
 			console.log(pc.dim("  支持的操作: add, update, publish"));
@@ -335,7 +335,7 @@ async function handleUpdate(target?: string) {
 	}
 }
 
-async function handlePublish(nameArg?: string) {
+async function handlePublish(nameArg?: string, templateNameArg?: string) {
 	// 处理 "publish ." —— 当前项目发布为模板
 	if (nameArg === ".") {
 		const currentDir = process.cwd();
@@ -345,7 +345,11 @@ async function handlePublish(nameArg?: string) {
 		let templateName: string;
 		let needSave = false;
 
-		if (currentProject?.savedTemplate) {
+		if (templateNameArg) {
+			// 命令行已提供模板名称 → 直接使用
+			templateName = templateNameArg;
+			needSave = true;
+		} else if (currentProject?.savedTemplate) {
 			// 已关联模板 → 询问是否更新
 			templateName = currentProject.savedTemplate;
 			printInfo(`当前项目已关联模板: ${brand.primary(templateName)}`);

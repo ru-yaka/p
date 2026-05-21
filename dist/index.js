@@ -17956,7 +17956,7 @@ var templateCommand = new Command("template").alias("templates").alias("tp").des
   } else if (action === "update") {
     await handleUpdate(target);
   } else if (action === "publish") {
-    await handlePublish(target);
+    await handlePublish(target, name);
   } else {
     printError(`\u672A\u77E5\u64CD\u4F5C: ${action}`);
     console.log(import_picocolors26.default.dim("  \u652F\u6301\u7684\u64CD\u4F5C: add, update, publish"));
@@ -18146,14 +18146,17 @@ async function handleUpdate(target) {
     process.exit(1);
   }
 }
-async function handlePublish(nameArg) {
+async function handlePublish(nameArg, templateNameArg) {
   if (nameArg === ".") {
     const currentDir = process.cwd();
     const projects = listProjects();
     const currentProject = projects.find((p2) => p2.path === currentDir);
     let templateName;
     let needSave = false;
-    if (currentProject?.savedTemplate) {
+    if (templateNameArg) {
+      templateName = templateNameArg;
+      needSave = true;
+    } else if (currentProject?.savedTemplate) {
       templateName = currentProject.savedTemplate;
       printInfo(`\u5F53\u524D\u9879\u76EE\u5DF2\u5173\u8054\u6A21\u677F: ${brand.primary(templateName)}`);
       const shouldUpdate = await ye({ message: "\u662F\u5426\u66F4\u65B0\u6A21\u677F\uFF1F" });
