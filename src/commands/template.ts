@@ -444,10 +444,20 @@ async function handlePublish(nameArg?: string, templateNameArg?: string) {
 
 async function doPublish(selectedTemplate: string) {
 	const templatePath = resolve(TEMPLATES_DIR, selectedTemplate);
-	intro(bgOrange(" 发布模板 "));
+
+	// 提前检测远程仓库是否已存在
+	const checkSpinner = spinner();
+	checkSpinner.start("正在检查远程仓库...");
+	const repoCheck = await execAndCapture(`gh repo view ${selectedTemplate} --json name`, process.cwd());
+	const remoteExists = repoCheck.success;
+	checkSpinner.stop(`${brand.success("✓")} ${remoteExists ? "远程仓库已存在" : "新仓库"}`);
+
+	intro(remoteExists ? bgOrange(" 更新模板 ") : bgOrange(" 发布模板 "));
 
 	const shouldPublish = await confirm({
-		message: `确认将模板 ${brand.primary(selectedTemplate)} 发布到 GitHub？`,
+		message: remoteExists
+			? `确认将模板 ${brand.primary(selectedTemplate)} 更新到 GitHub？`
+			: `确认将模板 ${brand.primary(selectedTemplate)} 发布到 GitHub？`,
 	});
 	if (isCancel(shouldPublish) || !shouldPublish) {
 		outro(pc.dim("已取消"));
@@ -455,7 +465,7 @@ async function doPublish(selectedTemplate: string) {
 	}
 
 	const s = spinner();
-	s.start("正在创建 GitHub 仓库...");
+	s.start(remoteExists ? "正在推送到远程仓库..." : "正在创建 GitHub 仓库...");
 
 	const proc = Bun.spawn(
 		["gh", "repo", "create", selectedTemplate, "--public", "--description", `p template: ${selectedTemplate}`],
@@ -472,7 +482,6 @@ async function doPublish(selectedTemplate: string) {
 	if (urlMatch) {
 		owner = urlMatch[1];
 	} else {
-		// 仓库已存在时从 API 获取
 		const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
 		owner = whoami.success ? whoami.output.trim() : "";
 	}

@@ -47,7 +47,7 @@ export async function collectProjectFiles(
 	// 如果是 git 仓库，直接运行 git ls-files
 	if (isGit) {
 		const result = await execAndCapture(
-			"git ls-files --cached --others --exclude-standard",
+			"git ls-files --cached --modified --others --exclude-standard",
 			projectPath,
 		);
 
@@ -79,7 +79,7 @@ export async function collectProjectFiles(
 		}
 
 		const lsResult = await execAndCapture(
-			"git ls-files --cached --others --exclude-standard",
+			"git ls-files --cached --modified --others --exclude-standard",
 			projectPath,
 		);
 

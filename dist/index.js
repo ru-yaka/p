@@ -16022,7 +16022,7 @@ async function collectProjectFiles(projectPath) {
   const isGit = await isGitRepo(projectPath);
   const hasGitignore = await hasValidGitignore(projectPath);
   if (isGit) {
-    const result = await execAndCapture("git ls-files --cached --others --exclude-standard", projectPath);
+    const result = await execAndCapture("git ls-files --cached --modified --others --exclude-standard", projectPath);
     if (result.success) {
       const files2 = result.output.split(`
 `).map((f) => f.trim()).filter((f) => f.length > 0);
@@ -16043,7 +16043,7 @@ async function collectProjectFiles(projectPath) {
         message: "Git \u521D\u59CB\u5316\u5931\u8D25"
       };
     }
-    const lsResult = await execAndCapture("git ls-files --cached --others --exclude-standard", projectPath);
+    const lsResult = await execAndCapture("git ls-files --cached --modified --others --exclude-standard", projectPath);
     await import_fs_extra9.default.remove(join7(projectPath, ".git"));
     if (lsResult.success) {
       const files2 = lsResult.output.split(`
@@ -18302,16 +18302,21 @@ async function handlePublish(nameArg, templateNameArg) {
 }
 async function doPublish(selectedTemplate) {
   const templatePath = resolve5(TEMPLATES_DIR, selectedTemplate);
-  Ie(bgOrange(" \u53D1\u5E03\u6A21\u677F "));
+  const checkSpinner = Y2();
+  checkSpinner.start("\u6B63\u5728\u68C0\u67E5\u8FDC\u7A0B\u4ED3\u5E93...");
+  const repoCheck = await execAndCapture(`gh repo view ${selectedTemplate} --json name`, process.cwd());
+  const remoteExists = repoCheck.success;
+  checkSpinner.stop(`${brand.success("\u2713")} ${remoteExists ? "\u8FDC\u7A0B\u4ED3\u5E93\u5DF2\u5B58\u5728" : "\u65B0\u4ED3\u5E93"}`);
+  Ie(remoteExists ? bgOrange(" \u66F4\u65B0\u6A21\u677F ") : bgOrange(" \u53D1\u5E03\u6A21\u677F "));
   const shouldPublish = await ye({
-    message: `\u786E\u8BA4\u5C06\u6A21\u677F ${brand.primary(selectedTemplate)} \u53D1\u5E03\u5230 GitHub\uFF1F`
+    message: remoteExists ? `\u786E\u8BA4\u5C06\u6A21\u677F ${brand.primary(selectedTemplate)} \u66F4\u65B0\u5230 GitHub\uFF1F` : `\u786E\u8BA4\u5C06\u6A21\u677F ${brand.primary(selectedTemplate)} \u53D1\u5E03\u5230 GitHub\uFF1F`
   });
   if (pD(shouldPublish) || !shouldPublish) {
     Se(import_picocolors26.default.dim("\u5DF2\u53D6\u6D88"));
     return;
   }
   const s = Y2();
-  s.start("\u6B63\u5728\u521B\u5EFA GitHub \u4ED3\u5E93...");
+  s.start(remoteExists ? "\u6B63\u5728\u63A8\u9001\u5230\u8FDC\u7A0B\u4ED3\u5E93..." : "\u6B63\u5728\u521B\u5EFA GitHub \u4ED3\u5E93...");
   const proc = Bun.spawn(["gh", "repo", "create", selectedTemplate, "--public", "--description", `p template: ${selectedTemplate}`], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" });
   const exitCode = await proc.exited;
   const stdout = await new Response(proc.stdout).text();
