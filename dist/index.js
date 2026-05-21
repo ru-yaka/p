@@ -15153,19 +15153,13 @@ var cloneCommand = new Command("clone").alias("cl").description("\u4ECE\u8FDC\u7
     process.exit(1);
   }
   console.log();
-  console.log(import_picocolors7.default.dim("  \u4ED3\u5E93\u5730\u5740: ") + import_picocolors7.default.underline(normalizedUrl));
-  if (url !== normalizedUrl) {
-    console.log(import_picocolors7.default.dim("  \u539F\u59CB\u8F93\u5165: ") + import_picocolors7.default.dim(url));
-  }
-  console.log(import_picocolors7.default.dim("  \u9879\u76EE\u540D\u79F0: ") + brand.primary(projectName));
-  console.log();
   const owner = extractOwner(normalizedUrl);
   const gitUser = await getGitUsername();
   if (owner && gitUser && gitUser.toLowerCase() !== owner.toLowerCase()) {
     console.log(import_picocolors7.default.dim(`  \u26A0 git \u7528\u6237 (${gitUser}) \u4E0E\u4ED3\u5E93 owner (${owner}) \u4E0D\u4E00\u81F4\uFF0C\u540E\u7EED push \u8BF7\u6CE8\u610F\u8FDC\u7A0B\u4ED3\u5E93\u5730\u5740`));
   }
   const s = Y2();
-  s.start("\u6B63\u5728\u514B\u9686\u4ED3\u5E93...");
+  s.start(`\u6B63\u5728\u514B\u9686\u9879\u76EE\uFF1A${projectName}...`);
   const projectPath = getProjectPath(projectName);
   const result = await execAndCapture(`git clone ${normalizedUrl} ${projectName}`, PROJECTS_DIR);
   if (!result.success) {
@@ -17505,6 +17499,16 @@ var renameCommand = new Command("rename").alias("mv").description("\u91CD\u547D\
         printError(result.error || "\u672A\u77E5\u9519\u8BEF");
       } else {
         renameSpinner.stop(`${brand.success("\u2713")} GitHub \u4ED3\u5E93\u5DF2\u91CD\u547D\u540D\u4E3A ${brand.primary(finalName)}`);
+        const owner = repoSlug.split("/")[0];
+        let newRemoteUrl;
+        if (remoteUrl.includes("@")) {
+          newRemoteUrl = `git@github.com:${owner}/${finalName}.git`;
+        } else {
+          const tokenMatch = remoteUrl.match(/^(https?:\/\/[^@]*@)?github\.com/);
+          const prefix = tokenMatch ? tokenMatch[1] : "https://github.com/";
+          newRemoteUrl = `${prefix}github.com/${owner}/${finalName}.git`;
+        }
+        await execAndCapture(`git remote set-url origin ${newRemoteUrl}`, newPath);
       }
     }
   }

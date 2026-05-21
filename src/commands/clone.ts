@@ -104,12 +104,6 @@ export const cloneCommand = new Command("clone")
 		}
 
 		console.log();
-		console.log(pc.dim("  仓库地址: ") + pc.underline(normalizedUrl));
-		if (url !== normalizedUrl) {
-			console.log(pc.dim("  原始输入: ") + pc.dim(url));
-		}
-		console.log(pc.dim("  项目名称: ") + brand.primary(projectName));
-		console.log();
 
 		// 检查 git 用户与仓库 owner 是否一致
 		const owner = extractOwner(normalizedUrl);
@@ -125,7 +119,7 @@ export const cloneCommand = new Command("clone")
 
 		// 执行 git clone
 		const s = spinner();
-		s.start("正在克隆仓库...");
+		s.start(`正在克隆项目：${projectName}...`);
 
 		const projectPath = getProjectPath(projectName);
 		const result = await execAndCapture(
