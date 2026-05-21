@@ -18383,10 +18383,10 @@ async function doPublish(selectedTemplate) {
   }
   const branchResult = await git(["branch", "--show-current"]);
   const branch = branchResult.output.trim() || "main";
-  result = await git(["push", "-u", "origin", branch]);
+  result = await git(["push", "-u", "--force", "origin", branch]);
   if (!result.ok && branch === "main") {
     await git(["branch", "-M", "master"]);
-    result = await git(["push", "-u", "origin", "master"]);
+    result = await git(["push", "-u", "--force", "origin", "master"]);
   }
   if (!result.ok) {
     pushSpinner.stop("\u63A8\u9001\u5931\u8D25");
