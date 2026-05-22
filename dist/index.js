@@ -21881,7 +21881,6 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
   console.log();
   const s = Y2();
   s.start("\u6B63\u5728\u66F4\u65B0...");
-  await execAndCapture("bun remove -g p", process.cwd());
   const installResult = await execAndCapture("bun install -g ru-yaka/p --force", process.cwd());
   if (!installResult.success) {
     s.stop("\u66F4\u65B0\u5931\u8D25");
