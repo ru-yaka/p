@@ -18043,7 +18043,7 @@ async function handleExport(name) {
   s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
   await openInFileManager(resolve5(homedir2(), "Downloads"));
   console.log();
-  Se(brand.success(`\u2728 \u5DF2\u6253\u5F00 ${SYNC_DIR_NAME}/ \u76EE\u5F55\uFF0C\u53EF\u901A\u8FC7 LocalSend \u53D1\u9001`));
+  Se(brand.success("\u2728 \u5DF2\u6253\u5F00\u4E0B\u8F7D\u76EE\u5F55\uFF0C\u53EF\u901A\u8FC7 LocalSend \u53D1\u9001"));
 }
 async function importOneZip(zipPath, projectName) {
   const projectPath = getProjectPath(projectName);

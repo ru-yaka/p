@@ -267,7 +267,7 @@ async function handleExport(name?: string) {
 	await openInFileManager(resolve(homedir(), "Downloads"));
 
 	console.log();
-	outro(brand.success(`✨ 已打开 ${SYNC_DIR_NAME}/ 目录，可通过 LocalSend 发送`));
+	outro(brand.success("✨ 已打开下载目录，可通过 LocalSend 发送"));
 }
 
 async function importOneZip(zipPath: string, projectName: string) {
