@@ -36,6 +36,7 @@ export interface Config {
 	templates: Record<string, TemplateConfig>;
 	shortcuts?: Record<string, string>;
 	recentCount?: number;
+	ignore?: string[];
 	sync?: {
 		exclude?: string[];
 	};

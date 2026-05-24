@@ -117,6 +117,11 @@ templates:
   #     - gitInit
   #     - installDeps
 
-# 局域网同步（p sync push / pull，配合 LocalSend 等工具）
+# 额外的文件忽略规则（追加到默认规则之后，用于模板收集和文件遍历）
+#ignore:
+#  - "*.secret"
+#  - ".env.production"
+
+# 局域网同步（p sync export / import，配合 LocalSend 等工具）
 #sync:
 #  exclude: []

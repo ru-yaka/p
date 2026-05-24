@@ -17852,7 +17852,7 @@ import { basename as basename3, join as join10, resolve as resolve5 } from "path
 init_esm();
 var import_fs_extra19 = __toESM(require_lib(), 1);
 var import_picocolors25 = __toESM(require_picocolors(), 1);
-var SYNC_EXCLUDES = [
+var DEFAULT_SYNC_EXCLUDES = [
   "node_modules",
   ".next",
   ".nuxt",
@@ -17866,6 +17866,10 @@ var SYNC_EXCLUDES = [
   ".DS_Store",
   "Thumbs.db"
 ];
+function getExcludes() {
+  const config = loadConfig();
+  return [...DEFAULT_SYNC_EXCLUDES, ...config.sync?.exclude || []];
+}
 var SYNC_DIR_NAME = "p-sync";
 function getSyncDir() {
   return resolve5(homedir2(), "Downloads", SYNC_DIR_NAME);
@@ -17981,7 +17985,7 @@ async function handleExport(name) {
   const s = Y2();
   s.start("\u6B63\u5728\u6253\u5305...");
   await import_fs_extra19.default.remove(zipPath).catch(() => {});
-  const excludeArgs = SYNC_EXCLUDES.map((p2) => `-x "${p2}"`).join(" ");
+  const excludeArgs = getExcludes().map((p2) => `-x "${p2}"`).join(" ");
   const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`, projectPath);
   if (!result.success) {
     s.stop("\u6253\u5305\u5931\u8D25");

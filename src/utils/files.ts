@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import fse from "fs-extra";
 
+import { loadConfig } from "../core/config";
 import { execAndCapture } from "./shell";
 
 const DEFAULT_IGNORES = [

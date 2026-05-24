@@ -5,6 +5,7 @@ import { Command } from "commander";
 import fse from "fs-extra";
 import pc from "picocolors";
 
+import { loadConfig } from "../core/config";
 import {
 	getProjectPath,
 	listProjects,
@@ -17,7 +18,7 @@ import { filterProjects, projectHint } from "../utils/project-search";
 import { PROJECTS_DIR } from "../utils/paths";
 import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 
-const SYNC_EXCLUDES = [
+const DEFAULT_SYNC_EXCLUDES = [
 	"node_modules",
 	".next",
 	".nuxt",
@@ -31,6 +32,11 @@ const SYNC_EXCLUDES = [
 	".DS_Store",
 	"Thumbs.db",
 ];
+
+function getExcludes(): string[] {
+	const config = loadConfig();
+	return [...DEFAULT_SYNC_EXCLUDES, ...(config.sync?.exclude || [])];
+}
 
 const SYNC_DIR_NAME = "p-sync";
 
@@ -169,7 +175,7 @@ async function handleExport(name?: string) {
 
 	await fse.remove(zipPath).catch(() => {});
 
-	const excludeArgs = SYNC_EXCLUDES.map((p) => `-x "${p}"`).join(" ");
+	const excludeArgs = getExcludes().map((p) => `-x "${p}"`).join(" ");
 
 	const result = await execAndCapture(
 		`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`,
