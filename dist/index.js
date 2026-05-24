@@ -17985,12 +17985,34 @@ async function handleExport(name) {
   const s = Y2();
   s.start("\u6B63\u5728\u6253\u5305...");
   await import_fs_extra19.default.remove(zipPath).catch(() => {});
-  const excludeArgs = getExcludes().map((p2) => `-x "${p2}"`).join(" ");
-  const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`, projectPath);
-  if (!result.success) {
+  const isGit = await import_fs_extra19.default.pathExists(join10(projectPath, ".git"));
+  let zipSuccess = false;
+  if (isGit) {
+    const listResult = await execAndCapture("git ls-files --cached --modified --others --exclude-standard", projectPath);
+    const gitFiles = listResult.success ? listResult.output.split(`
+`).filter((f) => f.trim()) : [];
+    const envResult = await execAndCapture("git ls-files --others --exclude-standard -- .env*", projectPath);
+    const envFiles = envResult.success ? envResult.output.split(`
+`).filter((f) => f.trim() && !gitFiles.includes(f)) : [];
+    const allFiles = [...gitFiles, ...envFiles];
+    if (allFiles.length === 0) {
+      s.stop("\u6253\u5305\u5931\u8D25");
+      printError("\u9879\u76EE\u6CA1\u6709\u53EF\u6253\u5305\u7684\u6587\u4EF6");
+      process.exit(1);
+    }
+    const tmpList = join10(projectPath, ".p-sync-filelist.tmp");
+    await import_fs_extra19.default.writeFile(tmpList, allFiles.join(`
+`));
+    const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" -@ < ".p-sync-filelist.tmp"`, projectPath);
+    await import_fs_extra19.default.remove(tmpList).catch(() => {});
+    zipSuccess = result.success;
+  } else {
+    const excludeArgs = getExcludes().map((p2) => `-x "${p2}"`).join(" ");
+    const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`, projectPath);
+    zipSuccess = result.success;
+  }
+  if (!zipSuccess) {
     s.stop("\u6253\u5305\u5931\u8D25");
-    console.log();
-    printError(result.error || "zip \u547D\u4EE4\u6267\u884C\u5931\u8D25");
     process.exit(1);
   }
   const exists = await import_fs_extra19.default.pathExists(zipPath);

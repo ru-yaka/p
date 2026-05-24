@@ -175,17 +175,56 @@ async function handleExport(name?: string) {
 
 	await fse.remove(zipPath).catch(() => {});
 
-	const excludeArgs = getExcludes().map((p) => `-x "${p}"`).join(" ");
+	const isGit = await fse.pathExists(join(projectPath, ".git"));
+	let zipSuccess = false;
 
-	const result = await execAndCapture(
-		`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`,
-		projectPath,
-	);
+	if (isGit) {
+		// git 仓库：用 git ls-files 尊重 .gitignore，额外包含 .env 文件
+		const listResult = await execAndCapture(
+			"git ls-files --cached --modified --others --exclude-standard",
+			projectPath,
+		);
+		const gitFiles = listResult.success
+			? listResult.output.split("\n").filter((f) => f.trim())
+			: [];
 
-	if (!result.success) {
+		// 收集被 .gitignore 排除的 .env 文件
+		const envResult = await execAndCapture(
+			"git ls-files --others --exclude-standard -- .env*",
+			projectPath,
+		);
+		const envFiles = envResult.success
+			? envResult.output.split("\n").filter((f) => f.trim() && !gitFiles.includes(f))
+			: [];
+
+		const allFiles = [...gitFiles, ...envFiles];
+		if (allFiles.length === 0) {
+			s.stop("打包失败");
+			printError("项目没有可打包的文件");
+			process.exit(1);
+		}
+
+		// 写文件列表到临时文件，用 zip -@ 从文件读取列表
+		const tmpList = join(projectPath, ".p-sync-filelist.tmp");
+		await fse.writeFile(tmpList, allFiles.join("\n"));
+		const result = await execAndCapture(
+			`cd "${projectPath}" && zip -r "${zipPath}" -@ < ".p-sync-filelist.tmp"`,
+			projectPath,
+		);
+		await fse.remove(tmpList).catch(() => {});
+		zipSuccess = result.success;
+	} else {
+		// 非 git 仓库：用排除列表
+		const excludeArgs = getExcludes().map((p) => `-x "${p}"`).join(" ");
+		const result = await execAndCapture(
+			`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`,
+			projectPath,
+		);
+		zipSuccess = result.success;
+	}
+
+	if (!zipSuccess) {
 		s.stop("打包失败");
-		console.log();
-		printError(result.error || "zip 命令执行失败");
 		process.exit(1);
 	}
 
