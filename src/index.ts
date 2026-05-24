@@ -19,6 +19,7 @@ import { projectCommand } from "./commands/project";
 import { renameCommand } from "./commands/rename";
 import { recentCommand } from "./commands/recent";
 import { runCommand } from "./commands/run";
+import { syncCommand } from "./commands/sync";
 import { tagCommand } from "./commands/tag";
 import { templateCommand } from "./commands/template";
 import { unzipCommand } from "./commands/unzip";
@@ -77,5 +78,6 @@ program.addCommand(metaCommand);
 program.addCommand(noteCommand);
 program.addCommand(unzipCommand);
 program.addCommand(updateCommand);
+program.addCommand(syncCommand);
 
 program.parse();

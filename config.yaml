@@ -116,3 +116,9 @@ templates:
   #   hooks:
   #     - gitInit
   #     - installDeps
+
+# 局域网同步（p sync --push / --pull）
+#sync:
+#  remote: "user@192.168.1.100"
+#  port: 22
+#  exclude: []
