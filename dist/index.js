@@ -17873,7 +17873,10 @@ function getExcludes() {
 }
 var SYNC_DIR_NAME = "p-sync";
 function getSyncDir() {
-  return resolve5(homedir2(), "Downloads", SYNC_DIR_NAME);
+  return resolve5(homedir2(), ".p", SYNC_DIR_NAME);
+}
+function getDownloadsDir() {
+  return join10(homedir2(), "Downloads");
 }
 async function searchAndSelect3(projects, initialQuery) {
   const options = projects.map((p2) => ({
@@ -17913,19 +17916,19 @@ async function openInFileManager(targetPath) {
     await execAndCapture(`xdg-open "${targetPath}"`, process.cwd());
   }
 }
-async function scanSyncDir() {
-  const syncDir = getSyncDir();
-  const checkResult = await execAndCapture(`test -d "${syncDir}" && echo exists || echo missing`, process.cwd());
+async function scanDownloadsDir() {
+  const downloadsDir = getDownloadsDir();
+  const checkResult = await execAndCapture(`test -d "${downloadsDir}" && echo exists || echo missing`, process.cwd());
   if (!checkResult.success || checkResult.output.trim() !== "exists")
     return [];
-  const lsResult = await execAndCapture(`ls -1 "${syncDir}"`, process.cwd());
+  const lsResult = await execAndCapture(`ls -1 "${downloadsDir}"`, process.cwd());
   if (!lsResult.success)
     return [];
   const entries = lsResult.output.split(`
 `).filter((e2) => e2.trim().endsWith(".zip"));
   const zips = [];
   for (const entry of entries) {
-    const fullPath = join10(syncDir, entry);
+    const fullPath = join10(downloadsDir, entry);
     const statResult = await execAndCapture(`stat -f "%z %m" "${fullPath}"`, process.cwd());
     if (!statResult.success)
       continue;
@@ -18048,9 +18051,9 @@ async function handleExport(name) {
   const stat = await import_fs_extra19.default.stat(zipPath);
   const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
   s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
-  await openInFileManager(resolve5(homedir2(), "Downloads"));
+  await openInFileManager(getSyncDir());
   console.log();
-  Se(brand.success("\u2728 \u5DF2\u6253\u5F00\u4E0B\u8F7D\u76EE\u5F55\uFF0C\u53EF\u901A\u8FC7 LocalSend \u53D1\u9001"));
+  Se(brand.success("\u2728 \u5DF2\u6253\u5F00\u540C\u6B65\u76EE\u5F55\uFF0C\u53EF\u901A\u8FC7 LocalSend \u53D1\u9001"));
 }
 async function importOneZip(zipPath, projectName) {
   const projectPath = getProjectPath(projectName);
@@ -18112,10 +18115,10 @@ async function handleImport(file) {
     return;
   }
   Ie(bgOrange(" \u5BFC\u5165\u9879\u76EE "));
-  const zips = await scanSyncDir();
+  const zips = await scanDownloadsDir();
   if (zips.length === 0) {
-    printInfo(`Downloads/${SYNC_DIR_NAME}/ \u4E2D\u6CA1\u6709\u53EF\u5BFC\u5165\u7684\u9879\u76EE`);
-    console.log(import_picocolors25.default.dim("  \u63D0\u793A\uFF1A\u5148\u5728\u53E6\u4E00\u53F0\u673A\u5668\u4E0A\u8FD0\u884C ") + brand.primary("p sync export") + import_picocolors25.default.dim(" \u5BFC\u51FA\u9879\u76EE"));
+    printInfo("Downloads/ \u4E2D\u6CA1\u6709\u53EF\u5BFC\u5165\u7684 .zip \u6587\u4EF6");
+    console.log(import_picocolors25.default.dim("  \u63D0\u793A\uFF1A\u5148\u5728\u53E6\u4E00\u53F0\u673A\u5668\u4E0A\u8FD0\u884C ") + brand.primary("p sync export") + import_picocolors25.default.dim(" \u5E76\u901A\u8FC7 LocalSend \u53D1\u9001"));
     console.log();
     return;
   }
@@ -18179,9 +18182,9 @@ async function handleImport(file) {
   }
   console.log();
 }
-var syncCommand = new Command("sync").description("\u5BFC\u51FA/\u5BFC\u5165\u9879\u76EE\uFF08\u914D\u5408 LocalSend \u7B49\u5DE5\u5177\u5728\u5C40\u57DF\u7F51\u8FC1\u79FB\uFF09").addCommand(new Command("export").description("\u5BFC\u51FA\u9879\u76EE\u4E3A ZIP \u5230 Downloads/p-sync \u76EE\u5F55").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001. \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
+var syncCommand = new Command("sync").description("\u5BFC\u51FA/\u5BFC\u5165\u9879\u76EE\uFF08\u914D\u5408 LocalSend \u7B49\u5DE5\u5177\u5728\u5C40\u57DF\u7F51\u8FC1\u79FB\uFF09").addCommand(new Command("export").description("\u5BFC\u51FA\u9879\u76EE\u4E3A ZIP \u5230 ~/.p/p-sync \u76EE\u5F55").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001. \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
   await handleExport(name);
-})).addCommand(new Command("import").description("\u4ECE ZIP \u6587\u4EF6\u5BFC\u5165\u9879\u76EE\uFF08\u81EA\u52A8\u626B\u63CF Downloads/p-sync\uFF09").argument("[file]", "ZIP \u6587\u4EF6\u8DEF\u5F84\uFF08\u4E0D\u6307\u5B9A\u5219\u81EA\u52A8\u626B\u63CF\uFF09").action(async (file) => {
+})).addCommand(new Command("import").description("\u4ECE ZIP \u6587\u4EF6\u5BFC\u5165\u9879\u76EE\uFF08\u81EA\u52A8\u626B\u63CF Downloads \u76EE\u5F55\uFF09").argument("[file]", "ZIP \u6587\u4EF6\u8DEF\u5F84\uFF08\u4E0D\u6307\u5B9A\u5219\u81EA\u52A8\u626B\u63CF\uFF09").action(async (file) => {
   await handleImport(file);
 }));
 

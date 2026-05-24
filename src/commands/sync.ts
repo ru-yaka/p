@@ -42,7 +42,11 @@ function getExcludes(): string[] {
 const SYNC_DIR_NAME = "p-sync";
 
 function getSyncDir(): string {
-	return resolve(homedir(), "Downloads", SYNC_DIR_NAME);
+	return resolve(homedir(), ".p", SYNC_DIR_NAME);
+}
+
+function getDownloadsDir(): string {
+	return join(homedir(), "Downloads");
 }
 
 async function searchAndSelect(
@@ -91,23 +95,23 @@ async function openInFileManager(targetPath: string): Promise<void> {
 }
 
 /**
- * 通过 shell 命令扫描目录（绕过 macOS TCC 权限限制）
+ * 通过 shell 命令扫描 Downloads 目录（绕过 macOS TCC 权限限制）
  * Ghostty 有 FDA，shell 子进程会继承权限
  */
-async function scanSyncDir(): Promise<
+async function scanDownloadsDir(): Promise<
 	{ path: string; name: string; size: string; mtime: Date }[]
 > {
-	const syncDir = getSyncDir();
+	const downloadsDir = getDownloadsDir();
 
 	const checkResult = await execAndCapture(
-		`test -d "${syncDir}" && echo exists || echo missing`,
+		`test -d "${downloadsDir}" && echo exists || echo missing`,
 		process.cwd(),
 	);
 	if (!checkResult.success || checkResult.output.trim() !== "exists") return [];
 
 	// 用 shell ls 列出文件
 	const lsResult = await execAndCapture(
-		`ls -1 "${syncDir}"`,
+		`ls -1 "${downloadsDir}"`,
 		process.cwd(),
 	);
 	if (!lsResult.success) return [];
@@ -116,7 +120,7 @@ async function scanSyncDir(): Promise<
 	const zips: { path: string; name: string; size: string; mtime: Date }[] = [];
 
 	for (const entry of entries) {
-		const fullPath = join(syncDir, entry);
+		const fullPath = join(downloadsDir, entry);
 		// 用 shell stat 获取文件大小和修改时间
 		const statResult = await execAndCapture(
 			`stat -f "%z %m" "${fullPath}"`,
@@ -288,10 +292,10 @@ async function handleExport(name?: string) {
 
 	s.stop(`${brand.success("✓")} 已打包: ${brand.primary(`${sizeMB}MB`)}`);
 
-	await openInFileManager(resolve(homedir(), "Downloads"));
+	await openInFileManager(getSyncDir());
 
 	console.log();
-	outro(brand.success("✨ 已打开下载目录，可通过 LocalSend 发送"));
+	outro(brand.success("✨ 已打开同步目录，可通过 LocalSend 发送"));
 }
 
 async function importOneZip(zipPath: string, projectName: string) {
@@ -375,14 +379,14 @@ async function handleImport(file?: string) {
 		return;
 	}
 
-	// 未指定文件 → 扫描 Downloads/p-sync/
+	// 未指定文件 → 扫描 Downloads 目录
 	intro(bgOrange(" 导入项目 "));
 
-	const zips = await scanSyncDir();
+	const zips = await scanDownloadsDir();
 
 	if (zips.length === 0) {
-		printInfo(`Downloads/${SYNC_DIR_NAME}/ 中没有可导入的项目`);
-		console.log(pc.dim("  提示：先在另一台机器上运行 ") + brand.primary("p sync export") + pc.dim(" 导出项目"));
+			printInfo("Downloads/ 中没有可导入的 .zip 文件");
+		console.log(pc.dim("  提示：先在另一台机器上运行 ") + brand.primary("p sync export") + pc.dim(" 并通过 LocalSend 发送"));
 		console.log();
 		return;
 	}
@@ -463,7 +467,7 @@ export const syncCommand = new Command("sync")
 	.description("导出/导入项目（配合 LocalSend 等工具在局域网迁移）")
 	.addCommand(
 		new Command("export")
-			.description("导出项目为 ZIP 到 Downloads/p-sync 目录")
+			.description("导出项目为 ZIP 到 ~/.p/p-sync 目录")
 			.argument("[name]", "项目名称、. 表示当前目录")
 			.action(async (name?: string) => {
 				await handleExport(name);
@@ -471,7 +475,7 @@ export const syncCommand = new Command("sync")
 	)
 	.addCommand(
 		new Command("import")
-			.description("从 ZIP 文件导入项目（自动扫描 Downloads/p-sync）")
+			.description("从 ZIP 文件导入项目（自动扫描 Downloads 目录）")
 			.argument("[file]", "ZIP 文件路径（不指定则自动扫描）")
 			.action(async (file?: string) => {
 				await handleImport(file);
