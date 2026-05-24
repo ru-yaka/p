@@ -17906,7 +17906,7 @@ async function searchAndSelect3(projects, initialQuery) {
 async function openInFileManager(targetPath) {
   const platform = process.platform;
   if (platform === "win32") {
-    Bun.spawn(["explorer.exe", targetPath], { detached: true });
+    Bun.spawn(["explorer.exe", "shell:Downloads"], { detached: true });
   } else if (platform === "darwin") {
     await execAndCapture(`open "${targetPath}"`, process.cwd());
   } else {
@@ -18041,7 +18041,7 @@ async function handleExport(name) {
   const stat = await import_fs_extra19.default.stat(zipPath);
   const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
   s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
-  await openInFileManager(syncDir);
+  await openInFileManager(resolve5(homedir2(), "Downloads"));
   console.log();
   Se(brand.success(`\u2728 \u5DF2\u6253\u5F00 ${SYNC_DIR_NAME}/ \u76EE\u5F55\uFF0C\u53EF\u901A\u8FC7 LocalSend \u53D1\u9001`));
 }

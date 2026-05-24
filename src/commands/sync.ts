@@ -82,7 +82,7 @@ async function searchAndSelect(
 async function openInFileManager(targetPath: string): Promise<void> {
 	const platform = process.platform;
 	if (platform === "win32") {
-		Bun.spawn(["explorer.exe", targetPath], { detached: true });
+		Bun.spawn(["explorer.exe", "shell:Downloads"], { detached: true });
 	} else if (platform === "darwin") {
 		await execAndCapture(`open "${targetPath}"`, process.cwd());
 	} else {
@@ -264,7 +264,7 @@ async function handleExport(name?: string) {
 
 	s.stop(`${brand.success("✓")} 已打包: ${brand.primary(`${sizeMB}MB`)}`);
 
-	await openInFileManager(syncDir);
+	await openInFileManager(resolve(homedir(), "Downloads"));
 
 	console.log();
 	outro(brand.success(`✨ 已打开 ${SYNC_DIR_NAME}/ 目录，可通过 LocalSend 发送`));
