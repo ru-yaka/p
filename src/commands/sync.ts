@@ -188,9 +188,9 @@ async function handleExport(name?: string) {
 			? listResult.output.split("\n").filter((f) => f.trim())
 			: [];
 
-		// 收集被 .gitignore 排除的 .env 文件
+		// 收集被 .gitignore 排除的 .env 文件（豁免，不走 exclude-standard）
 		const envResult = await execAndCapture(
-			"git ls-files --others --exclude-standard -- .env*",
+			"git ls-files --others -- .env*",
 			projectPath,
 		);
 		const envFiles = envResult.success

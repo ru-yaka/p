@@ -17991,7 +17991,7 @@ async function handleExport(name) {
     const listResult = await execAndCapture("git ls-files --cached --modified --others --exclude-standard", projectPath);
     const gitFiles = listResult.success ? listResult.output.split(`
 `).filter((f) => f.trim()) : [];
-    const envResult = await execAndCapture("git ls-files --others --exclude-standard -- .env*", projectPath);
+    const envResult = await execAndCapture("git ls-files --others -- .env*", projectPath);
     const envFiles = envResult.success ? envResult.output.split(`
 `).filter((f) => f.trim() && !gitFiles.includes(f)) : [];
     const allFiles = [...gitFiles, ...envFiles];
