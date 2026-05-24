@@ -1,7 +1,8 @@
 import { homedir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, join, resolve, dirname, relative } from "node:path";
 import { intro, isCancel, multiselect, outro, spinner } from "@clack/prompts";
 import { Command } from "commander";
+import AdmZip from "adm-zip";
 import fse from "fs-extra";
 import pc from "picocolors";
 
@@ -117,6 +118,47 @@ async function scanSyncDir(): Promise<
 	return zips;
 }
 
+function shouldExclude(name: string, relPath: string, excludes: string[]): boolean {
+	for (const pattern of excludes) {
+		if (pattern.includes("*")) {
+			const regex = new RegExp(
+				`^${pattern.replace(/\*/g, ".*").replace(/\./g, "\\.")}$`,
+			);
+			if (regex.test(name)) return true;
+		}
+		if (name === pattern || relPath.includes(`/${pattern}/`)) return true;
+	}
+	return false;
+}
+
+async function walkFiles(
+	dir: string,
+	excludes: string[],
+	relativePath = "",
+): Promise<string[]> {
+	const entries = await fse.readdir(dir, { withFileTypes: true });
+	const files: string[] = [];
+
+	for (const entry of entries) {
+		const relPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+
+		if (shouldExclude(entry.name, relPath, excludes)) continue;
+
+		if (entry.isDirectory()) {
+			const subFiles = await walkFiles(
+				join(dir, entry.name),
+				excludes,
+				relPath,
+			);
+			files.push(...subFiles);
+		} else {
+			files.push(relPath);
+		}
+	}
+
+	return files;
+}
+
 async function handleExport(name?: string) {
 	const projects = listProjects();
 	const currentDir = process.cwd();
@@ -176,10 +218,10 @@ async function handleExport(name?: string) {
 	await fse.remove(zipPath).catch(() => {});
 
 	const isGit = await fse.pathExists(join(projectPath, ".git"));
-	let zipSuccess = false;
+	let files: string[];
 
 	if (isGit) {
-		// git 仓库：用 git ls-files 尊重 .gitignore，额外包含 .env 文件
+		// git 仓库：用 git ls-files 尊重 .gitignore
 		const listResult = await execAndCapture(
 			"git ls-files --cached --modified --others --exclude-standard",
 			projectPath,
@@ -188,7 +230,7 @@ async function handleExport(name?: string) {
 			? listResult.output.split("\n").filter((f) => f.trim())
 			: [];
 
-		// 收集被 .gitignore 排除的 .env 文件（豁免，不走 exclude-standard）
+		// 豁免 .env 文件（不走 .gitignore）
 		const envResult = await execAndCapture(
 			"git ls-files --others -- .env*",
 			projectPath,
@@ -197,43 +239,27 @@ async function handleExport(name?: string) {
 			? envResult.output.split("\n").filter((f) => f.trim() && !gitFiles.includes(f))
 			: [];
 
-		const allFiles = [...gitFiles, ...envFiles];
-		if (allFiles.length === 0) {
-			s.stop("打包失败");
-			printError("项目没有可打包的文件");
-			process.exit(1);
-		}
-
-		// 写文件列表到临时文件，用 zip -@ 从文件读取列表
-		const tmpList = join(projectPath, ".p-sync-filelist.tmp");
-		await fse.writeFile(tmpList, allFiles.join("\n"));
-		const result = await execAndCapture(
-			`cd "${projectPath}" && zip -r "${zipPath}" -@ < ".p-sync-filelist.tmp"`,
-			projectPath,
-		);
-		await fse.remove(tmpList).catch(() => {});
-		zipSuccess = result.success;
+		files = [...gitFiles, ...envFiles];
 	} else {
-		// 非 git 仓库：用排除列表
-		const excludeArgs = getExcludes().map((p) => `-x "${p}"`).join(" ");
-		const result = await execAndCapture(
-			`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`,
-			projectPath,
-		);
-		zipSuccess = result.success;
+		// 非 git 仓库：用排除列表遍历
+		files = await walkFiles(projectPath, getExcludes());
 	}
 
-	if (!zipSuccess) {
+	if (files.length === 0) {
 		s.stop("打包失败");
+		printError("项目没有可打包的文件");
 		process.exit(1);
 	}
 
-	const exists = await fse.pathExists(zipPath);
-	if (!exists) {
-		s.stop("打包失败");
-		printError("ZIP 文件未创建");
-		process.exit(1);
+	// 用 adm-zip 打包（跨平台）
+	const zip = new AdmZip();
+	for (const file of files) {
+		const fullPath = join(projectPath, file);
+		if (await fse.pathExists(fullPath)) {
+			zip.addLocalFile(fullPath, dirname(file));
+		}
 	}
+	zip.writeZip(zipPath);
 
 	const stat = await fse.stat(zipPath);
 	const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
@@ -254,14 +280,12 @@ async function importOneZip(zipPath: string, projectName: string) {
 
 	await fse.ensureDir(projectPath);
 
-	const result = await execAndCapture(
-		`unzip -o "${zipPath}" -d "${projectPath}"`,
-		process.cwd(),
-	);
-
-	if (!result.success) {
+	try {
+		const zip = new AdmZip(zipPath);
+		zip.extractAllTo(projectPath, true);
+	} catch (error) {
 		s.stop(`导入 ${projectName} 失败`);
-		printError(result.error || "unzip 命令执行失败");
+		printError((error as Error).message);
 		await fse.remove(projectPath).catch(() => {});
 		return false;
 	}

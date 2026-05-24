@@ -13113,8 +13113,8 @@ var require_adm_zip = __commonJS((exports, module) => {
       return null;
     }
     function fixPath(zipPath) {
-      const { join: join11, normalize, sep } = pth.posix;
-      return join11(pth.isAbsolute(zipPath) ? "/" : ".", normalize(sep + zipPath.split("\\").join(sep) + sep));
+      const { join: join10, normalize, sep } = pth.posix;
+      return join10(pth.isAbsolute(zipPath) ? "/" : ".", normalize(sep + zipPath.split("\\").join(sep) + sep));
     }
     function filenameFilter(filterfn) {
       if (filterfn instanceof RegExp) {
@@ -13378,12 +13378,12 @@ var require_adm_zip = __commonJS((exports, module) => {
         });
       },
       addLocalFolderPromise: function(localPath2, props) {
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve5, reject) => {
           this.addLocalFolderAsync2(Object.assign({ localPath: localPath2 }, props), (err, done) => {
             if (err)
               reject(err);
             if (done)
-              resolve7(this);
+              resolve5(this);
           });
         });
       },
@@ -13515,12 +13515,12 @@ var require_adm_zip = __commonJS((exports, module) => {
         keepOriginalPermission = get_Bool(false, keepOriginalPermission);
         overwrite = get_Bool(false, overwrite);
         if (!callback) {
-          return new Promise((resolve7, reject) => {
+          return new Promise((resolve5, reject) => {
             this.extractAllToAsync(targetPath, overwrite, keepOriginalPermission, function(err) {
               if (err) {
                 reject(err);
               } else {
-                resolve7(this);
+                resolve5(this);
               }
             });
           });
@@ -13606,20 +13606,20 @@ var require_adm_zip = __commonJS((exports, module) => {
       },
       writeZipPromise: function(targetFileName, props) {
         const { overwrite, perm } = Object.assign({ overwrite: true }, props);
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!targetFileName && opts.filename)
             targetFileName = opts.filename;
           if (!targetFileName)
             reject("ADM-ZIP: ZIP File Name Missing");
           this.toBufferPromise().then((zipData) => {
-            const ret = (done) => done ? resolve7(done) : reject("ADM-ZIP: Wasn't able to write zip file");
+            const ret = (done) => done ? resolve5(done) : reject("ADM-ZIP: Wasn't able to write zip file");
             filetools.writeFileToAsync(targetFileName, zipData, overwrite, perm, ret);
           }, reject);
         });
       },
       toBufferPromise: function() {
-        return new Promise((resolve7, reject) => {
-          _zip.toAsyncBuffer(resolve7, reject);
+        return new Promise((resolve5, reject) => {
+          _zip.toAsyncBuffer(resolve5, reject);
         });
       },
       toBuffer: function(onSuccess, onFail, onItemStart, onItemEnd) {
@@ -13636,7 +13636,7 @@ var require_adm_zip = __commonJS((exports, module) => {
 // src/index.ts
 init_esm();
 import { readFileSync as readFileSync3 } from "fs";
-import { dirname as dirname5, join as join13 } from "path";
+import { dirname as dirname6, join as join13 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/commands/add.ts
@@ -17848,8 +17848,9 @@ var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u
 
 // src/commands/sync.ts
 import { homedir as homedir2 } from "os";
-import { basename as basename3, join as join10, resolve as resolve5 } from "path";
+import { basename as basename3, join as join10, resolve as resolve5, dirname as dirname3 } from "path";
 init_esm();
+var import_adm_zip = __toESM(require_adm_zip(), 1);
 var import_fs_extra19 = __toESM(require_lib(), 1);
 var import_picocolors25 = __toESM(require_picocolors(), 1);
 var DEFAULT_SYNC_EXCLUDES = [
@@ -17936,6 +17937,34 @@ async function scanSyncDir() {
   zips.sort((a, b3) => b3.mtime.getTime() - a.mtime.getTime());
   return zips;
 }
+function shouldExclude(name, relPath, excludes) {
+  for (const pattern of excludes) {
+    if (pattern.includes("*")) {
+      const regex = new RegExp(`^${pattern.replace(/\*/g, ".*").replace(/\./g, "\\.")}$`);
+      if (regex.test(name))
+        return true;
+    }
+    if (name === pattern || relPath.includes(`/${pattern}/`))
+      return true;
+  }
+  return false;
+}
+async function walkFiles(dir, excludes, relativePath = "") {
+  const entries = await import_fs_extra19.default.readdir(dir, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const relPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+    if (shouldExclude(entry.name, relPath, excludes))
+      continue;
+    if (entry.isDirectory()) {
+      const subFiles = await walkFiles(join10(dir, entry.name), excludes, relPath);
+      files.push(...subFiles);
+    } else {
+      files.push(relPath);
+    }
+  }
+  return files;
+}
 async function handleExport(name) {
   const projects = listProjects();
   const currentDir = process.cwd();
@@ -17986,7 +18015,7 @@ async function handleExport(name) {
   s.start("\u6B63\u5728\u6253\u5305...");
   await import_fs_extra19.default.remove(zipPath).catch(() => {});
   const isGit = await import_fs_extra19.default.pathExists(join10(projectPath, ".git"));
-  let zipSuccess = false;
+  let files;
   if (isGit) {
     const listResult = await execAndCapture("git ls-files --cached --modified --others --exclude-standard", projectPath);
     const gitFiles = listResult.success ? listResult.output.split(`
@@ -17994,33 +18023,23 @@ async function handleExport(name) {
     const envResult = await execAndCapture("git ls-files --others -- .env*", projectPath);
     const envFiles = envResult.success ? envResult.output.split(`
 `).filter((f) => f.trim() && !gitFiles.includes(f)) : [];
-    const allFiles = [...gitFiles, ...envFiles];
-    if (allFiles.length === 0) {
-      s.stop("\u6253\u5305\u5931\u8D25");
-      printError("\u9879\u76EE\u6CA1\u6709\u53EF\u6253\u5305\u7684\u6587\u4EF6");
-      process.exit(1);
-    }
-    const tmpList = join10(projectPath, ".p-sync-filelist.tmp");
-    await import_fs_extra19.default.writeFile(tmpList, allFiles.join(`
-`));
-    const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" -@ < ".p-sync-filelist.tmp"`, projectPath);
-    await import_fs_extra19.default.remove(tmpList).catch(() => {});
-    zipSuccess = result.success;
+    files = [...gitFiles, ...envFiles];
   } else {
-    const excludeArgs = getExcludes().map((p2) => `-x "${p2}"`).join(" ");
-    const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`, projectPath);
-    zipSuccess = result.success;
+    files = await walkFiles(projectPath, getExcludes());
   }
-  if (!zipSuccess) {
+  if (files.length === 0) {
     s.stop("\u6253\u5305\u5931\u8D25");
+    printError("\u9879\u76EE\u6CA1\u6709\u53EF\u6253\u5305\u7684\u6587\u4EF6");
     process.exit(1);
   }
-  const exists = await import_fs_extra19.default.pathExists(zipPath);
-  if (!exists) {
-    s.stop("\u6253\u5305\u5931\u8D25");
-    printError("ZIP \u6587\u4EF6\u672A\u521B\u5EFA");
-    process.exit(1);
+  const zip = new import_adm_zip.default;
+  for (const file of files) {
+    const fullPath = join10(projectPath, file);
+    if (await import_fs_extra19.default.pathExists(fullPath)) {
+      zip.addLocalFile(fullPath, dirname3(file));
+    }
   }
+  zip.writeZip(zipPath);
   const stat = await import_fs_extra19.default.stat(zipPath);
   const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
   s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
@@ -18033,10 +18052,12 @@ async function importOneZip(zipPath, projectName) {
   const s = Y2();
   s.start(`\u6B63\u5728\u5BFC\u5165 ${projectName}...`);
   await import_fs_extra19.default.ensureDir(projectPath);
-  const result = await execAndCapture(`unzip -o "${zipPath}" -d "${projectPath}"`, process.cwd());
-  if (!result.success) {
+  try {
+    const zip = new import_adm_zip.default(zipPath);
+    zip.extractAllTo(projectPath, true);
+  } catch (error) {
     s.stop(`\u5BFC\u5165 ${projectName} \u5931\u8D25`);
-    printError(result.error || "unzip \u547D\u4EE4\u6267\u884C\u5931\u8D25");
+    printError(error.message);
     await import_fs_extra19.default.remove(projectPath).catch(() => {});
     return false;
   }
@@ -18771,7 +18792,7 @@ async function countFiles(dir) {
 
 // src/commands/unzip.ts
 init_esm();
-var import_adm_zip = __toESM(require_adm_zip(), 1);
+var import_adm_zip2 = __toESM(require_adm_zip(), 1);
 var import_fs_extra21 = __toESM(require_lib(), 1);
 
 // node_modules/glob/dist/esm/index.min.js
@@ -22064,7 +22085,7 @@ Ze.glob = Ze;
 
 // src/commands/unzip.ts
 var import_picocolors28 = __toESM(require_picocolors(), 1);
-import { basename as basename4, dirname as dirname3, join as join11, parse } from "path";
+import { basename as basename4, dirname as dirname4, join as join11, parse } from "path";
 var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
   let cwd;
   if (!project || project === ".") {
@@ -22101,12 +22122,12 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
     const relativePath = basename4(zipFile);
     try {
       const zipName = parse(zipFile).name;
-      const destDir = join11(dirname3(zipFile), zipName);
+      const destDir = join11(dirname4(zipFile), zipName);
       if (await import_fs_extra21.default.pathExists(destDir)) {
         await import_fs_extra21.default.remove(destDir);
       }
       const tempDir = `${destDir}.tmp`;
-      const zip = new import_adm_zip.default(zipFile);
+      const zip = new import_adm_zip2.default(zipFile);
       zip.extractAllTo(tempDir, true);
       if (options?.flatten) {
         const entries = await import_fs_extra21.default.readdir(tempDir);
@@ -22146,7 +22167,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
 // src/commands/update.ts
 init_esm();
 var import_picocolors29 = __toESM(require_picocolors(), 1);
-import { dirname as dirname4, join as join12, resolve as resolve7 } from "path";
+import { dirname as dirname5, join as join12, resolve as resolve7 } from "path";
 import { fileURLToPath } from "url";
 import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
 function getVersion(dir) {
@@ -22159,7 +22180,7 @@ function getVersion(dir) {
 }
 function findPDir() {
   const currentFile = fileURLToPath(import.meta.url);
-  let dir = dirname4(currentFile);
+  let dir = dirname5(currentFile);
   for (let i = 0;i < 10; i++) {
     const pkgPath = join12(dir, "package.json");
     if (existsSync2(pkgPath)) {
@@ -22207,7 +22228,7 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
 
 // src/index.ts
 var import_picocolors30 = __toESM(require_picocolors(), 1);
-var __dirname2 = dirname5(fileURLToPath2(import.meta.url));
+var __dirname2 = dirname6(fileURLToPath2(import.meta.url));
 var pkgPath = join13(__dirname2, "..", "package.json");
 var pkg = JSON.parse(readFileSync3(pkgPath, "utf-8"));
 var program2 = new Command;
