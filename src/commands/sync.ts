@@ -109,18 +109,17 @@ async function scanDownloadsDir(): Promise<
 	);
 	if (!checkResult.success || checkResult.output.trim() !== "exists") return [];
 
-	// 用 shell ls 列出文件
-	const lsResult = await execAndCapture(
-		`ls -1 "${downloadsDir}"`,
+	// 用 find 递归查找 .zip 文件（LocalSend 可能把文件放到子目录）
+	const findResult = await execAndCapture(
+		`find "${downloadsDir}" -maxdepth 2 -name "*.zip" -type f`,
 		process.cwd(),
 	);
-	if (!lsResult.success) return [];
+	if (!findResult.success) return [];
 
-	const entries = lsResult.output.split("\n").filter((e) => e.trim().endsWith(".zip"));
+	const entries = findResult.output.split("\n").filter((e) => e.trim());
 	const zips: { path: string; name: string; size: string; mtime: Date }[] = [];
 
-	for (const entry of entries) {
-		const fullPath = join(downloadsDir, entry);
+	for (const fullPath of entries) {
 		// 用 shell stat 获取文件大小和修改时间
 		const statResult = await execAndCapture(
 			`stat -f "%z %m" "${fullPath}"`,
@@ -134,7 +133,7 @@ async function scanDownloadsDir(): Promise<
 
 		zips.push({
 			path: fullPath,
-			name: basename(entry, ".zip"),
+			name: basename(fullPath, ".zip"),
 			size: `${sizeMB}MB`,
 			mtime: new Date(Number.parseFloat(timeStr || "0") * 1000),
 		});

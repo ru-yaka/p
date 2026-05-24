@@ -17921,14 +17921,13 @@ async function scanDownloadsDir() {
   const checkResult = await execAndCapture(`test -d "${downloadsDir}" && echo exists || echo missing`, process.cwd());
   if (!checkResult.success || checkResult.output.trim() !== "exists")
     return [];
-  const lsResult = await execAndCapture(`ls -1 "${downloadsDir}"`, process.cwd());
-  if (!lsResult.success)
+  const findResult = await execAndCapture(`find "${downloadsDir}" -maxdepth 2 -name "*.zip" -type f`, process.cwd());
+  if (!findResult.success)
     return [];
-  const entries = lsResult.output.split(`
-`).filter((e2) => e2.trim().endsWith(".zip"));
+  const entries = findResult.output.split(`
+`).filter((e2) => e2.trim());
   const zips = [];
-  for (const entry of entries) {
-    const fullPath = join10(downloadsDir, entry);
+  for (const fullPath of entries) {
     const statResult = await execAndCapture(`stat -f "%z %m" "${fullPath}"`, process.cwd());
     if (!statResult.success)
       continue;
@@ -17937,7 +17936,7 @@ async function scanDownloadsDir() {
     const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
     zips.push({
       path: fullPath,
-      name: basename3(entry, ".zip"),
+      name: basename3(fullPath, ".zip"),
       size: `${sizeMB}MB`,
       mtime: new Date(Number.parseFloat(timeStr || "0") * 1000)
     });
