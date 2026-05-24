@@ -17909,7 +17909,7 @@ async function openInFileManager(targetPath) {
   if (platform === "darwin") {
     cmd = `open "${targetPath}"`;
   } else if (platform === "win32") {
-    cmd = `explorer "${targetPath}"`;
+    cmd = `cmd /c start "" "${targetPath}"`;
   } else {
     cmd = `xdg-open "${targetPath}"`;
   }
