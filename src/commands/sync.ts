@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { basename, join, resolve, dirname } from "node:path";
-import { intro, isCancel, multiselect, outro, spinner } from "@clack/prompts";
+import { confirm, intro, isCancel, multiselect, outro, spinner } from "@clack/prompts";
 import { Command } from "commander";
 import AdmZip from "adm-zip";
 import fse from "fs-extra";
@@ -47,6 +47,24 @@ function getSyncDir(): string {
 
 function getDownloadsDir(): string {
 	return join(homedir(), "Downloads");
+}
+
+async function promptDeletePSync(): Promise<void> {
+	const pSyncDir = join(getDownloadsDir(), "p-sync");
+	const checkResult = await execAndCapture(
+		`test -d "${pSyncDir}" && echo exists || echo missing`,
+		process.cwd(),
+	);
+	if (checkResult.output.trim() !== "exists") return;
+
+	const shouldDelete = await confirm({
+		message: "是否删除 Downloads/p-sync 目录？",
+		initialValue: true,
+	});
+	if (!isCancel(shouldDelete) && shouldDelete) {
+		await execAndCapture(`rm -rf "${pSyncDir}"`, process.cwd());
+		console.log(pc.dim("  已删除 Downloads/p-sync"));
+	}
 }
 
 async function searchAndSelect(
@@ -370,6 +388,7 @@ async function handleImport(file?: string) {
 
 		if (ok) {
 			console.log();
+			await promptDeletePSync();
 			outro(brand.success(`✨ 项目 ${projectName} 导入成功！`));
 			console.log();
 			console.log(pc.dim("  使用 ") + brand.primary("p open " + projectName) + pc.dim(" 打开项目"));
@@ -405,6 +424,7 @@ async function handleImport(file?: string) {
 
 		if (ok) {
 			console.log();
+			await promptDeletePSync();
 			outro(brand.success(`✨ 项目 ${zip.name} 导入成功！`));
 			console.log();
 			console.log(pc.dim("  使用 ") + brand.primary("p open " + zip.name) + pc.dim(" 打开项目"));
@@ -455,8 +475,10 @@ async function handleImport(file?: string) {
 
 	console.log();
 	if (imported === selected.length) {
+		await promptDeletePSync();
 		outro(brand.success(`✨ 已成功导入 ${imported} 个项目`));
 	} else {
+		await promptDeletePSync();
 		outro(`${brand.success("✓")} 已导入 ${imported} 个，${selected.length - imported} 个失败`);
 	}
 	console.log();

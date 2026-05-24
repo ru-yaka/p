@@ -17878,6 +17878,20 @@ function getSyncDir() {
 function getDownloadsDir() {
   return join10(homedir2(), "Downloads");
 }
+async function promptDeletePSync() {
+  const pSyncDir = join10(getDownloadsDir(), "p-sync");
+  const checkResult = await execAndCapture(`test -d "${pSyncDir}" && echo exists || echo missing`, process.cwd());
+  if (checkResult.output.trim() !== "exists")
+    return;
+  const shouldDelete = await ye({
+    message: "\u662F\u5426\u5220\u9664 Downloads/p-sync \u76EE\u5F55\uFF1F",
+    initialValue: true
+  });
+  if (!pD(shouldDelete) && shouldDelete) {
+    await execAndCapture(`rm -rf "${pSyncDir}"`, process.cwd());
+    console.log(import_picocolors25.default.dim("  \u5DF2\u5220\u9664 Downloads/p-sync"));
+  }
+}
 async function searchAndSelect3(projects, initialQuery) {
   const options = projects.map((p2) => ({
     value: p2.name,
@@ -18106,6 +18120,7 @@ async function handleImport(file) {
     const ok = await importOneZip(zipPath, projectName);
     if (ok) {
       console.log();
+      await promptDeletePSync();
       Se(brand.success(`\u2728 \u9879\u76EE ${projectName} \u5BFC\u5165\u6210\u529F\uFF01`));
       console.log();
       console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors25.default.dim(" \u6253\u5F00\u9879\u76EE"));
@@ -18133,6 +18148,7 @@ async function handleImport(file) {
     const ok = await importOneZip(zip.path, zip.name);
     if (ok) {
       console.log();
+      await promptDeletePSync();
       Se(brand.success(`\u2728 \u9879\u76EE ${zip.name} \u5BFC\u5165\u6210\u529F\uFF01`));
       console.log();
       console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + zip.name) + import_picocolors25.default.dim(" \u6253\u5F00\u9879\u76EE"));
@@ -18175,8 +18191,10 @@ async function handleImport(file) {
   }
   console.log();
   if (imported === selected.length) {
+    await promptDeletePSync();
     Se(brand.success(`\u2728 \u5DF2\u6210\u529F\u5BFC\u5165 ${imported} \u4E2A\u9879\u76EE`));
   } else {
+    await promptDeletePSync();
     Se(`${brand.success("\u2713")} \u5DF2\u5BFC\u5165 ${imported} \u4E2A\uFF0C${selected.length - imported} \u4E2A\u5931\u8D25`);
   }
   console.log();
