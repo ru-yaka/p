@@ -53,8 +53,9 @@ export const updateCommand = new Command("update")
 		const s = spinner();
 		s.start("正在更新...");
 
-		// 直接覆盖安装（--force 绕过缓存），不先 remove，避免网络中断导致不可用
-		const installResult = await execAndCapture("bun install -g ru-yaka/p --force", process.cwd());
+		// 先删除缓存，再重新安装（解决 Bun 缓存旧 GitHub commit 的问题）
+		await execAndCapture("bun remove -g p", process.cwd());
+		const installResult = await execAndCapture("bun install -g ru-yaka/p", process.cwd());
 
 		if (!installResult.success) {
 			s.stop("更新失败");
