@@ -81,15 +81,13 @@ async function searchAndSelect(
 
 async function openInFileManager(targetPath: string): Promise<void> {
 	const platform = process.platform;
-	let cmd: string;
-	if (platform === "darwin") {
-		cmd = `open "${targetPath}"`;
-	} else if (platform === "win32") {
-		cmd = `start "" "${targetPath}"`;
+	if (platform === "win32") {
+		Bun.spawn(["explorer.exe", targetPath], { detached: true });
+	} else if (platform === "darwin") {
+		await execAndCapture(`open "${targetPath}"`, process.cwd());
 	} else {
-		cmd = `xdg-open "${targetPath}"`;
+		await execAndCapture(`xdg-open "${targetPath}"`, process.cwd());
 	}
-	await execAndCapture(cmd, process.cwd());
 }
 
 async function scanSyncDir(): Promise<
