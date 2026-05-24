@@ -13113,8 +13113,8 @@ var require_adm_zip = __commonJS((exports, module) => {
       return null;
     }
     function fixPath(zipPath) {
-      const { join: join10, normalize, sep } = pth.posix;
-      return join10(pth.isAbsolute(zipPath) ? "/" : ".", normalize(sep + zipPath.split("\\").join(sep) + sep));
+      const { join: join11, normalize, sep } = pth.posix;
+      return join11(pth.isAbsolute(zipPath) ? "/" : ".", normalize(sep + zipPath.split("\\").join(sep) + sep));
     }
     function filenameFilter(filterfn) {
       if (filterfn instanceof RegExp) {
@@ -13378,12 +13378,12 @@ var require_adm_zip = __commonJS((exports, module) => {
         });
       },
       addLocalFolderPromise: function(localPath2, props) {
-        return new Promise((resolve6, reject) => {
+        return new Promise((resolve7, reject) => {
           this.addLocalFolderAsync2(Object.assign({ localPath: localPath2 }, props), (err, done) => {
             if (err)
               reject(err);
             if (done)
-              resolve6(this);
+              resolve7(this);
           });
         });
       },
@@ -13515,12 +13515,12 @@ var require_adm_zip = __commonJS((exports, module) => {
         keepOriginalPermission = get_Bool(false, keepOriginalPermission);
         overwrite = get_Bool(false, overwrite);
         if (!callback) {
-          return new Promise((resolve6, reject) => {
+          return new Promise((resolve7, reject) => {
             this.extractAllToAsync(targetPath, overwrite, keepOriginalPermission, function(err) {
               if (err) {
                 reject(err);
               } else {
-                resolve6(this);
+                resolve7(this);
               }
             });
           });
@@ -13606,20 +13606,20 @@ var require_adm_zip = __commonJS((exports, module) => {
       },
       writeZipPromise: function(targetFileName, props) {
         const { overwrite, perm } = Object.assign({ overwrite: true }, props);
-        return new Promise((resolve6, reject) => {
+        return new Promise((resolve7, reject) => {
           if (!targetFileName && opts.filename)
             targetFileName = opts.filename;
           if (!targetFileName)
             reject("ADM-ZIP: ZIP File Name Missing");
           this.toBufferPromise().then((zipData) => {
-            const ret = (done) => done ? resolve6(done) : reject("ADM-ZIP: Wasn't able to write zip file");
+            const ret = (done) => done ? resolve7(done) : reject("ADM-ZIP: Wasn't able to write zip file");
             filetools.writeFileToAsync(targetFileName, zipData, overwrite, perm, ret);
           }, reject);
         });
       },
       toBufferPromise: function() {
-        return new Promise((resolve6, reject) => {
-          _zip.toAsyncBuffer(resolve6, reject);
+        return new Promise((resolve7, reject) => {
+          _zip.toAsyncBuffer(resolve7, reject);
         });
       },
       toBuffer: function(onSuccess, onFail, onItemStart, onItemEnd) {
@@ -13636,7 +13636,7 @@ var require_adm_zip = __commonJS((exports, module) => {
 // src/index.ts
 init_esm();
 import { readFileSync as readFileSync3 } from "fs";
-import { dirname as dirname5, join as join12 } from "path";
+import { dirname as dirname5, join as join13 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/commands/add.ts
@@ -17847,6 +17847,8 @@ var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u
 });
 
 // src/commands/sync.ts
+import { homedir as homedir2 } from "os";
+import { basename as basename3, join as join10, resolve as resolve5 } from "path";
 init_esm();
 var import_fs_extra19 = __toESM(require_lib(), 1);
 var import_picocolors25 = __toESM(require_picocolors(), 1);
@@ -17872,7 +17874,7 @@ async function searchAndSelect3(projects, initialQuery) {
     hint: projectHint(p2)
   }));
   const result = await liveSearch({
-    message: "\u641C\u7D22\u8981\u540C\u6B65\u7684\u9879\u76EE:",
+    message: "\u641C\u7D22\u8981\u5BFC\u51FA\u7684\u9879\u76EE:",
     placeholder: "\u8F93\u5165\u9879\u76EE\u540D\u79F0\u7B5B\u9009",
     options,
     filterFn: (query) => {
@@ -17893,69 +17895,30 @@ async function searchAndSelect3(projects, initialQuery) {
   }
   return result[0];
 }
-function buildRsyncArgs(source, dest, excludes, port, dryRun) {
-  const parts = ["rsync", "-avz", "--progress"];
-  for (const pattern of excludes) {
-    parts.push(`--exclude '${pattern}'`);
-  }
-  if (dryRun) {
-    parts.push("--dry-run");
-  }
-  if (port !== 22) {
-    parts.push(`-e "ssh -p ${port}"`);
-  }
-  parts.push(`${source}/`, dest);
-  return parts.join(" ");
+function getDownloadDir() {
+  return resolve5(homedir2(), "Downloads");
 }
-var syncCommand = new Command("sync").description("\u5728\u5C40\u57DF\u7F51\u673A\u5668\u95F4\u540C\u6B65\u9879\u76EE").argument("[name]", "\u9879\u76EE\u540D\u79F0\u6216\u641C\u7D22\u5173\u952E\u8BCD").option("--push", "\u63A8\u9001\u9879\u76EE\u5230\u8FDC\u7A0B\u673A\u5668").option("--pull", "\u4ECE\u8FDC\u7A0B\u673A\u5668\u62C9\u53D6\u9879\u76EE").option("--dry-run", "\u9884\u89C8\u5C06\u8981\u540C\u6B65\u7684\u6587\u4EF6\uFF08\u4E0D\u5B9E\u9645\u4F20\u8F93\uFF09").action(async (name, options) => {
-  const opts = options || {};
-  const directionCount = (opts.push ? 1 : 0) + (opts.pull ? 1 : 0);
-  if (directionCount !== 1) {
-    printError("\u8BF7\u6307\u5B9A --push \u6216 --pull \u5176\u4E2D\u4E4B\u4E00");
-    console.log(import_picocolors25.default.dim("  \u7528\u6CD5: p sync <\u9879\u76EE\u540D> --push / --pull"));
-    process.exit(1);
+async function openInFileManager(filePath) {
+  const platform = process.platform;
+  let cmd;
+  if (platform === "darwin") {
+    cmd = `open -R "${filePath}"`;
+  } else if (platform === "win32") {
+    cmd = `explorer /select,"${filePath}"`;
+  } else {
+    cmd = `xdg-open "${filePath}"`;
   }
-  if (!await commandExists("rsync")) {
-    printError("rsync \u672A\u5B89\u88C5");
-    console.log(import_picocolors25.default.dim("  \u5B89\u88C5: sudo apt install rsync \u6216 brew install rsync"));
-    process.exit(1);
-  }
-  if (!await commandExists("ssh")) {
-    printError("ssh \u672A\u5B89\u88C5");
-    console.log(import_picocolors25.default.dim("  \u5B89\u88C5: sudo apt install openssh-client"));
-    process.exit(1);
-  }
-  const config = loadConfig();
-  if (!config.sync?.remote) {
-    printError("\u672A\u914D\u7F6E\u540C\u6B65\u8FDC\u7A0B\u5730\u5740");
-    console.log(import_picocolors25.default.dim(`  \u8BF7\u5728 ~/.p/config.yaml \u4E2D\u6DFB\u52A0:
-  sync:
-    remote: "user@192.168.1.100"`));
-    process.exit(1);
-  }
-  const remote = config.sync.remote;
-  const port = config.sync.port || 22;
-  const extraExcludes = config.sync.exclude || [];
-  const excludes = [...SYNC_EXCLUDES, ...extraExcludes];
-  const connSpinner = Y2();
-  connSpinner.start(`\u6B63\u5728\u8FDE\u63A5 ${remote}...`);
-  const sshArgs = port !== 22 ? `-o ConnectTimeout=5 -p ${port}` : "-o ConnectTimeout=5";
-  const connTest = await execAndCapture(`ssh ${sshArgs} ${remote} "echo ok"`, process.cwd());
-  if (!connTest.success) {
-    connSpinner.stop("\u8FDE\u63A5\u5931\u8D25");
-    console.log();
-    printError(`\u65E0\u6CD5\u8FDE\u63A5\u5230 ${remote}`);
-    console.log(import_picocolors25.default.dim("  \u8BF7\u68C0\u67E5\u5730\u5740\u3001\u7F51\u7EDC\u548C SSH \u5BC6\u94A5\u914D\u7F6E"));
-    process.exit(1);
-  }
-  connSpinner.stop(`${brand.success("\u2713")} \u5DF2\u8FDE\u63A5: ${brand.primary(remote)}`);
-  const homeResult = await execAndCapture(`ssh ${sshArgs} ${remote} "echo ~"`, process.cwd());
-  const remoteHome = homeResult.success ? homeResult.output.trim() : "~";
-  const remoteProjectsDir = `${remoteHome}/.p/projects`;
+  await execAndCapture(cmd, process.cwd());
+}
+async function handlePush(name) {
   const projects = listProjects();
+  if (projects.length === 0) {
+    printInfo("\u6682\u65E0\u9879\u76EE");
+    return;
+  }
   let projectName = name;
   if (projectName) {
-    if (opts.push && !projectExists(projectName)) {
+    if (!projectExists(projectName)) {
       const filtered = filterProjects(projects, projectName);
       if (filtered.length === 1) {
         console.log(import_picocolors25.default.dim("  \u5339\u914D\u5230: ") + brand.primary(filtered[0].name));
@@ -17967,63 +17930,92 @@ var syncCommand = new Command("sync").description("\u5728\u5C40\u57DF\u7F51\u673
         printError(`\u9879\u76EE\u4E0D\u5B58\u5728: ${projectName}`);
         process.exit(1);
       }
-    } else if (opts.pull && !projectExists(projectName)) {}
+    }
   } else {
-    if (projects.length === 0 && opts.push) {
-      printInfo("\u6682\u65E0\u9879\u76EE");
-      return;
-    }
-    if (projects.length > 0) {
-      projectName = await searchAndSelect3(projects);
-    } else {
-      printError("\u8BF7\u6307\u5B9A\u9879\u76EE\u540D\u79F0");
-      process.exit(1);
-    }
+    projectName = await searchAndSelect3(projects);
   }
-  const localPath2 = getProjectPath(projectName);
-  const remotePath = `${remote}:${remoteProjectsDir}/${projectName}`;
-  const direction = opts.push ? "\u63A8\u9001" : "\u62C9\u53D6";
-  const label = opts.push ? "\u63A8\u9001" : "\u62C9\u53D6";
-  Ie(bgOrange(` ${label}\u9879\u76EE `));
-  console.log(import_picocolors25.default.dim(`  ${direction}: `) + brand.primary(projectName));
-  console.log(import_picocolors25.default.dim("  \u76EE\u6807: ") + import_picocolors25.default.underline(remotePath));
+  const projectPath = getProjectPath(projectName);
+  const downloadDir = getDownloadDir();
+  const zipPath = join10(downloadDir, `${projectName}.zip`);
+  Ie(bgOrange(" \u5BFC\u51FA\u9879\u76EE "));
+  console.log(import_picocolors25.default.dim("  \u9879\u76EE: ") + brand.primary(projectName));
+  console.log(import_picocolors25.default.dim("  \u8F93\u51FA: ") + import_picocolors25.default.underline(zipPath));
   console.log();
-  if (opts.push) {
-    await execAndCapture(`ssh ${sshArgs} ${remote} "mkdir -p ${remoteProjectsDir}"`, process.cwd());
-  } else {
-    await import_fs_extra19.default.ensureDir(localPath2);
-    const checkResult = await execAndCapture(`ssh ${sshArgs} ${remote} "test -d ${remoteProjectsDir}/${projectName} && echo exists || echo missing"`, process.cwd());
-    if (!checkResult.success || checkResult.output.trim() !== "exists") {
-      printError(`\u8FDC\u7A0B\u9879\u76EE '${projectName}' \u4E0D\u5B58\u5728\uFF0C\u8BF7\u5148\u4F7F\u7528 --push \u63A8\u9001`);
-      process.exit(1);
-    }
-  }
-  const source = opts.push ? localPath2 : remotePath;
-  const dest = opts.push ? remotePath : localPath2;
-  const rsyncCmd = buildRsyncArgs(source, dest, excludes, port, !!opts.dryRun);
-  if (opts.dryRun) {
-    console.log(import_picocolors25.default.dim("  \u9884\u89C8\u6A21\u5F0F\uFF0C\u4E0D\u4F1A\u5B9E\u9645\u4F20\u8F93\u6587\u4EF6"));
-    console.log();
-  }
-  const syncSpinner = Y2();
-  syncSpinner.start(opts.dryRun ? `\u6B63\u5728\u9884\u89C8${direction}\u6587\u4EF6...` : `\u6B63\u5728${direction}\u6587\u4EF6...`);
-  syncSpinner.stop(`${brand.success("\u2713")} rsync ${direction}\u4E2D...`);
-  const result = await execInDir(rsyncCmd, process.cwd(), {
-    silent: true
-  });
-  console.log();
+  const s = Y2();
+  s.start("\u6B63\u5728\u6253\u5305...");
+  const excludeArgs = SYNC_EXCLUDES.map((p2) => `-x "${p2}"`).join(" ");
+  await import_fs_extra19.default.remove(zipPath).catch(() => {});
+  const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`, projectPath);
   if (!result.success) {
-    printError(`${direction}\u5931\u8D25`);
-    if (result.stderr) {
-      console.log(import_picocolors25.default.dim(result.stderr));
-    }
+    s.stop("\u6253\u5305\u5931\u8D25");
+    console.log();
+    printError(result.error || "zip \u547D\u4EE4\u6267\u884C\u5931\u8D25");
     process.exit(1);
   }
-  if (opts.pull && !projectExists(projectName)) {
-    saveProjectMeta(projectName, { template: "sync" });
+  const exists = await import_fs_extra19.default.pathExists(zipPath);
+  if (!exists) {
+    s.stop("\u6253\u5305\u5931\u8D25");
+    printError("ZIP \u6587\u4EF6\u672A\u521B\u5EFA");
+    process.exit(1);
   }
-  Se(brand.success(`\u2713 ${projectName} ${direction}\u5B8C\u6210`));
-});
+  const stat = await import_fs_extra19.default.stat(zipPath);
+  const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+  s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
+  await openInFileManager(zipPath);
+  console.log();
+  Se(brand.success("\u2728 \u5DF2\u5728\u6587\u4EF6\u7BA1\u7406\u5668\u4E2D\u6253\u5F00\uFF0C\u53EF\u901A\u8FC7 LocalSend \u53D1\u9001"));
+}
+async function handlePull(file) {
+  if (!file) {
+    printError("\u8BF7\u6307\u5B9A ZIP \u6587\u4EF6\u8DEF\u5F84");
+    console.log(import_picocolors25.default.dim("  \u7528\u6CD5: p sync pull <zip\u6587\u4EF6\u8DEF\u5F84>"));
+    console.log(import_picocolors25.default.dim("  \u793A\u4F8B: p sync pull ~/Downloads/my-app.zip"));
+    process.exit(1);
+  }
+  const zipPath = resolve5(file);
+  if (!await import_fs_extra19.default.pathExists(zipPath)) {
+    printError(`\u6587\u4EF6\u4E0D\u5B58\u5728: ${zipPath}`);
+    process.exit(1);
+  }
+  if (!zipPath.endsWith(".zip")) {
+    printError("\u8BF7\u6307\u5B9A .zip \u6587\u4EF6");
+    process.exit(1);
+  }
+  const projectName = basename3(zipPath, ".zip");
+  if (projectExists(projectName)) {
+    printError(`\u9879\u76EE\u5DF2\u5B58\u5728: ${projectName}`);
+    console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors25.default.dim(" \u6253\u5F00\u5DF2\u6709\u9879\u76EE"));
+    process.exit(1);
+  }
+  Ie(bgOrange(" \u5BFC\u5165\u9879\u76EE "));
+  console.log(import_picocolors25.default.dim("  \u6587\u4EF6: ") + import_picocolors25.default.underline(zipPath));
+  console.log(import_picocolors25.default.dim("  \u9879\u76EE: ") + brand.primary(projectName));
+  console.log();
+  const s = Y2();
+  s.start("\u6B63\u5728\u89E3\u538B...");
+  const projectPath = getProjectPath(projectName);
+  await import_fs_extra19.default.ensureDir(projectPath);
+  const result = await execAndCapture(`unzip -o "${zipPath}" -d "${projectPath}"`, process.cwd());
+  if (!result.success) {
+    s.stop("\u89E3\u538B\u5931\u8D25");
+    console.log();
+    printError(result.error || "unzip \u547D\u4EE4\u6267\u884C\u5931\u8D25");
+    await import_fs_extra19.default.remove(projectPath).catch(() => {});
+    process.exit(1);
+  }
+  s.stop(`${brand.success("\u2713")} \u5DF2\u5BFC\u5165`);
+  saveProjectMeta(projectName, { template: "sync" });
+  console.log();
+  Se(brand.success(`\u2728 \u9879\u76EE ${projectName} \u5BFC\u5165\u6210\u529F\uFF01`));
+  console.log();
+  console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors25.default.dim(" \u6253\u5F00\u9879\u76EE"));
+  console.log();
+}
+var syncCommand = new Command("sync").description("\u5BFC\u51FA/\u5BFC\u5165\u9879\u76EE\uFF08\u914D\u5408 LocalSend \u7B49\u5DE5\u5177\u5728\u5C40\u57DF\u7F51\u8FC1\u79FB\uFF09").addCommand(new Command("push").description("\u5BFC\u51FA\u9879\u76EE\u4E3A ZIP \u5230 Downloads \u76EE\u5F55").argument("[name]", "\u9879\u76EE\u540D\u79F0\u6216\u641C\u7D22\u5173\u952E\u8BCD").action(async (name) => {
+  await handlePush(name);
+})).addCommand(new Command("pull").description("\u4ECE ZIP \u6587\u4EF6\u5BFC\u5165\u9879\u76EE").argument("<file>", "ZIP \u6587\u4EF6\u8DEF\u5F84").action(async (file) => {
+  await handlePull(file);
+}));
 
 // src/commands/tag.ts
 init_esm();
@@ -18164,12 +18156,12 @@ var tagCommand = new Command("tag").alias("t").alias("tags").description("\u7BA1
 }));
 
 // src/commands/template.ts
-import { resolve as resolve5 } from "path";
+import { resolve as resolve6 } from "path";
 init_esm();
 var import_fs_extra20 = __toESM(require_lib(), 1);
 var import_picocolors27 = __toESM(require_picocolors(), 1);
 async function templateExists(templateName) {
-  const templatePath = resolve5(TEMPLATES_DIR, templateName);
+  const templatePath = resolve6(TEMPLATES_DIR, templateName);
   return import_fs_extra20.default.pathExists(templatePath);
 }
 function buildTemplateOptions(projects) {
@@ -18359,7 +18351,7 @@ async function handleUpdate(target) {
   const localTemplates = await import_fs_extra20.default.readdir(TEMPLATES_DIR).catch(() => []);
   const updatableTemplates = [];
   for (const name of localTemplates) {
-    const templatePath2 = resolve5(TEMPLATES_DIR, name);
+    const templatePath2 = resolve6(TEMPLATES_DIR, name);
     const stat = await import_fs_extra20.default.stat(templatePath2);
     if (stat.isDirectory()) {
       updatableTemplates.push(name);
@@ -18383,7 +18375,7 @@ async function handleUpdate(target) {
     process.exit(0);
   }
   const selectedTemplate = result;
-  const templatePath = resolve5(TEMPLATES_DIR, selectedTemplate);
+  const templatePath = resolve6(TEMPLATES_DIR, selectedTemplate);
   const allProjects = listProjects();
   const project = allProjects.find((p2) => p2.savedTemplate === selectedTemplate);
   if (project) {
@@ -18438,7 +18430,7 @@ async function handlePublish(nameArg, templateNameArg) {
   const entries = await import_fs_extra20.default.readdir(TEMPLATES_DIR).catch(() => []);
   const localTemplates = [];
   for (const entry of entries) {
-    const stat = await import_fs_extra20.default.stat(resolve5(TEMPLATES_DIR, entry));
+    const stat = await import_fs_extra20.default.stat(resolve6(TEMPLATES_DIR, entry));
     if (stat.isDirectory())
       localTemplates.push(entry);
   }
@@ -18484,7 +18476,7 @@ async function handlePublish(nameArg, templateNameArg) {
   await doPublish(selectedTemplate);
 }
 async function doPublish(selectedTemplate) {
-  const templatePath = resolve5(TEMPLATES_DIR, selectedTemplate);
+  const templatePath = resolve6(TEMPLATES_DIR, selectedTemplate);
   const checkSpinner = Y2();
   checkSpinner.start("\u6B63\u5728\u68C0\u67E5\u8FDC\u7A0B\u4ED3\u5E93...");
   const repoCheck = await execAndCapture(`gh repo view ${selectedTemplate} --json name`, process.cwd());
@@ -18599,7 +18591,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
     process.exit(1);
   }
   s.stop(`${brand.success("\u2713")} \u627E\u5230 ${brand.primary(files.length.toString())} \u4E2A\u6587\u4EF6`);
-  const targetPath = resolve5(TEMPLATES_DIR, templateName);
+  const targetPath = resolve6(TEMPLATES_DIR, templateName);
   const exists = await import_fs_extra20.default.pathExists(targetPath);
   if (exists) {
     await import_fs_extra20.default.emptyDir(targetPath);
@@ -18625,7 +18617,7 @@ async function createOrUpdateTemplate(sourcePath, templateName, isUpdate) {
   console.log();
 }
 async function cleanupGitDir(dir) {
-  const gitDir = resolve5(dir, ".git");
+  const gitDir = resolve6(dir, ".git");
   if (await import_fs_extra20.default.pathExists(gitDir)) {
     await import_fs_extra20.default.remove(gitDir);
   }
@@ -18637,7 +18629,7 @@ async function countFiles(dir) {
     if (entry.name === ".git")
       continue;
     if (entry.isDirectory()) {
-      count += await countFiles(resolve5(dir, entry.name));
+      count += await countFiles(resolve6(dir, entry.name));
     } else {
       count++;
     }
@@ -21940,7 +21932,7 @@ Ze.glob = Ze;
 
 // src/commands/unzip.ts
 var import_picocolors28 = __toESM(require_picocolors(), 1);
-import { basename as basename3, dirname as dirname3, join as join10, parse } from "path";
+import { basename as basename4, dirname as dirname3, join as join11, parse } from "path";
 var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
   let cwd;
   if (!project || project === ".") {
@@ -21966,7 +21958,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   console.log();
   console.log(import_picocolors28.default.dim(`  \u627E\u5230 ${zipFiles.length} \u4E2A zip \u6587\u4EF6:`));
   for (const file of zipFiles) {
-    console.log(`  ${brand.secondary("\u2022")} ${basename3(file)}`);
+    console.log(`  ${brand.secondary("\u2022")} ${basename4(file)}`);
   }
   console.log();
   const s = Y2();
@@ -21974,10 +21966,10 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   let successCount = 0;
   const errors2 = [];
   for (const zipFile of zipFiles) {
-    const relativePath = basename3(zipFile);
+    const relativePath = basename4(zipFile);
     try {
       const zipName = parse(zipFile).name;
-      const destDir = join10(dirname3(zipFile), zipName);
+      const destDir = join11(dirname3(zipFile), zipName);
       if (await import_fs_extra21.default.pathExists(destDir)) {
         await import_fs_extra21.default.remove(destDir);
       }
@@ -21987,7 +21979,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
       if (options?.flatten) {
         const entries = await import_fs_extra21.default.readdir(tempDir);
         if (entries.length === 1) {
-          const singleEntry = join10(tempDir, entries[0]);
+          const singleEntry = join11(tempDir, entries[0]);
           const stat = await import_fs_extra21.default.stat(singleEntry);
           if (stat.isDirectory()) {
             await import_fs_extra21.default.move(singleEntry, destDir);
@@ -22022,12 +22014,12 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
 // src/commands/update.ts
 init_esm();
 var import_picocolors29 = __toESM(require_picocolors(), 1);
-import { dirname as dirname4, join as join11, resolve as resolve6 } from "path";
+import { dirname as dirname4, join as join12, resolve as resolve7 } from "path";
 import { fileURLToPath } from "url";
 import { existsSync as existsSync2, readFileSync as readFileSync2 } from "fs";
 function getVersion(dir) {
   try {
-    const pkg = JSON.parse(readFileSync2(join11(dir, "package.json"), "utf-8"));
+    const pkg = JSON.parse(readFileSync2(join12(dir, "package.json"), "utf-8"));
     return pkg.version;
   } catch {
     return "unknown";
@@ -22037,7 +22029,7 @@ function findPDir() {
   const currentFile = fileURLToPath(import.meta.url);
   let dir = dirname4(currentFile);
   for (let i = 0;i < 10; i++) {
-    const pkgPath = join11(dir, "package.json");
+    const pkgPath = join12(dir, "package.json");
     if (existsSync2(pkgPath)) {
       try {
         const pkg = JSON.parse(readFileSync2(pkgPath, "utf-8"));
@@ -22045,7 +22037,7 @@ function findPDir() {
           return dir;
       } catch {}
     }
-    const parent = resolve6(dir, "..");
+    const parent = resolve7(dir, "..");
     if (parent === dir)
       break;
     dir = parent;
@@ -22083,7 +22075,7 @@ var updateCommand = new Command("update").alias("upgrade").description("\u66F4\u
 // src/index.ts
 var import_picocolors30 = __toESM(require_picocolors(), 1);
 var __dirname2 = dirname5(fileURLToPath2(import.meta.url));
-var pkgPath = join12(__dirname2, "..", "package.json");
+var pkgPath = join13(__dirname2, "..", "package.json");
 var pkg = JSON.parse(readFileSync3(pkgPath, "utf-8"));
 var program2 = new Command;
 await ensureInitialized();

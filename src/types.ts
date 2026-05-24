@@ -37,8 +37,6 @@ export interface Config {
 	shortcuts?: Record<string, string>;
 	recentCount?: number;
 	sync?: {
-		remote: string;
-		port?: number;
 		exclude?: string[];
 	};
 }
