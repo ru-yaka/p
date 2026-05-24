@@ -17915,21 +17915,28 @@ async function openInFileManager(targetPath) {
 }
 async function scanSyncDir() {
   const syncDir = getSyncDir();
-  if (!await import_fs_extra19.default.pathExists(syncDir))
+  const checkResult = await execAndCapture(`test -d "${syncDir}" && echo exists || echo missing`, process.cwd());
+  if (!checkResult.success || checkResult.output.trim() !== "exists")
     return [];
-  const entries = await import_fs_extra19.default.readdir(syncDir);
+  const lsResult = await execAndCapture(`ls -1 "${syncDir}"`, process.cwd());
+  if (!lsResult.success)
+    return [];
+  const entries = lsResult.output.split(`
+`).filter((e2) => e2.trim().endsWith(".zip"));
   const zips = [];
   for (const entry of entries) {
-    if (!entry.endsWith(".zip"))
-      continue;
     const fullPath = join10(syncDir, entry);
-    const stat = await import_fs_extra19.default.stat(fullPath);
-    const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+    const statResult = await execAndCapture(`stat -f "%z %m" "${fullPath}"`, process.cwd());
+    if (!statResult.success)
+      continue;
+    const [sizeStr, timeStr] = statResult.output.trim().split(" ");
+    const sizeBytes = Number.parseInt(sizeStr || "0", 10);
+    const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
     zips.push({
       path: fullPath,
       name: basename3(entry, ".zip"),
       size: `${sizeMB}MB`,
-      mtime: stat.mtime
+      mtime: new Date(Number.parseFloat(timeStr || "0") * 1000)
     });
   }
   zips.sort((a, b3) => b3.mtime.getTime() - a.mtime.getTime());
@@ -18051,8 +18058,17 @@ async function importOneZip(zipPath, projectName) {
   s.start(`\u6B63\u5728\u5BFC\u5165 ${projectName}...`);
   await import_fs_extra19.default.ensureDir(projectPath);
   try {
-    const zip = new import_adm_zip.default(zipPath);
+    const tmpZip = join10(PROJECTS_DIR, `.tmp-import-${Date.now()}.zip`);
+    const cpResult = await execAndCapture(`cp "${zipPath}" "${tmpZip}"`, process.cwd());
+    if (!cpResult.success) {
+      s.stop(`\u5BFC\u5165 ${projectName} \u5931\u8D25`);
+      printError(`\u65E0\u6CD5\u8BFB\u53D6\u6587\u4EF6: ${zipPath}`);
+      await import_fs_extra19.default.remove(projectPath).catch(() => {});
+      return false;
+    }
+    const zip = new import_adm_zip.default(tmpZip);
     zip.extractAllTo(projectPath, true);
+    await import_fs_extra19.default.remove(tmpZip).catch(() => {});
   } catch (error) {
     s.stop(`\u5BFC\u5165 ${projectName} \u5931\u8D25`);
     printError(error.message);
@@ -18066,7 +18082,8 @@ async function importOneZip(zipPath, projectName) {
 async function handleImport(file) {
   if (file) {
     const zipPath = resolve5(file);
-    if (!await import_fs_extra19.default.pathExists(zipPath)) {
+    const checkResult = await execAndCapture(`test -f "${zipPath}" && echo exists || echo missing`, process.cwd());
+    if (checkResult.output.trim() !== "exists") {
       printError(`\u6587\u4EF6\u4E0D\u5B58\u5728: ${zipPath}`);
       process.exit(1);
     }

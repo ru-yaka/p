@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { basename, join, resolve, dirname, relative } from "node:path";
+import { basename, join, resolve, dirname } from "node:path";
 import { intro, isCancel, multiselect, outro, spinner } from "@clack/prompts";
 import { Command } from "commander";
 import AdmZip from "adm-zip";
@@ -90,25 +90,49 @@ async function openInFileManager(targetPath: string): Promise<void> {
 	}
 }
 
+/**
+ * 通过 shell 命令扫描目录（绕过 macOS TCC 权限限制）
+ * Ghostty 有 FDA，shell 子进程会继承权限
+ */
 async function scanSyncDir(): Promise<
 	{ path: string; name: string; size: string; mtime: Date }[]
 > {
 	const syncDir = getSyncDir();
-	if (!(await fse.pathExists(syncDir))) return [];
 
-	const entries = await fse.readdir(syncDir);
+	const checkResult = await execAndCapture(
+		`test -d "${syncDir}" && echo exists || echo missing`,
+		process.cwd(),
+	);
+	if (!checkResult.success || checkResult.output.trim() !== "exists") return [];
+
+	// 用 shell ls 列出文件
+	const lsResult = await execAndCapture(
+		`ls -1 "${syncDir}"`,
+		process.cwd(),
+	);
+	if (!lsResult.success) return [];
+
+	const entries = lsResult.output.split("\n").filter((e) => e.trim().endsWith(".zip"));
 	const zips: { path: string; name: string; size: string; mtime: Date }[] = [];
 
 	for (const entry of entries) {
-		if (!entry.endsWith(".zip")) continue;
 		const fullPath = join(syncDir, entry);
-		const stat = await fse.stat(fullPath);
-		const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+		// 用 shell stat 获取文件大小和修改时间
+		const statResult = await execAndCapture(
+			`stat -f "%z %m" "${fullPath}"`,
+			process.cwd(),
+		);
+		if (!statResult.success) continue;
+
+		const [sizeStr, timeStr] = statResult.output.trim().split(" ");
+		const sizeBytes = Number.parseInt(sizeStr || "0", 10);
+		const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
+
 		zips.push({
 			path: fullPath,
 			name: basename(entry, ".zip"),
 			size: `${sizeMB}MB`,
-			mtime: stat.mtime,
+			mtime: new Date(Number.parseFloat(timeStr || "0") * 1000),
 		});
 	}
 
@@ -279,8 +303,22 @@ async function importOneZip(zipPath: string, projectName: string) {
 	await fse.ensureDir(projectPath);
 
 	try {
-		const zip = new AdmZip(zipPath);
+		// 先通过 shell cp 复制到临时位置（绕过 macOS TCC），再解压
+		const tmpZip = join(PROJECTS_DIR, `.tmp-import-${Date.now()}.zip`);
+		const cpResult = await execAndCapture(
+			`cp "${zipPath}" "${tmpZip}"`,
+			process.cwd(),
+		);
+		if (!cpResult.success) {
+			s.stop(`导入 ${projectName} 失败`);
+			printError(`无法读取文件: ${zipPath}`);
+			await fse.remove(projectPath).catch(() => {});
+			return false;
+		}
+
+		const zip = new AdmZip(tmpZip);
 		zip.extractAllTo(projectPath, true);
+		await fse.remove(tmpZip).catch(() => {});
 	} catch (error) {
 		s.stop(`导入 ${projectName} 失败`);
 		printError((error as Error).message);
@@ -297,7 +335,12 @@ async function handleImport(file?: string) {
 	if (file) {
 		const zipPath = resolve(file);
 
-		if (!(await fse.pathExists(zipPath))) {
+		// 用 shell test 检查文件是否存在（绕过 TCC）
+		const checkResult = await execAndCapture(
+			`test -f "${zipPath}" && echo exists || echo missing`,
+			process.cwd(),
+		);
+		if (checkResult.output.trim() !== "exists") {
 			printError(`文件不存在: ${zipPath}`);
 			process.exit(1);
 		}
