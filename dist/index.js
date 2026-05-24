@@ -17863,12 +17863,7 @@ var SYNC_EXCLUDES = [
   ".idea",
   "*.log",
   ".DS_Store",
-  "Thumbs.db",
-  "package-lock.json",
-  "pnpm-lock.yaml",
-  "yarn.lock",
-  "bun.lock",
-  "bun.lockb"
+  "Thumbs.db"
 ];
 async function searchAndSelect3(projects, initialQuery) {
   const options = projects.map((p2) => ({

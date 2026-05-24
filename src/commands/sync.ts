@@ -30,11 +30,6 @@ const SYNC_EXCLUDES = [
 	"*.log",
 	".DS_Store",
 	"Thumbs.db",
-	"package-lock.json",
-	"pnpm-lock.yaml",
-	"yarn.lock",
-	"bun.lock",
-	"bun.lockb",
 ];
 
 async function searchAndSelect(
