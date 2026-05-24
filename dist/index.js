@@ -17860,13 +17860,13 @@ var SYNC_EXCLUDES = [
   "dist",
   "build",
   "coverage",
-  ".git",
   ".vscode",
   ".idea",
   "*.log",
   ".DS_Store",
   "Thumbs.db"
 ];
+var MARKER_FILE = ".p-sync.json";
 async function searchAndSelect3(projects, initialQuery) {
   const options = projects.map((p2) => ({
     value: p2.name,
@@ -17910,8 +17910,42 @@ async function openInFileManager(filePath) {
   }
   await execAndCapture(cmd, process.cwd());
 }
-async function handlePush(name) {
+async function scanExportedZips() {
+  const downloadDir = getDownloadDir();
+  if (!await import_fs_extra19.default.pathExists(downloadDir))
+    return [];
+  const entries = await import_fs_extra19.default.readdir(downloadDir);
+  const zips = [];
+  for (const entry of entries) {
+    if (!entry.endsWith(".zip"))
+      continue;
+    const fullPath = join10(downloadDir, entry);
+    const check = await execAndCapture(`unzip -l "${fullPath}" "${MARKER_FILE}"`, process.cwd());
+    if (!check.success)
+      continue;
+    const stat = await import_fs_extra19.default.stat(fullPath);
+    const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+    zips.push({
+      path: fullPath,
+      name: basename3(entry, ".zip"),
+      size: `${sizeMB}MB`,
+      mtime: stat.mtime
+    });
+  }
+  zips.sort((a, b3) => b3.mtime.getTime() - a.mtime.getTime());
+  return zips;
+}
+async function handleExport(name) {
   const projects = listProjects();
+  const currentDir = process.cwd();
+  if (name === ".") {
+    const currentProject = projects.find((p2) => p2.path === currentDir);
+    if (!currentProject) {
+      printError("\u5F53\u524D\u76EE\u5F55\u4E0D\u662F p \u7BA1\u7406\u7684\u9879\u76EE");
+      process.exit(1);
+    }
+    name = currentProject.name;
+  }
   if (projects.length === 0) {
     printInfo("\u6682\u65E0\u9879\u76EE");
     return;
@@ -17932,7 +17966,12 @@ async function handlePush(name) {
       }
     }
   } else {
-    projectName = await searchAndSelect3(projects);
+    const currentProject = projects.find((p2) => p2.path === currentDir);
+    if (currentProject) {
+      projectName = currentProject.name;
+    } else {
+      projectName = await searchAndSelect3(projects);
+    }
   }
   const projectPath = getProjectPath(projectName);
   const downloadDir = getDownloadDir();
@@ -17943,9 +17982,16 @@ async function handlePush(name) {
   console.log();
   const s = Y2();
   s.start("\u6B63\u5728\u6253\u5305...");
-  const excludeArgs = SYNC_EXCLUDES.map((p2) => `-x "${p2}"`).join(" ");
   await import_fs_extra19.default.remove(zipPath).catch(() => {});
+  const markerPath = join10(projectPath, MARKER_FILE);
+  await import_fs_extra19.default.writeJson(markerPath, {
+    projectName,
+    exportedAt: new Date().toISOString(),
+    version: 1
+  });
+  const excludeArgs = SYNC_EXCLUDES.map((p2) => `-x "${p2}"`).join(" ");
   const result = await execAndCapture(`cd "${projectPath}" && zip -r "${zipPath}" . ${excludeArgs}`, projectPath);
+  await import_fs_extra19.default.remove(markerPath).catch(() => {});
   if (!result.success) {
     s.stop("\u6253\u5305\u5931\u8D25");
     console.log();
@@ -17965,56 +18011,126 @@ async function handlePush(name) {
   console.log();
   Se(brand.success("\u2728 \u5DF2\u5728\u6587\u4EF6\u7BA1\u7406\u5668\u4E2D\u6253\u5F00\uFF0C\u53EF\u901A\u8FC7 LocalSend \u53D1\u9001"));
 }
-async function handlePull(file) {
-  if (!file) {
-    printError("\u8BF7\u6307\u5B9A ZIP \u6587\u4EF6\u8DEF\u5F84");
-    console.log(import_picocolors25.default.dim("  \u7528\u6CD5: p sync pull <zip\u6587\u4EF6\u8DEF\u5F84>"));
-    console.log(import_picocolors25.default.dim("  \u793A\u4F8B: p sync pull ~/Downloads/my-app.zip"));
-    process.exit(1);
-  }
-  const zipPath = resolve5(file);
-  if (!await import_fs_extra19.default.pathExists(zipPath)) {
-    printError(`\u6587\u4EF6\u4E0D\u5B58\u5728: ${zipPath}`);
-    process.exit(1);
-  }
-  if (!zipPath.endsWith(".zip")) {
-    printError("\u8BF7\u6307\u5B9A .zip \u6587\u4EF6");
-    process.exit(1);
-  }
-  const projectName = basename3(zipPath, ".zip");
-  if (projectExists(projectName)) {
-    printError(`\u9879\u76EE\u5DF2\u5B58\u5728: ${projectName}`);
-    console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors25.default.dim(" \u6253\u5F00\u5DF2\u6709\u9879\u76EE"));
-    process.exit(1);
-  }
-  Ie(bgOrange(" \u5BFC\u5165\u9879\u76EE "));
-  console.log(import_picocolors25.default.dim("  \u6587\u4EF6: ") + import_picocolors25.default.underline(zipPath));
-  console.log(import_picocolors25.default.dim("  \u9879\u76EE: ") + brand.primary(projectName));
-  console.log();
-  const s = Y2();
-  s.start("\u6B63\u5728\u89E3\u538B...");
+async function importOneZip(zipPath, projectName) {
   const projectPath = getProjectPath(projectName);
+  const s = Y2();
+  s.start(`\u6B63\u5728\u5BFC\u5165 ${projectName}...`);
   await import_fs_extra19.default.ensureDir(projectPath);
   const result = await execAndCapture(`unzip -o "${zipPath}" -d "${projectPath}"`, process.cwd());
   if (!result.success) {
-    s.stop("\u89E3\u538B\u5931\u8D25");
-    console.log();
+    s.stop(`\u5BFC\u5165 ${projectName} \u5931\u8D25`);
     printError(result.error || "unzip \u547D\u4EE4\u6267\u884C\u5931\u8D25");
     await import_fs_extra19.default.remove(projectPath).catch(() => {});
-    process.exit(1);
+    return false;
   }
-  s.stop(`${brand.success("\u2713")} \u5DF2\u5BFC\u5165`);
+  await import_fs_extra19.default.remove(join10(projectPath, MARKER_FILE)).catch(() => {});
+  s.stop(`${brand.success("\u2713")} \u5DF2\u5BFC\u5165: ${brand.primary(projectName)}`);
   saveProjectMeta(projectName, { template: "sync" });
+  return true;
+}
+async function handleImport(file) {
+  if (file) {
+    const zipPath = resolve5(file);
+    if (!await import_fs_extra19.default.pathExists(zipPath)) {
+      printError(`\u6587\u4EF6\u4E0D\u5B58\u5728: ${zipPath}`);
+      process.exit(1);
+    }
+    if (!zipPath.endsWith(".zip")) {
+      printError("\u8BF7\u6307\u5B9A .zip \u6587\u4EF6");
+      process.exit(1);
+    }
+    const projectName = basename3(zipPath, ".zip");
+    if (projectExists(projectName)) {
+      printError(`\u9879\u76EE\u5DF2\u5B58\u5728: ${projectName}`);
+      console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors25.default.dim(" \u6253\u5F00\u5DF2\u6709\u9879\u76EE"));
+      process.exit(1);
+    }
+    Ie(bgOrange(" \u5BFC\u5165\u9879\u76EE "));
+    console.log(import_picocolors25.default.dim("  \u6587\u4EF6: ") + import_picocolors25.default.underline(zipPath));
+    console.log(import_picocolors25.default.dim("  \u9879\u76EE: ") + brand.primary(projectName));
+    console.log();
+    const ok = await importOneZip(zipPath, projectName);
+    if (ok) {
+      console.log();
+      Se(brand.success(`\u2728 \u9879\u76EE ${projectName} \u5BFC\u5165\u6210\u529F\uFF01`));
+      console.log();
+      console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors25.default.dim(" \u6253\u5F00\u9879\u76EE"));
+      console.log();
+    }
+    return;
+  }
+  Ie(bgOrange(" \u5BFC\u5165\u9879\u76EE "));
+  const zips = await scanExportedZips();
+  if (zips.length === 0) {
+    printInfo("Downloads \u4E2D\u6CA1\u6709\u53EF\u5BFC\u5165\u7684\u9879\u76EE");
+    console.log(import_picocolors25.default.dim("  \u63D0\u793A\uFF1A\u5148\u5728\u53E6\u4E00\u53F0\u673A\u5668\u4E0A\u8FD0\u884C ") + brand.primary("p sync export") + import_picocolors25.default.dim(" \u5BFC\u51FA\u9879\u76EE"));
+    console.log();
+    return;
+  }
+  if (zips.length === 1) {
+    const zip = zips[0];
+    console.log(import_picocolors25.default.dim("  \u627E\u5230: ") + brand.primary(zip.name) + import_picocolors25.default.dim(` (${zip.size})`));
+    console.log();
+    if (projectExists(zip.name)) {
+      printError(`\u9879\u76EE\u5DF2\u5B58\u5728: ${zip.name}`);
+      console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + zip.name) + import_picocolors25.default.dim(" \u6253\u5F00\u5DF2\u6709\u9879\u76EE"));
+      process.exit(1);
+    }
+    const ok = await importOneZip(zip.path, zip.name);
+    if (ok) {
+      console.log();
+      Se(brand.success(`\u2728 \u9879\u76EE ${zip.name} \u5BFC\u5165\u6210\u529F\uFF01`));
+      console.log();
+      console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + zip.name) + import_picocolors25.default.dim(" \u6253\u5F00\u9879\u76EE"));
+      console.log();
+    }
+    return;
+  }
+  console.log(import_picocolors25.default.dim(`  \u627E\u5230 ${zips.length} \u4E2A\u53EF\u5BFC\u5165\u7684\u9879\u76EE:`));
   console.log();
-  Se(brand.success(`\u2728 \u9879\u76EE ${projectName} \u5BFC\u5165\u6210\u529F\uFF01`));
+  const available = zips.filter((z2) => !projectExists(z2.name));
+  if (available.length === 0) {
+    printInfo("\u6240\u6709\u9879\u76EE\u90FD\u5DF2\u5B58\u5728");
+    return;
+  }
+  const options = available.map((z2) => ({
+    value: z2.path,
+    label: z2.name,
+    hint: z2.size
+  }));
+  const result = await fe({
+    message: "\u9009\u62E9\u8981\u5BFC\u5165\u7684\u9879\u76EE:",
+    options,
+    required: true,
+    initialValues: available.map((z2) => z2.path)
+  });
+  if (pD(result)) {
+    Se(import_picocolors25.default.dim("\u5DF2\u53D6\u6D88"));
+    return;
+  }
   console.log();
-  console.log(import_picocolors25.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors25.default.dim(" \u6253\u5F00\u9879\u76EE"));
+  const selected = result;
+  let imported = 0;
+  for (const path of selected) {
+    const zip = available.find((z2) => z2.path === path);
+    if (!zip)
+      continue;
+    const ok = await importOneZip(zip.path, zip.name);
+    if (ok)
+      imported++;
+  }
+  console.log();
+  if (imported === selected.length) {
+    Se(brand.success(`\u2728 \u5DF2\u6210\u529F\u5BFC\u5165 ${imported} \u4E2A\u9879\u76EE`));
+  } else {
+    Se(`${brand.success("\u2713")} \u5DF2\u5BFC\u5165 ${imported} \u4E2A\uFF0C${selected.length - imported} \u4E2A\u5931\u8D25`);
+  }
   console.log();
 }
-var syncCommand = new Command("sync").description("\u5BFC\u51FA/\u5BFC\u5165\u9879\u76EE\uFF08\u914D\u5408 LocalSend \u7B49\u5DE5\u5177\u5728\u5C40\u57DF\u7F51\u8FC1\u79FB\uFF09").addCommand(new Command("push").description("\u5BFC\u51FA\u9879\u76EE\u4E3A ZIP \u5230 Downloads \u76EE\u5F55").argument("[name]", "\u9879\u76EE\u540D\u79F0\u6216\u641C\u7D22\u5173\u952E\u8BCD").action(async (name) => {
-  await handlePush(name);
-})).addCommand(new Command("pull").description("\u4ECE ZIP \u6587\u4EF6\u5BFC\u5165\u9879\u76EE").argument("<file>", "ZIP \u6587\u4EF6\u8DEF\u5F84").action(async (file) => {
-  await handlePull(file);
+var syncCommand = new Command("sync").description("\u5BFC\u51FA/\u5BFC\u5165\u9879\u76EE\uFF08\u914D\u5408 LocalSend \u7B49\u5DE5\u5177\u5728\u5C40\u57DF\u7F51\u8FC1\u79FB\uFF09").addCommand(new Command("export").description("\u5BFC\u51FA\u9879\u76EE\u4E3A ZIP \u5230 Downloads \u76EE\u5F55").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001. \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
+  await handleExport(name);
+})).addCommand(new Command("import").description("\u4ECE ZIP \u6587\u4EF6\u5BFC\u5165\u9879\u76EE\uFF08\u81EA\u52A8\u626B\u63CF Downloads\uFF09").argument("[file]", "ZIP \u6587\u4EF6\u8DEF\u5F84\uFF08\u4E0D\u6307\u5B9A\u5219\u81EA\u52A8\u626B\u63CF\uFF09").action(async (file) => {
+  await handleImport(file);
 }));
 
 // src/commands/tag.ts
