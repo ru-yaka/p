@@ -85,7 +85,7 @@ async function openInFileManager(targetPath: string): Promise<void> {
 	if (platform === "darwin") {
 		cmd = `open "${targetPath}"`;
 	} else if (platform === "win32") {
-		cmd = `cmd /c start "" "${targetPath}"`;
+		cmd = `start "" "${targetPath}"`;
 	} else {
 		cmd = `xdg-open "${targetPath}"`;
 	}
