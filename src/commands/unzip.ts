@@ -11,8 +11,7 @@ import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 export const unzipCommand = new Command("unzip")
 	.description("解压项目中所有 zip 文件")
 	.argument("[project]", "项目名称（. 或省略表示当前目录）")
-	.option("-f, --flatten", "解散 zip 内的根目录")
-	.action(async (project?: string, options?: { flatten?: boolean }) => {
+	.action(async (project?: string) => {
 		// 确定工作目录
 		let cwd: string;
 
@@ -64,32 +63,46 @@ export const unzipCommand = new Command("unzip")
 					await fse.remove(destDir);
 				}
 
-				// 使用 adm-zip 解压到临时目录
-				const tempDir = `${destDir}.tmp`;
 				const zip = new AdmZip(zipFile);
-				zip.extractAllTo(tempDir, true);
+				const entries = zip.getEntries();
 
-				// 检查是否需要解散根目录
-				if (options?.flatten) {
-					const entries = await fse.readdir(tempDir);
-					// 如果只有一个目录且没有其他文件，解散它
-					if (entries.length === 1) {
-						const singleEntry = join(tempDir, entries[0]);
-						const stat = await fse.stat(singleEntry);
-						if (stat.isDirectory()) {
-							// 把这个目录的内容移动到目标目录
-							await fse.move(singleEntry, destDir);
-							await fse.remove(tempDir);
-						} else {
-							// 单个文件，正常移动
-							await fse.move(tempDir, destDir);
-						}
+				// 过滤 __MACOSX 和 .DS_Store
+				const validEntries = entries.filter((entry) => {
+					const name = entry.entryName;
+					return !name.startsWith("__MACOSX") && !name.includes("/__MACOSX") && !name.endsWith(".DS_Store");
+				});
+
+				// 检查是否需要 flatten：如果所有条目都在同一个根目录下
+				const rootDirs = new Set(
+					validEntries
+						.filter((e) => !e.isDirectory)
+						.map((e) => e.entryName.split("/")[0]),
+				);
+
+				// 计算 flatten 偏移：如果唯一根目录名 == zip 文件名，跳过它
+				let stripPrefix = "";
+				if (rootDirs.size === 1 && [...rootDirs][0] === zipName) {
+					stripPrefix = zipName + "/";
+				}
+
+				for (const entry of validEntries) {
+					const entryPath = entry.entryName;
+					const targetRelPath = stripPrefix
+						? entryPath.startsWith(stripPrefix)
+							? entryPath.slice(stripPrefix.length)
+							: entryPath
+						: entryPath;
+
+					if (!targetRelPath) continue;
+
+					const fullPath = join(destDir, targetRelPath);
+
+					if (entry.isDirectory) {
+						await fse.ensureDir(fullPath);
 					} else {
-						// 多个条目，正常移动
-						await fse.move(tempDir, destDir);
+						await fse.ensureDir(dirname(fullPath));
+						await fse.writeFile(fullPath, entry.getData());
 					}
-				} else {
-					await fse.move(tempDir, destDir);
 				}
 
 				// 删除原 zip 文件

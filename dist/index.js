@@ -22121,7 +22121,7 @@ Ze.glob = Ze;
 // src/commands/unzip.ts
 var import_picocolors28 = __toESM(require_picocolors(), 1);
 import { basename as basename4, dirname as dirname4, join as join11, parse } from "path";
-var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-f, --flatten", "\u89E3\u6563 zip \u5185\u7684\u6839\u76EE\u5F55").action(async (project, options) => {
+var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").action(async (project) => {
   let cwd;
   if (!project || project === ".") {
     cwd = process.cwd();
@@ -22161,25 +22161,29 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
       if (await import_fs_extra21.default.pathExists(destDir)) {
         await import_fs_extra21.default.remove(destDir);
       }
-      const tempDir = `${destDir}.tmp`;
       const zip = new import_adm_zip2.default(zipFile);
-      zip.extractAllTo(tempDir, true);
-      if (options?.flatten) {
-        const entries = await import_fs_extra21.default.readdir(tempDir);
-        if (entries.length === 1) {
-          const singleEntry = join11(tempDir, entries[0]);
-          const stat = await import_fs_extra21.default.stat(singleEntry);
-          if (stat.isDirectory()) {
-            await import_fs_extra21.default.move(singleEntry, destDir);
-            await import_fs_extra21.default.remove(tempDir);
-          } else {
-            await import_fs_extra21.default.move(tempDir, destDir);
-          }
+      const entries = zip.getEntries();
+      const validEntries = entries.filter((entry) => {
+        const name = entry.entryName;
+        return !name.startsWith("__MACOSX") && !name.includes("/__MACOSX") && !name.endsWith(".DS_Store");
+      });
+      const rootDirs = new Set(validEntries.filter((e2) => !e2.isDirectory).map((e2) => e2.entryName.split("/")[0]));
+      let stripPrefix = "";
+      if (rootDirs.size === 1 && [...rootDirs][0] === zipName) {
+        stripPrefix = zipName + "/";
+      }
+      for (const entry of validEntries) {
+        const entryPath = entry.entryName;
+        const targetRelPath = stripPrefix ? entryPath.startsWith(stripPrefix) ? entryPath.slice(stripPrefix.length) : entryPath : entryPath;
+        if (!targetRelPath)
+          continue;
+        const fullPath = join11(destDir, targetRelPath);
+        if (entry.isDirectory) {
+          await import_fs_extra21.default.ensureDir(fullPath);
         } else {
-          await import_fs_extra21.default.move(tempDir, destDir);
+          await import_fs_extra21.default.ensureDir(dirname4(fullPath));
+          await import_fs_extra21.default.writeFile(fullPath, entry.getData());
         }
-      } else {
-        await import_fs_extra21.default.move(tempDir, destDir);
       }
       await import_fs_extra21.default.remove(zipFile);
       successCount++;
