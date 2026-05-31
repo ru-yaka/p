@@ -17873,7 +17873,7 @@ function getExcludes() {
 }
 var SYNC_DIR_NAME = "p-sync";
 function getSyncDir() {
-  return resolve5(homedir2(), ".p", SYNC_DIR_NAME);
+  return join10(getDownloadsDir(), SYNC_DIR_NAME);
 }
 function getDownloadsDir() {
   return join10(homedir2(), "Downloads");
@@ -17923,7 +17923,7 @@ async function searchAndSelect3(projects, initialQuery) {
 async function openInFileManager(targetPath) {
   const platform = process.platform;
   if (platform === "win32") {
-    Bun.spawn(["explorer.exe", "shell:Downloads"], { detached: true });
+    Bun.spawn(["explorer.exe", targetPath], { detached: true });
   } else if (platform === "darwin") {
     await execAndCapture(`open "${targetPath}"`, process.cwd());
   } else {
@@ -18026,7 +18026,6 @@ async function handleExport(name) {
   }
   const projectPath = getProjectPath(projectName);
   const syncDir = getSyncDir();
-  await import_fs_extra19.default.ensureDir(syncDir);
   const zipPath = join10(syncDir, `${projectName}.zip`);
   Ie(bgOrange(" \u5BFC\u51FA\u9879\u76EE "));
   console.log(import_picocolors25.default.dim("  \u9879\u76EE: ") + brand.primary(projectName));
@@ -18034,7 +18033,7 @@ async function handleExport(name) {
   console.log();
   const s = Y2();
   s.start("\u6B63\u5728\u6253\u5305...");
-  await import_fs_extra19.default.remove(zipPath).catch(() => {});
+  await execAndCapture(`rm -f "${zipPath}"`, process.cwd());
   const isGit = await import_fs_extra19.default.pathExists(join10(projectPath, ".git"));
   let files;
   if (isGit) {
@@ -18060,9 +18059,12 @@ async function handleExport(name) {
       zip.addLocalFile(fullPath, dirname3(file));
     }
   }
-  zip.writeZip(zipPath);
-  const stat = await import_fs_extra19.default.stat(zipPath);
-  const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+  const tmpZip = join10(PROJECTS_DIR, `.tmp-export-${Date.now()}.zip`);
+  zip.writeZip(tmpZip);
+  await execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd());
+  const statResult = await execAndCapture(`stat -f "%z" "${zipPath}" 2>/dev/null || stat -c "%s" "${zipPath}"`, process.cwd());
+  const sizeBytes = Number.parseInt(statResult.output.trim() || "0", 10);
+  const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
   s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
   await openInFileManager(getSyncDir());
   console.log();
@@ -18199,7 +18201,7 @@ async function handleImport(file) {
   }
   console.log();
 }
-var syncCommand = new Command("sync").description("\u5BFC\u51FA/\u5BFC\u5165\u9879\u76EE\uFF08\u914D\u5408 LocalSend \u7B49\u5DE5\u5177\u5728\u5C40\u57DF\u7F51\u8FC1\u79FB\uFF09").addCommand(new Command("export").description("\u5BFC\u51FA\u9879\u76EE\u4E3A ZIP \u5230 ~/.p/p-sync \u76EE\u5F55").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001. \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
+var syncCommand = new Command("sync").description("\u5BFC\u51FA/\u5BFC\u5165\u9879\u76EE\uFF08\u914D\u5408 LocalSend \u7B49\u5DE5\u5177\u5728\u5C40\u57DF\u7F51\u8FC1\u79FB\uFF09").addCommand(new Command("export").description("\u5BFC\u51FA\u9879\u76EE\u4E3A ZIP \u5230 Downloads/p-sync \u76EE\u5F55").argument("[name]", "\u9879\u76EE\u540D\u79F0\u3001. \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
   await handleExport(name);
 })).addCommand(new Command("import").description("\u4ECE ZIP \u6587\u4EF6\u5BFC\u5165\u9879\u76EE\uFF08\u81EA\u52A8\u626B\u63CF Downloads \u76EE\u5F55\uFF09").argument("[file]", "ZIP \u6587\u4EF6\u8DEF\u5F84\uFF08\u4E0D\u6307\u5B9A\u5219\u81EA\u52A8\u626B\u63CF\uFF09").action(async (file) => {
   await handleImport(file);

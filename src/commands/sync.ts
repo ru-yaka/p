@@ -42,7 +42,7 @@ function getExcludes(): string[] {
 const SYNC_DIR_NAME = "p-sync";
 
 function getSyncDir(): string {
-	return resolve(homedir(), ".p", SYNC_DIR_NAME);
+	return join(getDownloadsDir(), SYNC_DIR_NAME);
 }
 
 function getDownloadsDir(): string {
@@ -104,7 +104,7 @@ async function searchAndSelect(
 async function openInFileManager(targetPath: string): Promise<void> {
 	const platform = process.platform;
 	if (platform === "win32") {
-		Bun.spawn(["explorer.exe", "shell:Downloads"], { detached: true });
+		Bun.spawn(["explorer.exe", targetPath], { detached: true });
 	} else if (platform === "darwin") {
 		await execAndCapture(`open "${targetPath}"`, process.cwd());
 	} else {
@@ -247,7 +247,6 @@ async function handleExport(name?: string) {
 
 	const projectPath = getProjectPath(projectName);
 	const syncDir = getSyncDir();
-	await fse.ensureDir(syncDir);
 	const zipPath = join(syncDir, `${projectName}.zip`);
 
 	intro(bgOrange(" 导出项目 "));
@@ -258,7 +257,7 @@ async function handleExport(name?: string) {
 	const s = spinner();
 	s.start("正在打包...");
 
-	await fse.remove(zipPath).catch(() => {});
+	await execAndCapture(`rm -f "${zipPath}"`, process.cwd());
 
 	const isGit = await fse.pathExists(join(projectPath, ".git"));
 	let files: string[];
@@ -302,10 +301,14 @@ async function handleExport(name?: string) {
 			zip.addLocalFile(fullPath, dirname(file));
 		}
 	}
-	zip.writeZip(zipPath);
+	// 写入临时文件后 shell mv 到 Downloads（绕过 macOS TCC）
+	const tmpZip = join(PROJECTS_DIR, `.tmp-export-${Date.now()}.zip`);
+	zip.writeZip(tmpZip);
+	await execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd());
 
-	const stat = await fse.stat(zipPath);
-	const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+	const statResult = await execAndCapture(`stat -f "%z" "${zipPath}" 2>/dev/null || stat -c "%s" "${zipPath}"`, process.cwd());
+	const sizeBytes = Number.parseInt(statResult.output.trim() || "0", 10);
+	const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
 
 	s.stop(`${brand.success("✓")} 已打包: ${brand.primary(`${sizeMB}MB`)}`);
 
@@ -488,7 +491,7 @@ export const syncCommand = new Command("sync")
 	.description("导出/导入项目（配合 LocalSend 等工具在局域网迁移）")
 	.addCommand(
 		new Command("export")
-			.description("导出项目为 ZIP 到 ~/.p/p-sync 目录")
+			.description("导出项目为 ZIP 到 Downloads/p-sync 目录")
 			.argument("[name]", "项目名称、. 表示当前目录")
 			.action(async (name?: string) => {
 				await handleExport(name);
