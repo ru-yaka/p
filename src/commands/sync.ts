@@ -304,11 +304,10 @@ async function handleExport(name?: string) {
 	// 写入临时文件后 shell mv 到 Downloads（绕过 macOS TCC）
 	const tmpZip = join(PROJECTS_DIR, `.tmp-export-${Date.now()}.zip`);
 	zip.writeZip(tmpZip);
+	const tmpStat = await fse.stat(tmpZip);
+	const sizeMB = (tmpStat.size / 1024 / 1024).toFixed(1);
 	await execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd());
 
-	const statResult = await execAndCapture(`stat -f "%z" "${zipPath}" 2>/dev/null || stat -c "%s" "${zipPath}"`, process.cwd());
-	const sizeBytes = Number.parseInt(statResult.output.trim() || "0", 10);
-	const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
 
 	s.stop(`${brand.success("✓")} 已打包: ${brand.primary(`${sizeMB}MB`)}`);
 

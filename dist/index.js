@@ -18061,10 +18061,9 @@ async function handleExport(name) {
   }
   const tmpZip = join10(PROJECTS_DIR, `.tmp-export-${Date.now()}.zip`);
   zip.writeZip(tmpZip);
+  const tmpStat = await import_fs_extra19.default.stat(tmpZip);
+  const sizeMB = (tmpStat.size / 1024 / 1024).toFixed(1);
   await execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd());
-  const statResult = await execAndCapture(`stat -f "%z" "${zipPath}" 2>/dev/null || stat -c "%s" "${zipPath}"`, process.cwd());
-  const sizeBytes = Number.parseInt(statResult.output.trim() || "0", 10);
-  const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
   s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
   await openInFileManager(getSyncDir());
   console.log();
