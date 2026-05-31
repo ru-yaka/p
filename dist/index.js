@@ -16249,8 +16249,8 @@ async function listTemplates(remoteOnly) {
   console.log(import_picocolors14.default.dim("  \u63D0\u793A: \u4F7F\u7528 ") + brand.primary("p templates add") + import_picocolors14.default.dim(" \u6DFB\u52A0\u6A21\u677F"));
   console.log();
 }
-var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").option("-r, --remote", "\u53EA\u5217\u51FA\u5DF2\u53D1\u5E03\u7684\u8FDC\u7A0B\u6A21\u677F").action(async (filter, options) => {
-  if (filter === "templates" || filter === "t" || options?.remote) {
+var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").option("-r, --remote", "\u914D\u5408 templates / t \u4F7F\u7528\uFF0C\u53EA\u5217\u51FA\u8FDC\u7A0B\u6A21\u677F").action(async (filter, options) => {
+  if (filter === "templates" || filter === "t") {
     await listTemplates(!!options?.remote);
     return;
   }
