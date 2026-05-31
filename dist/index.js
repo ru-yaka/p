@@ -16250,7 +16250,7 @@ async function listTemplates(remoteOnly) {
   console.log();
 }
 var lsCommand = new Command("ls").alias("list").description("\u5217\u51FA\u6240\u6709\u9879\u76EE").argument("[filter]", "templates / t \u5217\u51FA\u6A21\u677F").option("-r, --remote", "\u53EA\u5217\u51FA\u5DF2\u53D1\u5E03\u7684\u8FDC\u7A0B\u6A21\u677F").action(async (filter, options) => {
-  if (filter === "templates" || filter === "t") {
+  if (filter === "templates" || filter === "t" || options?.remote) {
     await listTemplates(!!options?.remote);
     return;
   }

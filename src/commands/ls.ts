@@ -98,7 +98,7 @@ export const lsCommand = new Command("ls")
 	.argument("[filter]", "templates / t 列出模板")
 	.option("-r, --remote", "只列出已发布的远程模板")
 	.action(async (filter?: string, options?: { remote?: boolean }) => {
-		if (filter === "templates" || filter === "t") {
+		if (filter === "templates" || filter === "t" || options?.remote) {
 			await listTemplates(!!options?.remote);
 			return;
 		}
