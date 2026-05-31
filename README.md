@@ -57,6 +57,8 @@ p update
 | `p config` | 打开配置文件 |
 | `p update` | 更新 p |
 | `p unzip [project]` | 解压项目所有 zip 文件 |
+| `p sync export [name]` | 导出项目为 ZIP 到 Downloads/p-sync |
+| `p sync import [file]` | 从 ZIP 导入项目（自动扫描 Downloads） |
 
 ## Clone 命令
 
@@ -143,9 +145,30 @@ p unzip my-project
 
 功能：
 - 递归查找目录下所有 `.zip` 文件
-- 解压到 zip 文件所在目录（文件夹名去掉 `.zip` 后缀）
+- 自动过滤 `__MACOSX` 和 `.DS_Store`
+- 如果 zip 内根目录与文件名一致，自动扁平化
 - 解压成功后自动删除原 zip 文件
 - 如果目标目录已存在，会先删除再解压
+
+## Sync 命令
+
+局域网迁移项目（配合 [LocalSend](https://localsend.org/) 等工具）：
+
+```bash
+# 导出项目为 ZIP（输出到 ~/Downloads/p-sync/）
+p sync export
+p sync export my-project
+p sync export .        # 当前项目
+
+# 导入项目（自动扫描 ~/Downloads/ 下的 zip 文件）
+p sync import
+p sync import path/to/file.zip  # 指定文件
+```
+
+功能：
+- 导出时打包 `.git` 目录，保留提交历史
+- 导入后提示删除 `Downloads/p-sync` 目录
+- macOS 通过 shell 命令绕过 TCC 权限限制
 
 ## AI 命名
 
