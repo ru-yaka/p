@@ -18033,7 +18033,7 @@ async function handleExport(name) {
   console.log();
   const s = Y2();
   s.start("\u6B63\u5728\u6253\u5305...");
-  await execAndCapture(`rm -f "${zipPath}"`, process.cwd());
+  await (process.platform === "darwin" ? execAndCapture(`rm -f "${zipPath}"`, process.cwd()) : import_fs_extra19.default.remove(zipPath).catch(() => {}));
   const isGit = await import_fs_extra19.default.pathExists(join10(projectPath, ".git"));
   let files;
   if (isGit) {
@@ -18063,7 +18063,7 @@ async function handleExport(name) {
   zip.writeZip(tmpZip);
   const tmpStat = await import_fs_extra19.default.stat(tmpZip);
   const sizeMB = (tmpStat.size / 1024 / 1024).toFixed(1);
-  await execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd());
+  await (process.platform === "darwin" ? execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd()) : import_fs_extra19.default.ensureDir(syncDir).then(() => import_fs_extra19.default.move(tmpZip, zipPath, { overwrite: true })));
   s.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5305: ${brand.primary(`${sizeMB}MB`)}`);
   await openInFileManager(getSyncDir());
   console.log();

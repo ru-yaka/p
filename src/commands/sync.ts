@@ -257,7 +257,9 @@ async function handleExport(name?: string) {
 	const s = spinner();
 	s.start("正在打包...");
 
-	await execAndCapture(`rm -f "${zipPath}"`, process.cwd());
+	await (process.platform === "darwin"
+		? execAndCapture(`rm -f "${zipPath}"`, process.cwd())
+		: fse.remove(zipPath).catch(() => {}));
 
 	const isGit = await fse.pathExists(join(projectPath, ".git"));
 	let files: string[];
@@ -306,7 +308,9 @@ async function handleExport(name?: string) {
 	zip.writeZip(tmpZip);
 	const tmpStat = await fse.stat(tmpZip);
 	const sizeMB = (tmpStat.size / 1024 / 1024).toFixed(1);
-	await execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd());
+	await (process.platform === "darwin"
+		? execAndCapture(`mkdir -p "${syncDir}" && mv "${tmpZip}" "${zipPath}"`, process.cwd())
+		: (fse.ensureDir(syncDir).then(() => fse.move(tmpZip, zipPath, { overwrite: true }))));
 
 
 	s.stop(`${brand.success("✓")} 已打包: ${brand.primary(`${sizeMB}MB`)}`);
