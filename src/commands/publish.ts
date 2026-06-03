@@ -254,8 +254,8 @@ export const publishCommand = new Command("publish")
 				projectPath = currentProject.path;
 				projectName = currentProject.name;
 			} else {
-				printError("请指定项目名称或在项目目录中运行");
-				process.exit(1);
+				projectPath = process.cwd();
+				projectName = basename(projectPath);
 			}
 		}
 

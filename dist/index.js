@@ -17408,8 +17408,8 @@ var publishCommand = new Command("publish").description("\u53D1\u5E03\u9879\u76E
       projectPath = currentProject.path;
       projectName = currentProject.name;
     } else {
-      printError("\u8BF7\u6307\u5B9A\u9879\u76EE\u540D\u79F0\u6216\u5728\u9879\u76EE\u76EE\u5F55\u4E2D\u8FD0\u884C");
-      process.exit(1);
+      projectPath = process.cwd();
+      projectName = basename3(projectPath);
     }
   }
   const templateName = templateNameArg || projectName;
