@@ -1,4 +1,5 @@
-import { homedir, basename, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { confirm, intro, isCancel, outro, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
