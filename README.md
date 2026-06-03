@@ -58,6 +58,8 @@ p update
 | `p config` | 打开配置文件 |
 | `p update` | 更新 p |
 | `p unzip [project]` | 解压项目所有 zip 文件 |
+| `p publish [name]` | 发布项目为 GitHub 模板仓库 |
+| `p publish --save` | 发布并同时保存为本地模板 |
 | `p sync export [name]` | 导出项目为 ZIP 到 Downloads/p-sync |
 | `p sync import [file]` | 从 ZIP 导入项目（自动扫描 Downloads） |
 
@@ -150,6 +152,30 @@ p unzip my-project
 - 如果 zip 内根目录与文件名一致，自动扁平化
 - 解压成功后自动删除原 zip 文件
 - 如果目标目录已存在，会先删除再解压
+
+## Publish 命令
+
+发布项目为 GitHub 模板仓库：
+
+```bash
+# 当前项目发布（已有 remote 则直接推送）
+p publish
+p publish .
+
+# 指定项目
+p publish my-project
+
+# 指定模板名称
+p publish my-project my-template
+
+# 同时保存为本地模板
+p publish --save
+```
+
+功能：
+- 已有 git remote 的项目：直接 `git push`，保留原有提交历史
+- 无 remote 的项目：创建 GitHub 仓库并推送
+- 默认不创建本地模板，加 `--save` 才保存
 
 ## Sync 命令
 
