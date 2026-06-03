@@ -17221,7 +17221,7 @@ var noteCommand = new Command("note").alias("notes").description("\u7BA1\u7406\u
 
 // src/commands/publish.ts
 import { homedir as homedir2 } from "os";
-import { join as join10 } from "path";
+import { basename as basename3, join as join10 } from "path";
 init_esm();
 var import_fs_extra15 = __toESM(require_lib(), 1);
 var import_picocolors20 = __toESM(require_picocolors(), 1);
@@ -17386,13 +17386,7 @@ var publishCommand = new Command("publish").description("\u53D1\u5E03\u9879\u76E
   let projectName;
   if (name === ".") {
     projectPath = process.cwd();
-    const projects = listProjects();
-    const currentProject = projects.find((p2) => p2.path === projectPath);
-    if (!currentProject) {
-      printError("\u5F53\u524D\u76EE\u5F55\u4E0D\u662F p \u7BA1\u7406\u7684\u9879\u76EE");
-      process.exit(1);
-    }
-    projectName = currentProject.name;
+    projectName = basename3(projectPath);
   } else if (name) {
     const projects = listProjects();
     if (!projects.find((p2) => p2.name === name)) {
@@ -18057,7 +18051,7 @@ var runCommand = new Command("run").alias("r").description("\u5728\u5F53\u524D\u
 
 // src/commands/sync.ts
 import { homedir as homedir3 } from "os";
-import { basename as basename3, join as join11, resolve as resolve6, dirname as dirname3 } from "path";
+import { basename as basename4, join as join11, resolve as resolve6, dirname as dirname3 } from "path";
 init_esm();
 var import_adm_zip = __toESM(require_adm_zip(), 1);
 var import_fs_extra20 = __toESM(require_lib(), 1);
@@ -18159,7 +18153,7 @@ async function scanDownloadsDir() {
     const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
     zips.push({
       path: fullPath,
-      name: basename3(fullPath, ".zip"),
+      name: basename4(fullPath, ".zip"),
       size: `${sizeMB}MB`,
       mtime: new Date(Number.parseFloat(timeStr || "0") * 1000)
     });
@@ -18317,7 +18311,7 @@ async function handleImport(file) {
       printError("\u8BF7\u6307\u5B9A .zip \u6587\u4EF6");
       process.exit(1);
     }
-    const projectName = basename3(zipPath, ".zip");
+    const projectName = basename4(zipPath, ".zip");
     if (projectExists(projectName)) {
       printError(`\u9879\u76EE\u5DF2\u5B58\u5728: ${projectName}`);
       console.log(import_picocolors26.default.dim("  \u4F7F\u7528 ") + brand.primary("p open " + projectName) + import_picocolors26.default.dim(" \u6253\u5F00\u5DF2\u6709\u9879\u76EE"));
@@ -22330,7 +22324,7 @@ Ze.glob = Ze;
 
 // src/commands/unzip.ts
 var import_picocolors29 = __toESM(require_picocolors(), 1);
-import { basename as basename4, dirname as dirname4, join as join12, parse } from "path";
+import { basename as basename5, dirname as dirname4, join as join12, parse } from "path";
 var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").action(async (project) => {
   let cwd;
   if (!project || project === ".") {
@@ -22356,7 +22350,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   console.log();
   console.log(import_picocolors29.default.dim(`  \u627E\u5230 ${zipFiles.length} \u4E2A zip \u6587\u4EF6:`));
   for (const file of zipFiles) {
-    console.log(`  ${brand.secondary("\u2022")} ${basename4(file)}`);
+    console.log(`  ${brand.secondary("\u2022")} ${basename5(file)}`);
   }
   console.log();
   const s = Y2();
@@ -22364,7 +22358,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   let successCount = 0;
   const errors2 = [];
   for (const zipFile of zipFiles) {
-    const relativePath = basename4(zipFile);
+    const relativePath = basename5(zipFile);
     try {
       const zipName = parse(zipFile).name;
       const destDir = join12(dirname4(zipFile), zipName);

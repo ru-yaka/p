@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { confirm, intro, isCancel, outro, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
@@ -232,13 +232,7 @@ export const publishCommand = new Command("publish")
 
 		if (name === ".") {
 			projectPath = process.cwd();
-			const projects = listProjects();
-			const currentProject = projects.find((p) => p.path === projectPath);
-			if (!currentProject) {
-				printError("当前目录不是 p 管理的项目");
-				process.exit(1);
-			}
-			projectName = currentProject.name;
+			projectName = basename(projectPath);
 		} else if (name) {
 			const projects = listProjects();
 			if (!projects.find((p) => p.name === name)) {
