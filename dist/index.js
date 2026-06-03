@@ -17264,7 +17264,11 @@ async function publishWithRemote(projectPath, templateName) {
     return true;
   }
   await git(["commit", "-m", "Update"], projectPath);
-  const pushResult = await git(["push", "origin", "HEAD"], projectPath);
+  let pushResult = await git(["push", "origin", "HEAD"], projectPath);
+  if (!pushResult.ok) {
+    console.log(import_picocolors20.default.dim("  \u26A0 \u666E\u901A\u63A8\u9001\u5931\u8D25\uFF0C\u6B63\u5728\u5F3A\u5236\u63A8\u9001..."));
+    pushResult = await git(["push", "--force", "origin", "HEAD"], projectPath);
+  }
   if (!pushResult.ok) {
     s.stop("\u63A8\u9001\u5931\u8D25");
     printError(pushResult.output);

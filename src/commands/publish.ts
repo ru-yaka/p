@@ -63,7 +63,12 @@ async function publishWithRemote(projectPath: string, templateName: string) {
 	// 尝试 commit，如果没变化会失败，跳过即可
 	await git(["commit", "-m", "Update"], projectPath);
 
-	const pushResult = await git(["push", "origin", "HEAD"], projectPath);
+	// 先尝试普通 push，失败则 force push
+	let pushResult = await git(["push", "origin", "HEAD"], projectPath);
+	if (!pushResult.ok) {
+		console.log(pc.dim("  ⚠ 普通推送失败，正在强制推送..."));
+		pushResult = await git(["push", "--force", "origin", "HEAD"], projectPath);
+	}
 	if (!pushResult.ok) {
 		s.stop("推送失败");
 		printError(pushResult.output);
