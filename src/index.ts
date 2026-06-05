@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { addCommand } from "./commands/add";
 import { claudeCommand } from "./commands/claude";
 import { cloneCommand } from "./commands/clone";
+import { cdCommand } from "./commands/cd";
 import { configCommand } from "./commands/config";
 import { copyCommand } from "./commands/copy";
 import { deleteCommand } from "./commands/delete";
@@ -62,6 +63,7 @@ Help.prototype.formatHelp = function (cmd: any, helper: any) {
 // 注册子命令
 program.addCommand(addCommand);
 program.addCommand(claudeCommand);
+program.addCommand(cdCommand);
 program.addCommand(cloneCommand);
 program.addCommand(copyCommand);
 program.addCommand(newCommand);

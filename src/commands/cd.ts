@@ -11,9 +11,9 @@ import { liveSearch, CANCEL } from "../utils/live-search";
 import { filterProjects, projectHint } from "../utils/project-search";
 import { brand, printError, printInfo } from "../utils/ui";
 
-export const claudeCommand = new Command("claude")
-	.alias("cc")
-	.description("切换到项目目录并启动 Claude Code")
+export const cdCommand = new Command("cd")
+	.alias("c")
+	.description("切换到项目目录")
 	.argument("[name]", "项目名称或搜索关键词")
 	.action(async (name?: string) => {
 		const projects = listProjects();
@@ -103,13 +103,14 @@ export const claudeCommand = new Command("claude")
 		}
 
 		const projectPath = getProjectPath(projectName);
+		const shell = process.env.SHELL || "/bin/bash";
 
 		const s = spinner();
-		s.start(`正在启动 Claude Code: ${brand.primary(projectName)}`);
-		s.stop(`${brand.success("✓")} ${brand.primary("claude")} ${pc.dim(`— ${projectName}`)}`);
+		s.start(`切换到: ${brand.primary(projectName)}`);
+		s.stop(`${brand.success("✓")} ${brand.primary(projectName)}`);
 		console.log();
 
-		const proc = Bun.spawn(["claude", "--dangerously-skip-permissions"], {
+		const proc = Bun.spawn([shell], {
 			cwd: projectPath,
 			stdin: "inherit",
 			stdout: "inherit",
