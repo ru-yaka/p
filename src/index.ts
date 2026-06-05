@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { addCommand } from "./commands/add";
+import { claudeCommand } from "./commands/claude";
 import { cloneCommand } from "./commands/clone";
 import { configCommand } from "./commands/config";
 import { copyCommand } from "./commands/copy";
@@ -60,6 +61,7 @@ Help.prototype.formatHelp = function (cmd: any, helper: any) {
 
 // 注册子命令
 program.addCommand(addCommand);
+program.addCommand(claudeCommand);
 program.addCommand(cloneCommand);
 program.addCommand(copyCommand);
 program.addCommand(newCommand);
