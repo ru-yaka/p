@@ -16,7 +16,7 @@ import { bgOrange, brand, printError } from "../utils/ui";
 
 export const copyCommand = new Command("copy")
 	.alias("cp")
-	.description("复制目录作为新项目到 p 管理")
+	.description("全量复制目录作为新项目到 p 管理")
 	.argument("<path>", "要复制的目录路径（支持相对/绝对路径）")
 	.argument("[name]", "自定义项目名称（默认从路径推断）")
 	.action(async (inputPath: string, customName?: string) => {

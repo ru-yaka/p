@@ -15774,7 +15774,7 @@ import { basename, resolve as resolve3 } from "path";
 init_esm();
 var import_fs_extra6 = __toESM(require_lib(), 1);
 var import_picocolors12 = __toESM(require_picocolors(), 1);
-var copyCommand = new Command("copy").alias("cp").description("\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
+var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
   const config = loadConfig();
   const sourcePath = resolve3(inputPath);
   if (!import_fs_extra6.default.existsSync(sourcePath)) {
