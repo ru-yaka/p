@@ -15875,7 +15875,7 @@ var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590
   const shouldTrash = await ye({
     message: `\u662F\u5426\u5C06\u539F\u59CB\u76EE\u5F55\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F
   ${import_picocolors12.default.underline(sourcePath)}`,
-    initialValue: false
+    initialValue: true
   });
   if (!pD(shouldTrash) && shouldTrash) {
     const trashSpinner = Y2();

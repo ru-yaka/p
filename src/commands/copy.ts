@@ -129,7 +129,7 @@ export const copyCommand = new Command("copy")
 			// 询问是否移入回收站
 			const shouldTrash = await confirm({
 				message: `是否将原始目录移入回收站？\n  ${pc.underline(sourcePath)}`,
-				initialValue: false,
+				initialValue: true,
 			});
 
 			if (!isCancel(shouldTrash) && shouldTrash) {
