@@ -14735,6 +14735,26 @@ async function commandExists(command) {
     return false;
   }
 }
+async function moveToTrash(path) {
+  if (process.platform === "darwin") {
+    const proc = Bun.spawn(["osascript", "-e", `tell application "Finder" to move POSIX file "${path}" to trash`], {
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    return await proc.exited === 0;
+  }
+  const trashCmds = ["gio trash", "trash-put", "trash"];
+  for (const cmd of trashCmds) {
+    if (await commandExists(cmd === "gio trash" ? "gio" : cmd === "trash-put" ? "trash-put" : "trash")) {
+      const args = cmd === "gio trash" ? ["trash", path] : [path];
+      const bin = cmd === "gio trash" ? "gio" : cmd;
+      const proc = Bun.spawn([bin, ...args], {
+        stdio: ["pipe", "pipe", "pipe"]
+      });
+      return await proc.exited === 0;
+    }
+  }
+  return false;
+}
 
 // src/core/template.ts
 async function getLocalTemplates() {
@@ -15851,6 +15871,22 @@ var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590
     console.log();
     console.log(import_picocolors12.default.dim("  \u9879\u76EE\u8DEF\u5F84: ") + import_picocolors12.default.underline(targetPath));
     console.log();
+  }
+  const shouldTrash = await ye({
+    message: `\u662F\u5426\u5C06\u539F\u59CB\u76EE\u5F55\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F
+  ${import_picocolors12.default.underline(sourcePath)}`,
+    initialValue: false
+  });
+  if (!pD(shouldTrash) && shouldTrash) {
+    const trashSpinner = Y2();
+    trashSpinner.start("\u6B63\u5728\u79FB\u5165\u56DE\u6536\u7AD9...");
+    const success = await moveToTrash(sourcePath);
+    if (success) {
+      trashSpinner.stop(`${brand.success("\u2713")} \u539F\u59CB\u76EE\u5F55\u5DF2\u79FB\u5165\u56DE\u6536\u7AD9`);
+    } else {
+      trashSpinner.stop("\u79FB\u5165\u56DE\u6536\u7AD9\u5931\u8D25");
+      console.log(import_picocolors12.default.dim("  \u8BF7\u624B\u52A8\u5220\u9664: ") + import_picocolors12.default.underline(sourcePath));
+    }
   }
   Se(brand.success("\u2728 \u9879\u76EE\u590D\u5236\u6210\u529F\uFF01"));
 });

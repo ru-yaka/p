@@ -1,5 +1,5 @@
 import { basename, resolve } from "node:path";
-import { intro, isCancel, outro, spinner, text } from "@clack/prompts";
+import { confirm, intro, isCancel, outro, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
 import pc from "picocolors";
@@ -11,7 +11,7 @@ import {
 	saveProjectMeta,
 	validateProjectNameFormat,
 } from "../core/project";
-import { execAndCapture, openWithIDE } from "../utils/shell";
+import { execAndCapture, moveToTrash, openWithIDE } from "../utils/shell";
 import { bgOrange, brand, printError } from "../utils/ui";
 
 export const copyCommand = new Command("copy")
@@ -126,5 +126,24 @@ export const copyCommand = new Command("copy")
 			console.log();
 		}
 
-		outro(brand.success("✨ 项目复制成功！"));
+			// 询问是否移入回收站
+			const shouldTrash = await confirm({
+				message: `是否将原始目录移入回收站？\n  ${pc.underline(sourcePath)}`,
+				initialValue: false,
+			});
+
+			if (!isCancel(shouldTrash) && shouldTrash) {
+				const trashSpinner = spinner();
+				trashSpinner.start("正在移入回收站...");
+
+				const success = await moveToTrash(sourcePath);
+				if (success) {
+					trashSpinner.stop(`${brand.success("✓")} 原始目录已移入回收站`);
+				} else {
+					trashSpinner.stop("移入回收站失败");
+					console.log(pc.dim("  请手动删除: ") + pc.underline(sourcePath));
+				}
+			}
+
+			outro(brand.success("✨ 项目复制成功！"));
 	});

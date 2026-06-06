@@ -197,3 +197,29 @@ export async function commandExists(command: string): Promise<boolean> {
 		return false;
 	}
 }
+
+/**
+ * 移动目录到系统回收站（macOS / Linux）
+ */
+export async function moveToTrash(path: string): Promise<boolean> {
+	if (process.platform === "darwin") {
+		const proc = Bun.spawn(["osascript", "-e", `tell application "Finder" to move POSIX file "${path}" to trash`], {
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+		return (await proc.exited) === 0;
+	}
+
+	const trashCmds = ["gio trash", "trash-put", "trash"];
+	for (const cmd of trashCmds) {
+		if (await commandExists(cmd === "gio trash" ? "gio" : cmd === "trash-put" ? "trash-put" : "trash")) {
+			const args = cmd === "gio trash" ? ["trash", path] : [path];
+			const bin = cmd === "gio trash" ? "gio" : cmd;
+			const proc = Bun.spawn([bin, ...args], {
+				stdio: ["pipe", "pipe", "pipe"],
+			});
+			return (await proc.exited) === 0;
+		}
+	}
+
+	return false;
+}
