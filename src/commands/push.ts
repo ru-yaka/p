@@ -47,15 +47,9 @@ export const pushCommand = new Command("push")
 				}
 			}
 		} else {
-			const currentDir = process.cwd();
-			const currentProject = listProjects().find((p) => p.path === currentDir);
-			if (currentProject) {
-				projectPath = currentProject.path;
-				projectName = currentProject.name;
-			} else {
-				printError("当前目录不是 p 管理的项目，请指定项目名");
-				process.exit(1);
-			}
+			projectPath = process.cwd();
+			const currentProject = listProjects().find((p) => p.path === projectPath);
+			projectName = currentProject?.name || basename(projectPath);
 		}
 
 		// 检查 remote

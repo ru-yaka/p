@@ -17679,15 +17679,9 @@ var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E7
       }
     }
   } else {
-    const currentDir = process.cwd();
-    const currentProject = listProjects().find((p2) => p2.path === currentDir);
-    if (currentProject) {
-      projectPath = currentProject.path;
-      projectName = currentProject.name;
-    } else {
-      printError("\u5F53\u524D\u76EE\u5F55\u4E0D\u662F p \u7BA1\u7406\u7684\u9879\u76EE\uFF0C\u8BF7\u6307\u5B9A\u9879\u76EE\u540D");
-      process.exit(1);
-    }
+    projectPath = process.cwd();
+    const currentProject = listProjects().find((p2) => p2.path === projectPath);
+    projectName = currentProject?.name || basename4(projectPath);
   }
   const remoteResult = await execAndCapture("git remote get-url origin", projectPath);
   if (!remoteResult.success) {
