@@ -17449,17 +17449,31 @@ var import_picocolors22 = __toESM(require_picocolors(), 1);
 var import_fs_extra15 = __toESM(require_lib(), 1);
 import { join as join10 } from "path";
 async function removeNestedGitDirs(cwd) {
-  const result = await execAndCapture("find . -mindepth 2 -name '.git' -type d", cwd);
-  if (!result.success)
-    return 0;
-  const dirs = result.output.trim().split(`
+  let count = 0;
+  const findResult = await execAndCapture("find . -mindepth 2 -name '.git' -type d", cwd);
+  if (findResult.success) {
+    const dirs = findResult.output.trim().split(`
 `).filter(Boolean);
-  for (const d3 of dirs) {
-    const parentDir = d3.replace(/^\.\//, "").replace(/\/\.git$/, "");
-    await import_fs_extra15.default.remove(join10(cwd, d3));
-    await execAndCapture(`git rm --cached "${parentDir}" 2>/dev/null`, cwd);
+    for (const d3 of dirs) {
+      const parentDir = d3.replace(/^\.\//, "").replace(/\/\.git$/, "");
+      await import_fs_extra15.default.remove(join10(cwd, d3));
+      await execAndCapture(`git rm --cached "${parentDir}" 2>/dev/null`, cwd);
+      count++;
+    }
   }
-  return dirs.length;
+  const lsResult = await execAndCapture("git ls-files -s | grep '^160000'", cwd);
+  if (lsResult.success) {
+    const gitlinks = lsResult.output.trim().split(`
+`).filter(Boolean);
+    for (const line of gitlinks) {
+      const path = line.split("\t")[1];
+      if (path) {
+        await execAndCapture(`git rm --cached "${path}" 2>/dev/null`, cwd);
+        count++;
+      }
+    }
+  }
+  return count;
 }
 
 // src/commands/publish.ts
