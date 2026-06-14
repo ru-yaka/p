@@ -17455,7 +17455,9 @@ async function removeNestedGitDirs(cwd) {
   const dirs = result.output.trim().split(`
 `).filter(Boolean);
   for (const d3 of dirs) {
+    const parentDir = d3.replace(/^\.\//, "").replace(/\/\.git$/, "");
     await import_fs_extra15.default.remove(join10(cwd, d3));
+    await execAndCapture(`git rm --cached "${parentDir}" 2>/dev/null`, cwd);
   }
   return dirs.length;
 }
