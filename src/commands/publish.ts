@@ -7,6 +7,7 @@ import pc from "picocolors";
 
 import { listProjects, getProjectPath, saveProjectMeta } from "../core/project";
 import { markTemplatePublished } from "../core/template";
+import { removeNestedGitDirs } from "../utils/git";
 import { collectProjectFiles, copyFiles } from "../utils/files";
 import { liveSearch, CANCEL } from "../utils/live-search";
 import { filterProjects } from "../utils/project-search";
@@ -52,6 +53,11 @@ async function publishWithRemote(projectPath: string, templateName: string) {
 
 	const s = spinner();
 	s.start("正在推送...");
+
+	const removed = await removeNestedGitDirs(projectPath);
+	if (removed > 0) {
+		console.log(pc.dim(`  已清理 ${removed} 个嵌套 .git 目录`));
+	}
 
 	const addResult = await git(["add", "-A"], projectPath);
 	if (!addResult.ok) {

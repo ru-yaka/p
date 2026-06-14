@@ -7,9 +7,10 @@ import {
 	getProjectPath,
 	listProjects,
 } from "../core/project";
+import { removeNestedGitDirs } from "../utils/git";
 import { execAndCapture } from "../utils/shell";
 import { filterProjects } from "../utils/project-search";
-import { bgOrange, brand, printError, printInfo } from "../utils/ui";
+import { bgOrange, brand, printError } from "../utils/ui";
 
 async function git(args: string[], cwd: string): Promise<{ ok: boolean; output: string }> {
 	const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -64,37 +65,47 @@ export const pushCommand = new Command("push")
 		console.log(pc.dim("  remote:   ") + pc.underline(remoteUrl));
 		console.log();
 
+		// 清理嵌套 .git 目录
+		const removed = await removeNestedGitDirs(projectPath);
+		if (removed > 0) {
+			console.log(pc.dim(`  已清理 ${removed} 个嵌套 .git 目录`));
+		}
+
 		// git add -A
-		const s = spinner();
-		s.start("正在暂存文件...");
+		const s1 = spinner();
+		s1.start("正在暂存文件...");
 
 		const addResult = await git(["add", "-A"], projectPath);
 		if (!addResult.ok) {
-			s.stop("暂存失败");
+			s1.stop("暂存失败");
 			printError(addResult.output);
 			process.exit(1);
 		}
+		s1.stop(`${brand.success("✓")} 已暂存`);
 
 		// git commit（无变更则跳过）
-		s.start("正在提交...");
+		const s2 = spinner();
+		s2.start("正在提交...");
 		const commitResult = await git(["commit", "-m", "update"], projectPath);
 
 		if (!commitResult.ok && !commitResult.output.includes("nothing to commit")) {
-			s.stop("提交失败");
+			s2.stop("提交失败");
 			printError(commitResult.output);
 			process.exit(1);
 		}
 
 		const nothingToCommit = commitResult.output.includes("nothing to commit");
+		s2.stop(nothingToCommit ? `${brand.success("✓")} 没有变更需要提交` : `${brand.success("✓")} 已提交`);
 
 		if (nothingToCommit) {
-			s.stop(`${brand.success("✓")} 没有变更需要提交`);
-		} else {
-			s.stop(`${brand.success("✓")} 已提交`);
+			console.log();
+			outro(brand.success("无需推送"));
+			return;
 		}
 
 		// git push
-		s.start("正在推送...");
+		const s3 = spinner();
+		s3.start("正在推送...");
 
 		let pushResult = await git(["push", "origin", "HEAD"], projectPath);
 		if (!pushResult.ok) {
@@ -103,7 +114,7 @@ export const pushCommand = new Command("push")
 		}
 
 		if (!pushResult.ok) {
-			s.stop("推送失败");
+			s3.stop("推送失败");
 			printError(pushResult.output);
 			process.exit(1);
 		}
@@ -111,7 +122,7 @@ export const pushCommand = new Command("push")
 		const branchResult = await git(["branch", "--show-current"], projectPath);
 		const branch = branchResult.output.trim();
 
-		s.stop(`${brand.success("✓")} 已推送到远程 (${branch})`);
+		s3.stop(`${brand.success("✓")} 已推送到远程 (${branch})`);
 		console.log();
 		outro(brand.success("✨ 推送成功"));
 	});
