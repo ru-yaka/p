@@ -20,9 +20,43 @@ async function git(args: string[], cwd: string): Promise<{ ok: boolean; output: 
 	return { ok: code === 0, output: err || out };
 }
 
+async function ensureRemote(projectPath: string, projectName: string): Promise<string> {
+	const existing = await execAndCapture("git remote get-url origin", projectPath);
+	if (existing.success) return existing.output.trim();
+
+	// 无 remote → 创建 GitHub 私有仓库
+	const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
+	const owner = whoami.success ? whoami.output.trim() : "";
+	if (!owner) {
+		printError("请先安装并登录 GitHub CLI (gh)");
+		process.exit(1);
+	}
+
+	const s = spinner();
+	s.start(`正在创建私有仓库 ${owner}/${projectName}...`);
+
+	const proc = Bun.spawn(
+		["gh", "repo", "create", projectName, "--private", "--description", `p: ${projectName}`],
+		{ cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
+	);
+	await proc.exited;
+	const stdout = await new Response(proc.stdout).text();
+	const stderr = await new Response(proc.stderr).text();
+
+	const urlMatch = (stdout + stderr).match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+	const repoOwner = urlMatch ? urlMatch[1] : owner;
+	const cloneUrl = `https://github.com/${repoOwner}/${projectName}.git`;
+
+	await git(["remote", "add", "origin", cloneUrl], projectPath);
+
+	s.stop(`${brand.success("✓")} 已创建私有仓库: ${brand.primary(`${repoOwner}/${projectName}`)}`);
+	console.log();
+	return cloneUrl;
+}
+
 export const pushCommand = new Command("push")
 	.alias("pu")
-	.description("提交并推送项目代码到 remote origin")
+	.description("提交并推送项目代码到 remote origin（无 remote 则自动创建私有仓库）")
 	.argument("[name]", "项目名称或 . 表示当前目录")
 	.action(async (name?: string) => {
 		let projectPath: string;
@@ -53,15 +87,10 @@ export const pushCommand = new Command("push")
 			projectName = currentProject?.name || basename(projectPath);
 		}
 
-		// 检查 remote
-		const remoteResult = await execAndCapture("git remote get-url origin", projectPath);
-		if (!remoteResult.success) {
-			printError(`项目 ${brand.primary(projectName)} 没有 remote origin`);
-			process.exit(1);
-		}
-
-		const remoteUrl = remoteResult.output.trim();
 		intro(bgOrange(` Push · ${projectName} `));
+
+		// 检查/创建 remote
+		const remoteUrl = await ensureRemote(projectPath, projectName);
 		console.log(pc.dim("  remote:   ") + pc.underline(remoteUrl));
 		console.log();
 

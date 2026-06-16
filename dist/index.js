@@ -17693,7 +17693,31 @@ async function git2(args, cwd) {
   const err = await new Response(proc.stderr).text();
   return { ok: code === 0, output: err || out };
 }
-var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E76\u63A8\u9001\u9879\u76EE\u4EE3\u7801\u5230 remote origin").argument("[name]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
+async function ensureRemote(projectPath, projectName) {
+  const existing = await execAndCapture("git remote get-url origin", projectPath);
+  if (existing.success)
+    return existing.output.trim();
+  const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
+  const owner = whoami.success ? whoami.output.trim() : "";
+  if (!owner) {
+    printError("\u8BF7\u5148\u5B89\u88C5\u5E76\u767B\u5F55 GitHub CLI (gh)");
+    process.exit(1);
+  }
+  const s = Y2();
+  s.start(`\u6B63\u5728\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93 ${owner}/${projectName}...`);
+  const proc = Bun.spawn(["gh", "repo", "create", projectName, "--private", "--description", `p: ${projectName}`], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" });
+  await proc.exited;
+  const stdout = await new Response(proc.stdout).text();
+  const stderr = await new Response(proc.stderr).text();
+  const urlMatch = (stdout + stderr).match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+  const repoOwner = urlMatch ? urlMatch[1] : owner;
+  const cloneUrl = `https://github.com/${repoOwner}/${projectName}.git`;
+  await git2(["remote", "add", "origin", cloneUrl], projectPath);
+  s.stop(`${brand.success("\u2713")} \u5DF2\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93: ${brand.primary(`${repoOwner}/${projectName}`)}`);
+  console.log();
+  return cloneUrl;
+}
+var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E76\u63A8\u9001\u9879\u76EE\u4EE3\u7801\u5230 remote origin\uFF08\u65E0 remote \u5219\u81EA\u52A8\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93\uFF09").argument("[name]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
   let projectPath;
   let projectName;
   if (name === ".") {
@@ -17720,13 +17744,8 @@ var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E7
     const currentProject = listProjects().find((p2) => p2.path === projectPath);
     projectName = currentProject?.name || basename4(projectPath);
   }
-  const remoteResult = await execAndCapture("git remote get-url origin", projectPath);
-  if (!remoteResult.success) {
-    printError(`\u9879\u76EE ${brand.primary(projectName)} \u6CA1\u6709 remote origin`);
-    process.exit(1);
-  }
-  const remoteUrl = remoteResult.output.trim();
   Ie(bgOrange(` Push \xB7 ${projectName} `));
+  const remoteUrl = await ensureRemote(projectPath, projectName);
   console.log(import_picocolors23.default.dim("  remote:   ") + import_picocolors23.default.underline(remoteUrl));
   console.log();
   const removed = await removeNestedGitDirs(projectPath);
