@@ -1,5 +1,11 @@
 # p
 
+## 1.15.1
+
+### Patch Changes
+
+- 修复 `p push` 在无新变更时因 pre-commit hook (如 lefthook) 报错而中断的问题：改用 `git diff --cached --quiet` 检测 staged 变更，无变更则跳过 commit 步骤；并新增未推送 commits 检测，仅在已与远程同步时才提示"无需推送"。
+
 ## 1.15.0
 
 ### Minor Changes

@@ -17803,17 +17803,25 @@ var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E7
     process.exit(1);
   }
   s1.stop(`${brand.success("\u2713")} \u5DF2\u6682\u5B58`);
-  const s2 = Y2();
-  s2.start("\u6B63\u5728\u63D0\u4EA4...");
-  const commitResult = await git2(["commit", "-m", "update"], projectPath);
-  if (!commitResult.ok && !commitResult.output.includes("nothing to commit")) {
-    s2.stop("\u63D0\u4EA4\u5931\u8D25");
-    printError(commitResult.output);
-    process.exit(1);
+  const stagedCheck = await git2(["diff", "--cached", "--quiet"], projectPath);
+  const hasStaged = !stagedCheck.ok;
+  if (hasStaged) {
+    const s2 = Y2();
+    s2.start("\u6B63\u5728\u63D0\u4EA4...");
+    const commitResult = await git2(["commit", "-m", "update"], projectPath);
+    if (!commitResult.ok) {
+      s2.stop("\u63D0\u4EA4\u5931\u8D25");
+      printError(commitResult.output);
+      process.exit(1);
+    }
+    s2.stop(`${brand.success("\u2713")} \u5DF2\u63D0\u4EA4`);
+  } else {
+    console.log(import_picocolors23.default.dim("  \u6CA1\u6709\u53D8\u66F4\u9700\u8981\u63D0\u4EA4"));
   }
-  const nothingToCommit = commitResult.output.includes("nothing to commit");
-  s2.stop(nothingToCommit ? `${brand.success("\u2713")} \u6CA1\u6709\u53D8\u66F4\u9700\u8981\u63D0\u4EA4` : `${brand.success("\u2713")} \u5DF2\u63D0\u4EA4`);
-  if (nothingToCommit) {
+  const aheadCheck = await git2(["rev-list", "--count", "@{u}..HEAD"], projectPath);
+  const hasUpstream = aheadCheck.ok;
+  const aheadCount = hasUpstream ? Number.parseInt(aheadCheck.output.trim(), 10) || 0 : 0;
+  if (!hasStaged && hasUpstream && aheadCount === 0) {
     console.log();
     Se(brand.success("\u65E0\u9700\u63A8\u9001"));
     return;

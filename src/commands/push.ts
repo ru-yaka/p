@@ -112,21 +112,36 @@ export const pushCommand = new Command("push")
 		}
 		s1.stop(`${brand.success("✓")} 已暂存`);
 
-		// git commit（无变更则跳过）
-		const s2 = spinner();
-		s2.start("正在提交...");
-		const commitResult = await git(["commit", "-m", "update"], projectPath);
+		// 检查是否有 staged 变更，避免无变更时触发 pre-commit hook
+		const stagedCheck = await git(["diff", "--cached", "--quiet"], projectPath);
+		const hasStaged = !stagedCheck.ok;
 
-		if (!commitResult.ok && !commitResult.output.includes("nothing to commit")) {
-			s2.stop("提交失败");
-			printError(commitResult.output);
-			process.exit(1);
+		if (hasStaged) {
+			const s2 = spinner();
+			s2.start("正在提交...");
+			const commitResult = await git(["commit", "-m", "update"], projectPath);
+			if (!commitResult.ok) {
+				s2.stop("提交失败");
+				printError(commitResult.output);
+				process.exit(1);
+			}
+			s2.stop(`${brand.success("✓")} 已提交`);
+		} else {
+			console.log(pc.dim("  没有变更需要提交"));
 		}
 
-		const nothingToCommit = commitResult.output.includes("nothing to commit");
-		s2.stop(nothingToCommit ? `${brand.success("✓")} 没有变更需要提交` : `${brand.success("✓")} 已提交`);
+		// 检查本地是否领先远程（有未推送的 commits）
+		const aheadCheck = await git(
+			["rev-list", "--count", "@{u}..HEAD"],
+			projectPath,
+		);
+		const hasUpstream = aheadCheck.ok;
+		const aheadCount = hasUpstream
+			? Number.parseInt(aheadCheck.output.trim(), 10) || 0
+			: 0;
 
-		if (nothingToCommit) {
+		// 无新变更 + 已有 upstream 且远程已同步 → 无需推送
+		if (!hasStaged && hasUpstream && aheadCount === 0) {
 			console.log();
 			outro(brand.success("无需推送"));
 			return;
