@@ -49,6 +49,7 @@ p update
 | `p open :<ide>` | 快速用指定 IDE 打开当前目录 |
 | `p rename [old] [new]` | 重命名项目 |
 | `p delete <name>` | 删除项目 |
+| `p delete <a> <b> <c>` | 批量删除多个项目（支持混合通配符） |
 | `p delete` | 多选批量删除 |
 | `p delete <pattern*>` | 通配符匹配删除（如 `p delete test-*`） |
 | `p note <project> <text>` | 设置项目备注 |
@@ -254,6 +255,10 @@ p delete
 # 通配符匹配
 p delete heroui-*
 p delete *-test
+
+# 一次性删除多个项目（支持混合通配符）
+p delete alpha beta gamma
+p delete api-* web-* legacy
 ```
 
 ## 模板管理

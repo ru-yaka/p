@@ -1,5 +1,11 @@
 # p
 
+## 1.15.0
+
+### Minor Changes
+
+- 支持 `p rm`/`p delete` 一次性传入多个项目名进行批量删除，每个参数可以是项目名或通配符模式（如 `p rm alpha beta api-*`）。
+
 ## 1.6.0
 
 - unzip 支持 -f/--flatten 解解散 zip 内的根目录

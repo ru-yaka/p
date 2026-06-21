@@ -151,8 +151,9 @@ export const deleteCommand = new Command("delete")
 	.alias("d")
 	.alias("rm")
 	.description("删除项目")
-	.argument("[name]", "项目名称、通配符模式，或 'all'")
-	.action(async (name?: string) => {
+	.argument("[names...]", "项目名称、通配符模式，或 'all'（支持多个）")
+	.action(async (names?: string[]) => {
+		const args = names ?? [];
 		const projects = listProjects();
 
 		if (projects.length === 0) {
@@ -163,7 +164,7 @@ export const deleteCommand = new Command("delete")
 		}
 
 		// 处理 delete all 命令
-		if (name === "all") {
+		if (args.length === 1 && args[0] === "all") {
 			intro(bgOrange(" 删除所有项目 "));
 
 			console.log();
@@ -259,8 +260,9 @@ export const deleteCommand = new Command("delete")
 			return;
 		}
 
-		// 通配符模式
-		if (name && name.includes("*")) {
+		// 通配符模式（单参数）
+		if (args.length === 1 && args[0].includes("*")) {
+			const name = args[0];
 			let matched = wildcardMatch(projects, name);
 
 			if (matched.length === 0) {
@@ -302,7 +304,7 @@ export const deleteCommand = new Command("delete")
 		}
 
 		// 无参数 → 多选模式
-		if (!name) {
+		if (args.length === 0) {
 			intro(bgOrange(" 批量删除 "));
 
 			const result = await multiselect({
@@ -324,7 +326,57 @@ export const deleteCommand = new Command("delete")
 			return;
 		}
 
-		// 搜索删除
+		// 多参数 → 批量删除（支持混合项目名、通配符）
+		if (args.length > 1) {
+			intro(bgOrange(" 批量删除 "));
+
+			const matched: string[] = [];
+			const notFound: string[] = [];
+			const seen = new Set<string>();
+
+			for (const arg of args) {
+				let current: string[] = [];
+
+				if (arg.includes("*")) {
+					current = wildcardMatch(projects, arg);
+				} else if (projectExists(arg)) {
+					current = [arg];
+				} else {
+					const filtered = filterProjects(projects, arg);
+					current = filtered.map((p) => p.name);
+				}
+
+				if (current.length === 0) {
+					notFound.push(arg);
+					continue;
+				}
+
+				for (const n of current) {
+					if (!seen.has(n)) {
+						seen.add(n);
+						matched.push(n);
+					}
+				}
+			}
+
+			if (notFound.length > 0) {
+				for (const n of notFound) {
+					console.log(`  ${brand.error("✗")} ${n} - 项目不存在`);
+				}
+				console.log();
+			}
+
+			if (matched.length === 0) {
+				printError("没有匹配的项目");
+				process.exit(1);
+			}
+
+			await batchDelete(matched);
+			return;
+		}
+
+		// 单参数搜索删除
+		const name = args[0];
 		let projectNames: string[];
 
 		if (projectExists(name)) {
