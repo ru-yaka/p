@@ -48,6 +48,7 @@ p update
 | `p open . -i <ide>` | 用指定 IDE 打开当前目录 |
 | `p open :<ide>` | 快速用指定 IDE 打开当前目录 |
 | `p rename [old] [new]` | 重命名项目 |
+| `p path <name>` (`p p`) | 打印项目绝对路径（支持模糊匹配） |
 | `p delete <name>` | 删除项目 |
 | `p delete <a> <b> <c>` | 批量删除多个项目（支持混合通配符） |
 | `p delete` | 多选批量删除 |
@@ -134,9 +135,28 @@ p mv old-name new-name
 - 本地目录重命名有 5 秒超时，超时提示关闭 IDE 窗口
 - 自动更新元数据
 
-## Unzip 命令
+## Path 命令
 
-解压项目中所有 zip 文件：
+打印项目绝对路径，常用于 shell 替换：
+
+```bash
+p p <name>           # 别名 p, pp
+p path <name>        # 全名
+
+# 支持模糊匹配（唯一匹配时直接输出）
+p p api              # 匹配到 api-server
+
+# 用于 shell 命令
+cd $(p p api)
+code $(p p web)
+
+# 多匹配时报错并列出候选
+p p s                # ✗ 匹配到 2 个项目，请精确指定
+```
+
+输出纯路径（无颜色），便于 `$(...)` 替换；错误信息走 stderr，不污染 stdout。
+
+## Unzip 命令
 
 ```bash
 # 当前目录

@@ -1,5 +1,11 @@
 # p
 
+## 1.16.0
+
+### Minor Changes
+
+- 新增 `p path <name>` 命令（别名 `p p`、`p pp`），打印项目绝对路径，支持模糊匹配。输出纯路径便于 shell 替换（如 `cd $(p p foo)`），错误走 stderr 不污染 stdout。
+
 ## 1.15.1
 
 ### Patch Changes
