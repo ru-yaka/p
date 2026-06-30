@@ -1,5 +1,11 @@
 # p
 
+## 1.18.0
+
+### Minor Changes
+
+- `p cp` 默认行为改为自动将原始目录移入回收站（不再询问），需要保留原始目录时加 `--no-trash`。`--trash` flag 因此移除。
+
 ## 1.17.0
 
 ### Minor Changes

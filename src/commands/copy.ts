@@ -1,5 +1,5 @@
 import { basename, resolve } from "node:path";
-import { confirm, intro, isCancel, outro, spinner, text } from "@clack/prompts";
+import { intro, isCancel, outro, spinner, text } from "@clack/prompts";
 import { Command } from "commander";
 import fse from "fs-extra";
 import pc from "picocolors";
@@ -31,8 +31,7 @@ export const copyCommand = new Command("copy")
 	.argument("<paths>", "要复制的目录路径（多个用逗号分隔）")
 	.argument("[names]", "自定义项目名（多个用逗号分隔，数量需与路径对应）")
 	.option("-o, --open", "复制完成后用 IDE 打开项目")
-	.option("-t, --trash", "将原始目录移入回收站")
-	.option("--no-trash", "不移入原始目录到回收站")
+	.option("--no-trash", "不移入原始目录到回收站（默认会移入）")
 	.action(async (inputPaths: string, inputNames: string | undefined, options: CopyOptions) => {
 		const config = loadConfig();
 
@@ -170,29 +169,8 @@ export const copyCommand = new Command("copy")
 			}
 		}
 
-		// 回收站：flag 优先，否则询问
-		let doTrash: boolean;
-		if (options.trash === true) {
-			doTrash = true;
-		} else if (options.trash === false) {
-			doTrash = false;
-		} else {
-			const message = isMultiple
-				? `是否将 ${brand.primary(String(targets.length))} 个原始目录都移入回收站？`
-				: `是否将原始目录移入回收站？\n  ${pc.underline(targets[0].sourcePath)}`;
-
-			const shouldTrash = await confirm({
-				message,
-				initialValue: true,
-			});
-
-			if (isCancel(shouldTrash)) {
-				outro(pc.dim("已取消"));
-				process.exit(0);
-			}
-
-			doTrash = shouldTrash as boolean;
-		}
+		// 回收站：默认移入，--no-trash 跳过
+		const doTrash = options.trash !== false;
 
 		if (doTrash) {
 			for (const t of targets) {

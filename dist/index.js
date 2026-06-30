@@ -15794,7 +15794,7 @@ import { basename, resolve as resolve3 } from "path";
 init_esm();
 var import_fs_extra6 = __toESM(require_lib(), 1);
 var import_picocolors12 = __toESM(require_picocolors(), 1);
-var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406\uFF08\u652F\u6301\u9017\u53F7\u5206\u9694\u591A\u8DEF\u5F84\uFF09").argument("<paths>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u591A\u4E2A\u7528\u9017\u53F7\u5206\u9694\uFF09").argument("[names]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\uFF08\u591A\u4E2A\u7528\u9017\u53F7\u5206\u9694\uFF0C\u6570\u91CF\u9700\u4E0E\u8DEF\u5F84\u5BF9\u5E94\uFF09").option("-o, --open", "\u590D\u5236\u5B8C\u6210\u540E\u7528 IDE \u6253\u5F00\u9879\u76EE").option("-t, --trash", "\u5C06\u539F\u59CB\u76EE\u5F55\u79FB\u5165\u56DE\u6536\u7AD9").option("--no-trash", "\u4E0D\u79FB\u5165\u539F\u59CB\u76EE\u5F55\u5230\u56DE\u6536\u7AD9").action(async (inputPaths, inputNames, options) => {
+var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406\uFF08\u652F\u6301\u9017\u53F7\u5206\u9694\u591A\u8DEF\u5F84\uFF09").argument("<paths>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u591A\u4E2A\u7528\u9017\u53F7\u5206\u9694\uFF09").argument("[names]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\uFF08\u591A\u4E2A\u7528\u9017\u53F7\u5206\u9694\uFF0C\u6570\u91CF\u9700\u4E0E\u8DEF\u5F84\u5BF9\u5E94\uFF09").option("-o, --open", "\u590D\u5236\u5B8C\u6210\u540E\u7528 IDE \u6253\u5F00\u9879\u76EE").option("--no-trash", "\u4E0D\u79FB\u5165\u539F\u59CB\u76EE\u5F55\u5230\u56DE\u6536\u7AD9\uFF08\u9ED8\u8BA4\u4F1A\u79FB\u5165\uFF09").action(async (inputPaths, inputNames, options) => {
   const config = loadConfig();
   const paths = inputPaths.split(",").map((s) => s.trim()).filter(Boolean);
   const names = inputNames ? inputNames.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -15891,24 +15891,7 @@ var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590
       }
     }
   }
-  let doTrash;
-  if (options.trash === true) {
-    doTrash = true;
-  } else if (options.trash === false) {
-    doTrash = false;
-  } else {
-    const message = isMultiple ? `\u662F\u5426\u5C06 ${brand.primary(String(targets.length))} \u4E2A\u539F\u59CB\u76EE\u5F55\u90FD\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F` : `\u662F\u5426\u5C06\u539F\u59CB\u76EE\u5F55\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F
-  ${import_picocolors12.default.underline(targets[0].sourcePath)}`;
-    const shouldTrash = await ye({
-      message,
-      initialValue: true
-    });
-    if (pD(shouldTrash)) {
-      Se(import_picocolors12.default.dim("\u5DF2\u53D6\u6D88"));
-      process.exit(0);
-    }
-    doTrash = shouldTrash;
-  }
+  const doTrash = options.trash !== false;
   if (doTrash) {
     for (const t of targets) {
       const trashSpinner = Y2();
