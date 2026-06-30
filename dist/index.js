@@ -15794,98 +15794,132 @@ import { basename, resolve as resolve3 } from "path";
 init_esm();
 var import_fs_extra6 = __toESM(require_lib(), 1);
 var import_picocolors12 = __toESM(require_picocolors(), 1);
-var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406").argument("<path>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u652F\u6301\u76F8\u5BF9/\u7EDD\u5BF9\u8DEF\u5F84\uFF09").argument("[name]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\u79F0\uFF08\u9ED8\u8BA4\u4ECE\u8DEF\u5F84\u63A8\u65AD\uFF09").action(async (inputPath, customName) => {
+var copyCommand = new Command("copy").alias("cp").description("\u5168\u91CF\u590D\u5236\u76EE\u5F55\u4F5C\u4E3A\u65B0\u9879\u76EE\u5230 p \u7BA1\u7406\uFF08\u652F\u6301\u9017\u53F7\u5206\u9694\u591A\u8DEF\u5F84\uFF09").argument("<paths>", "\u8981\u590D\u5236\u7684\u76EE\u5F55\u8DEF\u5F84\uFF08\u591A\u4E2A\u7528\u9017\u53F7\u5206\u9694\uFF09").argument("[names]", "\u81EA\u5B9A\u4E49\u9879\u76EE\u540D\uFF08\u591A\u4E2A\u7528\u9017\u53F7\u5206\u9694\uFF0C\u6570\u91CF\u9700\u4E0E\u8DEF\u5F84\u5BF9\u5E94\uFF09").option("-o, --open", "\u590D\u5236\u5B8C\u6210\u540E\u7528 IDE \u6253\u5F00\u9879\u76EE").option("-t, --trash", "\u5C06\u539F\u59CB\u76EE\u5F55\u79FB\u5165\u56DE\u6536\u7AD9").option("--no-trash", "\u4E0D\u79FB\u5165\u539F\u59CB\u76EE\u5F55\u5230\u56DE\u6536\u7AD9").action(async (inputPaths, inputNames, options) => {
   const config = loadConfig();
-  const sourcePath = resolve3(inputPath);
-  if (!import_fs_extra6.default.existsSync(sourcePath)) {
-    printError(`\u8DEF\u5F84\u4E0D\u5B58\u5728: ${sourcePath}`);
+  const paths = inputPaths.split(",").map((s) => s.trim()).filter(Boolean);
+  const names = inputNames ? inputNames.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  if (names.length > 0 && names.length !== paths.length) {
+    printError(`\u9879\u76EE\u540D\u6570\u91CF (${names.length}) \u4E0E\u8DEF\u5F84\u6570\u91CF (${paths.length}) \u4E0D\u5339\u914D`);
     process.exit(1);
   }
-  const stat = await import_fs_extra6.default.stat(sourcePath);
-  if (!stat.isDirectory()) {
-    printError(`\u4E0D\u662F\u76EE\u5F55: ${sourcePath}`);
-    process.exit(1);
-  }
-  let projectName = customName || basename(sourcePath);
-  const nameCheck = validateProjectNameFormat(projectName);
-  if (!nameCheck.valid) {
-    printError(nameCheck.message || "\u9879\u76EE\u540D\u79F0\u65E0\u6548");
-    process.exit(1);
-  }
-  if (projectExists(projectName)) {
-    Ie(bgOrange(" \u590D\u5236\u76EE\u5F55 "));
-    const result = await he({
-      message: `\u9879\u76EE\u540D "${projectName}" \u5DF2\u5B58\u5728\uFF0C\u8BF7\u8F93\u5165\u65B0\u540D\u79F0:`,
-      placeholder: `${projectName}-2`,
-      validate: (value) => {
-        const v2 = validateProjectNameFormat(value);
-        if (!v2.valid)
-          return v2.message;
-        if (projectExists(value))
-          return "\u9879\u76EE\u5DF2\u5B58\u5728";
-        return;
+  const isMultiple = paths.length > 1;
+  const targets = [];
+  for (let i = 0;i < paths.length; i++) {
+    const sourcePath = resolve3(paths[i]);
+    if (!import_fs_extra6.default.existsSync(sourcePath)) {
+      printError(`\u8DEF\u5F84\u4E0D\u5B58\u5728: ${sourcePath}`);
+      process.exit(1);
+    }
+    const stat = await import_fs_extra6.default.stat(sourcePath);
+    if (!stat.isDirectory()) {
+      printError(`\u4E0D\u662F\u76EE\u5F55: ${sourcePath}`);
+      process.exit(1);
+    }
+    let projectName = names[i] || basename(sourcePath);
+    const nameCheck = validateProjectNameFormat(projectName);
+    if (!nameCheck.valid) {
+      printError(nameCheck.message || `\u9879\u76EE\u540D\u79F0\u65E0\u6548: ${projectName}`);
+      process.exit(1);
+    }
+    if (projectExists(projectName)) {
+      if (isMultiple) {
+        printError(`\u9879\u76EE\u540D "${projectName}" \u5DF2\u5B58\u5728`);
+        process.exit(1);
       }
+      Ie(bgOrange(" \u590D\u5236\u76EE\u5F55 "));
+      const result = await he({
+        message: `\u9879\u76EE\u540D "${projectName}" \u5DF2\u5B58\u5728\uFF0C\u8BF7\u8F93\u5165\u65B0\u540D\u79F0:`,
+        placeholder: `${projectName}-2`,
+        validate: (value) => {
+          const v2 = validateProjectNameFormat(value);
+          if (!v2.valid)
+            return v2.message;
+          if (projectExists(value))
+            return "\u9879\u76EE\u5DF2\u5B58\u5728";
+          return;
+        }
+      });
+      if (pD(result)) {
+        Se(import_picocolors12.default.dim("\u5DF2\u53D6\u6D88"));
+        process.exit(0);
+      }
+      projectName = result.trim();
+    }
+    targets.push({
+      sourcePath,
+      projectName,
+      targetPath: getProjectPath(projectName)
     });
-    if (pD(result)) {
+  }
+  Ie(isMultiple ? bgOrange(` \u590D\u5236 ${targets.length} \u4E2A\u9879\u76EE `) : bgOrange(" \u590D\u5236\u76EE\u5F55 "));
+  for (const t of targets) {
+    console.log(import_picocolors12.default.dim("  \u6E90\u8DEF\u5F84:   ") + import_picocolors12.default.underline(t.sourcePath));
+    console.log(import_picocolors12.default.dim("  \u9879\u76EE\u540D:   ") + brand.primary(t.projectName));
+  }
+  console.log();
+  for (const t of targets) {
+    const s = Y2();
+    s.start(`\u6B63\u5728\u590D\u5236 ${t.projectName}...`);
+    try {
+      await import_fs_extra6.default.copy(t.sourcePath, t.targetPath, { overwrite: true });
+      s.stop(`${brand.success("\u2713")} ${t.projectName} \u5DF2\u590D\u5236`);
+    } catch (error) {
+      s.stop(`${t.projectName} \u590D\u5236\u5931\u8D25`);
+      printError(error.message);
+      process.exit(1);
+    }
+    const gitResult = await execAndCapture("git init", t.targetPath);
+    if (!gitResult.success) {
+      console.log(import_picocolors12.default.dim(`  ${t.projectName} git init \u5931\u8D25: ${gitResult.error}`));
+    }
+    saveProjectMeta(t.projectName, { template: "copy" });
+  }
+  if (options.open) {
+    for (const t of targets) {
+      const ideSpinner = Y2();
+      ideSpinner.start(`\u6B63\u5728\u7528 ${config.ide} \u6253\u5F00 ${t.projectName}...`);
+      try {
+        await openWithIDE(config.ide, t.targetPath);
+        ideSpinner.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5F00: ${brand.primary(t.projectName)}`);
+      } catch (error) {
+        ideSpinner.stop(`\u6253\u5F00 ${config.ide} \u5931\u8D25`);
+        console.log();
+        printError(error.message);
+        console.log();
+        console.log(import_picocolors12.default.dim("  \u9879\u76EE\u8DEF\u5F84: ") + import_picocolors12.default.underline(t.targetPath));
+        console.log();
+      }
+    }
+  }
+  let doTrash;
+  if (options.trash === true) {
+    doTrash = true;
+  } else if (options.trash === false) {
+    doTrash = false;
+  } else {
+    const message = isMultiple ? `\u662F\u5426\u5C06 ${brand.primary(String(targets.length))} \u4E2A\u539F\u59CB\u76EE\u5F55\u90FD\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F` : `\u662F\u5426\u5C06\u539F\u59CB\u76EE\u5F55\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F
+  ${import_picocolors12.default.underline(targets[0].sourcePath)}`;
+    const shouldTrash = await ye({
+      message,
+      initialValue: true
+    });
+    if (pD(shouldTrash)) {
       Se(import_picocolors12.default.dim("\u5DF2\u53D6\u6D88"));
       process.exit(0);
     }
-    projectName = result.trim();
-  } else {
-    Ie(bgOrange(" \u590D\u5236\u76EE\u5F55 "));
+    doTrash = shouldTrash;
   }
-  console.log();
-  console.log(import_picocolors12.default.dim("  \u6E90\u8DEF\u5F84:   ") + import_picocolors12.default.underline(sourcePath));
-  console.log(import_picocolors12.default.dim("  \u9879\u76EE\u540D:   ") + brand.primary(projectName));
-  console.log();
-  const targetPath = getProjectPath(projectName);
-  const s = Y2();
-  s.start("\u6B63\u5728\u590D\u5236\u76EE\u5F55...");
-  try {
-    await import_fs_extra6.default.copy(sourcePath, targetPath, { overwrite: true });
-    s.stop(`${brand.success("\u2713")} \u76EE\u5F55\u5DF2\u590D\u5236`);
-  } catch (error) {
-    s.stop("\u590D\u5236\u5931\u8D25");
-    printError(error.message);
-    process.exit(1);
-  }
-  const gitSpinner = Y2();
-  gitSpinner.start("\u6B63\u5728\u521D\u59CB\u5316 git...");
-  const gitResult = await execAndCapture("git init", targetPath);
-  if (!gitResult.success) {
-    gitSpinner.stop("git init \u5931\u8D25");
-    console.log(import_picocolors12.default.dim(gitResult.error));
-  } else {
-    gitSpinner.stop(`${brand.success("\u2713")} git \u5DF2\u521D\u59CB\u5316`);
-  }
-  saveProjectMeta(projectName, { template: "copy" });
-  const ideSpinner = Y2();
-  ideSpinner.start(`\u6B63\u5728\u7528 ${config.ide} \u6253\u5F00 ${projectName}...`);
-  try {
-    await openWithIDE(config.ide, targetPath);
-    ideSpinner.stop(`${brand.success("\u2713")} \u5DF2\u6253\u5F00: ${brand.primary(projectName)}`);
-  } catch (error) {
-    ideSpinner.stop(`\u6253\u5F00 ${config.ide} \u5931\u8D25`);
-    console.log();
-    printError(error.message);
-    console.log();
-    console.log(import_picocolors12.default.dim("  \u9879\u76EE\u8DEF\u5F84: ") + import_picocolors12.default.underline(targetPath));
-    console.log();
-  }
-  const shouldTrash = await ye({
-    message: `\u662F\u5426\u5C06\u539F\u59CB\u76EE\u5F55\u79FB\u5165\u56DE\u6536\u7AD9\uFF1F
-  ${import_picocolors12.default.underline(sourcePath)}`,
-    initialValue: true
-  });
-  if (!pD(shouldTrash) && shouldTrash) {
-    const trashSpinner = Y2();
-    trashSpinner.start("\u6B63\u5728\u79FB\u5165\u56DE\u6536\u7AD9...");
-    const success = await moveToTrash(sourcePath);
-    if (success) {
-      trashSpinner.stop(`${brand.success("\u2713")} \u539F\u59CB\u76EE\u5F55\u5DF2\u79FB\u5165\u56DE\u6536\u7AD9`);
-    } else {
-      trashSpinner.stop("\u79FB\u5165\u56DE\u6536\u7AD9\u5931\u8D25");
-      console.log(import_picocolors12.default.dim("  \u8BF7\u624B\u52A8\u5220\u9664: ") + import_picocolors12.default.underline(sourcePath));
+  if (doTrash) {
+    for (const t of targets) {
+      const trashSpinner = Y2();
+      trashSpinner.start(`\u6B63\u5728\u79FB\u5165\u56DE\u6536\u7AD9 ${t.projectName}...`);
+      const success = await moveToTrash(t.sourcePath);
+      if (success) {
+        trashSpinner.stop(`${brand.success("\u2713")} ${t.projectName} \u539F\u59CB\u76EE\u5F55\u5DF2\u79FB\u5165\u56DE\u6536\u7AD9`);
+      } else {
+        trashSpinner.stop(`${t.projectName} \u79FB\u5165\u56DE\u6536\u7AD9\u5931\u8D25`);
+        console.log(import_picocolors12.default.dim("  \u8BF7\u624B\u52A8\u5220\u9664: ") + import_picocolors12.default.underline(t.sourcePath));
+      }
     }
   }
   Se(brand.success("\u2728 \u9879\u76EE\u590D\u5236\u6210\u529F\uFF01"));

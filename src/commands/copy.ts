@@ -14,136 +14,202 @@ import {
 import { execAndCapture, moveToTrash, openWithIDE } from "../utils/shell";
 import { bgOrange, brand, printError } from "../utils/ui";
 
+interface CopyTarget {
+	sourcePath: string;
+	projectName: string;
+	targetPath: string;
+}
+
+interface CopyOptions {
+	open?: boolean;
+	trash?: boolean;
+}
+
 export const copyCommand = new Command("copy")
 	.alias("cp")
-	.description("全量复制目录作为新项目到 p 管理")
-	.argument("<path>", "要复制的目录路径（支持相对/绝对路径）")
-	.argument("[name]", "自定义项目名称（默认从路径推断）")
-	.action(async (inputPath: string, customName?: string) => {
+	.description("全量复制目录作为新项目到 p 管理（支持逗号分隔多路径）")
+	.argument("<paths>", "要复制的目录路径（多个用逗号分隔）")
+	.argument("[names]", "自定义项目名（多个用逗号分隔，数量需与路径对应）")
+	.option("-o, --open", "复制完成后用 IDE 打开项目")
+	.option("-t, --trash", "将原始目录移入回收站")
+	.option("--no-trash", "不移入原始目录到回收站")
+	.action(async (inputPaths: string, inputNames: string | undefined, options: CopyOptions) => {
 		const config = loadConfig();
 
-		// 解析源路径
-		const sourcePath = resolve(inputPath);
+		// 解析逗号分隔的路径与名称
+		const paths = inputPaths.split(",").map((s) => s.trim()).filter(Boolean);
+		const names = inputNames
+			? inputNames.split(",").map((s) => s.trim()).filter(Boolean)
+			: [];
 
-		// 验证路径存在且是目录
-		if (!fse.existsSync(sourcePath)) {
-			printError(`路径不存在: ${sourcePath}`);
+		if (names.length > 0 && names.length !== paths.length) {
+			printError(
+				`项目名数量 (${names.length}) 与路径数量 (${paths.length}) 不匹配`,
+			);
 			process.exit(1);
 		}
 
-		const stat = await fse.stat(sourcePath);
-		if (!stat.isDirectory()) {
-			printError(`不是目录: ${sourcePath}`);
-			process.exit(1);
+		const isMultiple = paths.length > 1;
+		const targets: CopyTarget[] = [];
+
+		// 解析并验证每个目标
+		for (let i = 0; i < paths.length; i++) {
+			const sourcePath = resolve(paths[i]);
+
+			if (!fse.existsSync(sourcePath)) {
+				printError(`路径不存在: ${sourcePath}`);
+				process.exit(1);
+			}
+
+			const stat = await fse.stat(sourcePath);
+			if (!stat.isDirectory()) {
+				printError(`不是目录: ${sourcePath}`);
+				process.exit(1);
+			}
+
+			let projectName = names[i] || basename(sourcePath);
+
+			const nameCheck = validateProjectNameFormat(projectName);
+			if (!nameCheck.valid) {
+				printError(nameCheck.message || `项目名称无效: ${projectName}`);
+				process.exit(1);
+			}
+
+			// 冲突处理：单项目交互改名，多项目直接报错
+			if (projectExists(projectName)) {
+				if (isMultiple) {
+					printError(`项目名 "${projectName}" 已存在`);
+					process.exit(1);
+				}
+
+				intro(bgOrange(" 复制目录 "));
+
+				const result = await text({
+					message: `项目名 "${projectName}" 已存在，请输入新名称:`,
+					placeholder: `${projectName}-2`,
+					validate: (value) => {
+						const v = validateProjectNameFormat(value);
+						if (!v.valid) return v.message;
+						if (projectExists(value)) return "项目已存在";
+						return undefined;
+					},
+				});
+
+				if (isCancel(result)) {
+					outro(pc.dim("已取消"));
+					process.exit(0);
+				}
+
+				projectName = (result as string).trim();
+			}
+
+			targets.push({
+				sourcePath,
+				projectName,
+				targetPath: getProjectPath(projectName),
+			});
 		}
 
-		// 确定项目名
-		let projectName = customName || basename(sourcePath);
+		intro(
+			isMultiple
+				? bgOrange(` 复制 ${targets.length} 个项目 `)
+				: bgOrange(" 复制目录 "),
+		);
 
-		// 名称验证
-		const nameCheck = validateProjectNameFormat(projectName);
-		if (!nameCheck.valid) {
-			printError(nameCheck.message || "项目名称无效");
-			process.exit(1);
+		// 显示信息
+		for (const t of targets) {
+			console.log(pc.dim("  源路径:   ") + pc.underline(t.sourcePath));
+			console.log(pc.dim("  项目名:   ") + brand.primary(t.projectName));
+		}
+		console.log();
+
+		// 逐个复制
+		for (const t of targets) {
+			const s = spinner();
+			s.start(`正在复制 ${t.projectName}...`);
+
+			try {
+				await fse.copy(t.sourcePath, t.targetPath, { overwrite: true });
+				s.stop(`${brand.success("✓")} ${t.projectName} 已复制`);
+			} catch (error) {
+				s.stop(`${t.projectName} 复制失败`);
+				printError((error as Error).message);
+				process.exit(1);
+			}
+
+			// 初始化 git
+			const gitResult = await execAndCapture("git init", t.targetPath);
+			if (!gitResult.success) {
+				console.log(
+					pc.dim(`  ${t.projectName} git init 失败: ${gitResult.error}`),
+				);
+			}
+
+			saveProjectMeta(t.projectName, { template: "copy" });
 		}
 
-		// 冲突检查
-		if (projectExists(projectName)) {
-			intro(bgOrange(" 复制目录 "));
+		// 打开 IDE（如指定）
+		if (options.open) {
+			for (const t of targets) {
+				const ideSpinner = spinner();
+				ideSpinner.start(`正在用 ${config.ide} 打开 ${t.projectName}...`);
 
-			const result = await text({
-				message: `项目名 "${projectName}" 已存在，请输入新名称:`,
-				placeholder: `${projectName}-2`,
-				validate: (value) => {
-					const v = validateProjectNameFormat(value);
-					if (!v.valid) return v.message;
-					if (projectExists(value)) return "项目已存在";
-					return undefined;
-				},
+				try {
+					await openWithIDE(config.ide, t.targetPath);
+					ideSpinner.stop(
+						`${brand.success("✓")} 已打开: ${brand.primary(t.projectName)}`,
+					);
+				} catch (error) {
+					ideSpinner.stop(`打开 ${config.ide} 失败`);
+					console.log();
+					printError((error as Error).message);
+					console.log();
+					console.log(pc.dim("  项目路径: ") + pc.underline(t.targetPath));
+					console.log();
+				}
+			}
+		}
+
+		// 回收站：flag 优先，否则询问
+		let doTrash: boolean;
+		if (options.trash === true) {
+			doTrash = true;
+		} else if (options.trash === false) {
+			doTrash = false;
+		} else {
+			const message = isMultiple
+				? `是否将 ${brand.primary(String(targets.length))} 个原始目录都移入回收站？`
+				: `是否将原始目录移入回收站？\n  ${pc.underline(targets[0].sourcePath)}`;
+
+			const shouldTrash = await confirm({
+				message,
+				initialValue: true,
 			});
 
-			if (isCancel(result)) {
+			if (isCancel(shouldTrash)) {
 				outro(pc.dim("已取消"));
 				process.exit(0);
 			}
 
-			projectName = (result as string).trim();
-		} else {
-			intro(bgOrange(" 复制目录 "));
+			doTrash = shouldTrash as boolean;
 		}
 
-		console.log();
-		console.log(pc.dim("  源路径:   ") + pc.underline(sourcePath));
-		console.log(pc.dim("  项目名:   ") + brand.primary(projectName));
-		console.log();
-
-		const targetPath = getProjectPath(projectName);
-
-		// 复制目录
-		const s = spinner();
-		s.start("正在复制目录...");
-
-		try {
-			await fse.copy(sourcePath, targetPath, { overwrite: true });
-			s.stop(`${brand.success("✓")} 目录已复制`);
-		} catch (error) {
-			s.stop("复制失败");
-			printError((error as Error).message);
-			process.exit(1);
-		}
-
-		// 初始化 git
-		const gitSpinner = spinner();
-		gitSpinner.start("正在初始化 git...");
-
-		const gitResult = await execAndCapture("git init", targetPath);
-
-		if (!gitResult.success) {
-			gitSpinner.stop("git init 失败");
-			console.log(pc.dim(gitResult.error));
-		} else {
-			gitSpinner.stop(`${brand.success("✓")} git 已初始化`);
-		}
-
-		// 保存元数据
-		saveProjectMeta(projectName, { template: "copy" });
-
-		// 打开 IDE
-		const ideSpinner = spinner();
-		ideSpinner.start(`正在用 ${config.ide} 打开 ${projectName}...`);
-
-		try {
-			await openWithIDE(config.ide, targetPath);
-			ideSpinner.stop(
-				`${brand.success("✓")} 已打开: ${brand.primary(projectName)}`,
-			);
-		} catch (error) {
-			ideSpinner.stop(`打开 ${config.ide} 失败`);
-			console.log();
-			printError((error as Error).message);
-			console.log();
-			console.log(pc.dim("  项目路径: ") + pc.underline(targetPath));
-			console.log();
-		}
-
-			// 询问是否移入回收站
-			const shouldTrash = await confirm({
-				message: `是否将原始目录移入回收站？\n  ${pc.underline(sourcePath)}`,
-				initialValue: true,
-			});
-
-			if (!isCancel(shouldTrash) && shouldTrash) {
+		if (doTrash) {
+			for (const t of targets) {
 				const trashSpinner = spinner();
-				trashSpinner.start("正在移入回收站...");
+				trashSpinner.start(`正在移入回收站 ${t.projectName}...`);
 
-				const success = await moveToTrash(sourcePath);
+				const success = await moveToTrash(t.sourcePath);
 				if (success) {
-					trashSpinner.stop(`${brand.success("✓")} 原始目录已移入回收站`);
+					trashSpinner.stop(
+						`${brand.success("✓")} ${t.projectName} 原始目录已移入回收站`,
+					);
 				} else {
-					trashSpinner.stop("移入回收站失败");
-					console.log(pc.dim("  请手动删除: ") + pc.underline(sourcePath));
+					trashSpinner.stop(`${t.projectName} 移入回收站失败`);
+					console.log(pc.dim("  请手动删除: ") + pc.underline(t.sourcePath));
 				}
 			}
+		}
 
-			outro(brand.success("✨ 项目复制成功！"));
+		outro(brand.success("✨ 项目复制成功！"));
 	});

@@ -105,6 +105,16 @@ p copy ./my-dir my-project
 # 支持绝对路径
 p copy /path/to/directory
 
+# 同时复制多个项目（逗号分隔路径，名称数量需对应）
+p cp ./foo,./bar,./baz
+p cp ./foo,./bar my-foo,my-bar
+
+# Flags
+p cp ./foo -o            # 复制完成后用 IDE 打开
+p cp ./foo -t            # 直接将原始目录移入回收站（不询问）
+p cp ./foo --no-trash    # 不移入回收站（不询问）
+p cp ./foo,./bar -o -t   # 多项目组合使用
+
 # 别名
 p cp <path>
 ```
@@ -112,7 +122,9 @@ p cp <path>
 功能：
 - 复制整个目录到 `~/.p/projects/`
 - 自动初始化 git
-- 用 IDE 打开项目
+- 默认**不打开** IDE，加 `-o/--open` 才打开
+- 默认会询问是否将原始目录移入回收站（多项目一次询问，要么全移要么全不移），可用 `-t/--trash` 或 `--no-trash` 跳过询问
+- 多项目模式下，若某项目名冲突会直接报错（单项目保留交互式改名）
 
 ## Rename 命令
 
