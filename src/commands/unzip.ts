@@ -25,29 +25,26 @@ function autoClean(name: string): string {
 	return cleaned;
 }
 
-// 检测一组名字的公共 dash-token 前缀（必须保留至少 1 个 token 作为后缀）
-// 至少 2 个名字共享，前缀 ≥ MIN_PREFIX_LEN 字符才返回，否则 null
-function detectCommonPrefix(names: string[]): string | null {
-	if (names.length < 2) return null;
+// 检测一组名字的公共 dash-token 前缀（按第一 token 聚类）
+// 返回所有被 ≥2 个名字作为首 token 共享、且长度 ≥ MIN_PREFIX_LEN 的前缀
+function detectCommonPrefixes(names: string[]): string[] {
+	if (names.length < 2) return [];
 
-	const tokenGroups = names.map((n) => n.split("-"));
-	const minTokens = Math.min(...tokenGroups.map((t) => t.length));
-	if (minTokens < 2) return null;
-
-	const commonTokens: string[] = [];
-	for (let i = 0; i < minTokens; i++) {
-		const token = tokenGroups[0][i];
-		if (tokenGroups.every((tg) => tg[i] === token)) {
-			commonTokens.push(token);
-		} else {
-			break;
-		}
+	const groups = new Map<string, number>();
+	for (const name of names) {
+		const tokens = name.split("-");
+		if (tokens.length < 2) continue; // 至少留 1 个 token 作后缀
+		const first = tokens[0];
+		groups.set(first, (groups.get(first) ?? 0) + 1);
 	}
 
-	if (commonTokens.length < 1 || commonTokens.length >= minTokens) return null;
-
-	const prefix = commonTokens.join("-");
-	return prefix.length >= MIN_PREFIX_LEN ? prefix : null;
+	const prefixes: string[] = [];
+	for (const [token, count] of groups) {
+		if (count >= 2 && token.length >= MIN_PREFIX_LEN) {
+			prefixes.push(token);
+		}
+	}
+	return prefixes;
 }
 
 function stripPrefix(name: string, prefix: string): string {
@@ -133,7 +130,24 @@ export const unzipCommand = new Command("unzip")
 		}
 		console.log();
 
-		// 决定是否应用 autoClean（-template / 哈希后缀移除）
+		// 先检测公共前缀并询问（基于清理后的名字，按第一 token 聚类）
+		const detectedPrefixes = detectCommonPrefixes(
+			zipInfos.map((z) => z.cleaned),
+		);
+		const prefixesToRemove = new Set<string>(manualPrefixes);
+		for (const prefix of detectedPrefixes) {
+			if (options.auto) {
+				prefixesToRemove.add(prefix);
+				continue;
+			}
+			const should = await confirm({
+				message: `检测到公共前缀 "${prefix}"，是否移除？`,
+				initialValue: true,
+			});
+			if (should) prefixesToRemove.add(prefix);
+		}
+
+		// 再询问 -template / 哈希后缀移除
 		let applyAutoClean: boolean;
 		if (options.auto) {
 			applyAutoClean = anyCleaned;
@@ -144,24 +158,6 @@ export const unzipCommand = new Command("unzip")
 			});
 		} else {
 			applyAutoClean = false;
-		}
-
-		// 检测一组 zip 的公共 dash-token 前缀（基于清理后的名字）
-		const baseNames = zipInfos.map((z) => z.cleaned);
-		const detectedPrefix = detectCommonPrefix(baseNames);
-
-		// 决定要移除哪些前缀：手动指定的不问，公共前缀问一次（--auto 时直接要）
-		const prefixesToRemove = new Set<string>(manualPrefixes);
-		if (detectedPrefix) {
-			if (options.auto) {
-				prefixesToRemove.add(detectedPrefix);
-			} else {
-				const should = await confirm({
-					message: `检测到公共前缀 "${detectedPrefix}"，是否移除？`,
-					initialValue: true,
-				});
-				if (should) prefixesToRemove.add(detectedPrefix);
-			}
 		}
 		console.log();
 

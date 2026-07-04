@@ -57,9 +57,9 @@ Help displays all aliases sorted longest-first (custom `Help.prototype.subcomman
 `p unzip` 解压时清理 zip 文件名，规则分两层：
 
 - **自动清理**（`autoClean`）：循环移除 `-template` 后缀 + 7-40 位十六进制哈希后缀（GitHub short SHA 到完整 SHA）。
-- **公共前缀检测**（`detectCommonPrefix`）：对一组 zip 名按 dash 分 token，找最长公共 token 前缀。要求 ≥2 个名字共享、前缀 ≥3 字符、且保留至少 1 个 token 作为后缀。**不维护硬编码前缀列表**——纯靠共性推断，避免每加一个模板库都要更新代码。
+- **公共前缀检测**（`detectCommonPrefixes`）：按第一 dash-token 聚类，返回所有被 ≥2 个名字作为首 token 共享、且长度 ≥3 的前缀。用聚类而非全局 LCP，避免一个异类把整组共性拉空（如 8 个 `magicuidesign-*` + 1 个 `dillionverma-*` 仍能识别出 `magicuidesign`）。**不维护硬编码前缀列表**——纯靠共性推断。
 
-CLI 选项：`-a/--auto` 跳过所有询问；`-r/--remove-prefix` / `-s/--remove-suffix` 手动指定要 strip 的前后缀（可多次，不询问）。
+询问顺序固定为 **前缀 → 后缀 → 执行**，符合"先归纳共性再清理"的直觉。CLI 选项：`-a/--auto` 跳过所有询问；`-r/--remove-prefix` / `-s/--remove-suffix` 手动指定要 strip 的前后缀（可多次，不询问）。
 
 ## Patterns
 
