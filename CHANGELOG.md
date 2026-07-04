@@ -1,5 +1,15 @@
 # p
 
+## 1.21.0
+
+### Minor Changes
+
+- `p push` 修复：当前目录不是 git 仓库时自动 `git init -b main`，不再报 "not a git repository"。创建 GitHub 私有仓库前增加询问，新增 `-a, --auto` 跳过询问。
+
+### Patch Changes
+
+- `p unzip` 输出精简：长哈希后缀截断到 8 位 + `…` 展示，去掉 `(清理自 …)` 后缀。
+
 ## 1.20.2
 
 ### Patch Changes

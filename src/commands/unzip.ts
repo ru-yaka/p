@@ -61,6 +61,14 @@ function stripSuffix(name: string, suffix: string): string {
 	return name;
 }
 
+// 截断长哈希后缀用于展示（保留前 8 位 + …）
+function truncateHash(name: string): string {
+	return name.replace(
+		/-([a-f0-9]{7,40})$/i,
+		(_m, hash: string) => `-${hash.slice(0, 8)}…`,
+	);
+}
+
 type UnzipOptions = {
 	auto?: boolean;
 	removePrefix?: string[];
@@ -124,9 +132,10 @@ export const unzipCommand = new Command("unzip")
 		console.log();
 		console.log(pc.dim(`  找到 ${zipFiles.length} 个 zip 文件:`));
 		for (const info of zipInfos) {
+			const display = truncateHash(info.internalName);
 			const tail =
 				info.cleaned !== info.internalName ? pc.dim(` → ${info.cleaned}`) : "";
-			console.log(`  ${brand.secondary("•")} ${basename(info.file)}${tail}`);
+			console.log(`  ${brand.secondary("•")} ${display}.zip${tail}`);
 		}
 		console.log();
 
@@ -181,7 +190,7 @@ export const unzipCommand = new Command("unzip")
 		const errors: string[] = [];
 
 		for (const { file: zipFile, internalName, finalName } of zipInfos) {
-			const relativePath = basename(zipFile);
+			const relativePath = truncateHash(internalName) + ".zip";
 			try {
 				const destDir = join(dirname(zipFile), finalName);
 
@@ -243,11 +252,7 @@ export const unzipCommand = new Command("unzip")
 				await fse.remove(zipFile);
 
 				successCount++;
-				const showRename = finalName !== internalName;
-				const tail = showRename ? pc.dim(` (清理自 ${internalName})`) : "";
-				console.log(
-					`  ${brand.success("✓")} ${relativePath} → ${finalName}/${tail}`,
-				);
+				console.log(`  ${brand.success("✓")} ${relativePath} → ${finalName}/`);
 			} catch (error) {
 				const err = error as Error;
 				errors.push(`${relativePath}: ${err.message}`);

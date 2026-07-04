@@ -201,6 +201,29 @@ p unzip -s template -s demo
 - 当 ≥2 个 zip 共享首 token 时（如多个 `magicuidesign-xxx`），询问是否移除公共前缀
 - `--remove-prefix <name>` / `--remove-suffix <name>` 手动指定要移除的前缀/后缀，可多次使用，不询问
 
+## Push 命令
+
+提交并推送项目代码到 remote origin（比 publish 更轻量，不涉及模板化）：
+
+```bash
+# 当前项目
+p push
+p push .
+
+# 指定项目
+p push my-project
+
+# 跳过所有询问（包括创建仓库）
+p push --auto
+```
+
+功能：
+- 当前目录不是 git 仓库时自动 `git init -b main`
+- 已有 remote：直接提交推送
+- 无 remote：询问是否创建私有仓库（`--auto` 跳过询问）
+- 自动清理嵌套 `.git` 目录，避免 gitlink
+- 检测无变更时跳过 commit，避免触发 pre-commit hook
+
 ## Publish 命令
 
 发布项目为 GitHub 模板仓库：

@@ -1,30 +1,41 @@
 import { basename } from "node:path";
-import { intro, outro, spinner } from "@clack/prompts";
+import { confirm, intro, outro, spinner } from "@clack/prompts";
 import { Command } from "commander";
 import pc from "picocolors";
 
-import {
-	getProjectPath,
-	listProjects,
-} from "../core/project";
+import { listProjects } from "../core/project";
 import { removeNestedGitDirs } from "../utils/git";
-import { execAndCapture } from "../utils/shell";
 import { filterProjects } from "../utils/project-search";
+import { execAndCapture } from "../utils/shell";
 import { bgOrange, brand, printError } from "../utils/ui";
 
-async function git(args: string[], cwd: string): Promise<{ ok: boolean; output: string }> {
-	const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+async function git(
+	args: string[],
+	cwd: string,
+): Promise<{ ok: boolean; output: string }> {
+	const proc = Bun.spawn(["git", ...args], {
+		cwd,
+		stdout: "pipe",
+		stderr: "pipe",
+	});
 	const code = await proc.exited;
 	const out = await new Response(proc.stdout).text();
 	const err = await new Response(proc.stderr).text();
 	return { ok: code === 0, output: err || out };
 }
 
-async function ensureRemote(projectPath: string, projectName: string): Promise<string> {
-	const existing = await execAndCapture("git remote get-url origin", projectPath);
+async function ensureRemote(
+	projectPath: string,
+	projectName: string,
+	auto: boolean,
+): Promise<string | null> {
+	const existing = await execAndCapture(
+		"git remote get-url origin",
+		projectPath,
+	);
 	if (existing.success) return existing.output.trim();
 
-	// 无 remote → 创建 GitHub 私有仓库
+	// 无 remote → 询问是否创建 GitHub 私有仓库
 	const whoami = await execAndCapture("gh api user --jq .login", process.cwd());
 	const owner = whoami.success ? whoami.output.trim() : "";
 	if (!owner) {
@@ -32,33 +43,57 @@ async function ensureRemote(projectPath: string, projectName: string): Promise<s
 		process.exit(1);
 	}
 
+	const fullRepo = `${owner}/${projectName}`;
+	if (!auto) {
+		const should = await confirm({
+			message: `将创建私有仓库 ${fullRepo}，是否继续？`,
+			initialValue: true,
+		});
+		if (!should) return null;
+	}
+
 	const s = spinner();
-	s.start(`正在创建私有仓库 ${owner}/${projectName}...`);
+	s.start(`正在创建私有仓库 ${fullRepo}...`);
 
 	const proc = Bun.spawn(
-		["gh", "repo", "create", projectName, "--private", "--description", `p: ${projectName}`],
+		[
+			"gh",
+			"repo",
+			"create",
+			projectName,
+			"--private",
+			"--description",
+			`p: ${projectName}`,
+		],
 		{ cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
 	);
 	await proc.exited;
 	const stdout = await new Response(proc.stdout).text();
 	const stderr = await new Response(proc.stderr).text();
 
-	const urlMatch = (stdout + stderr).match(/https:\/\/github\.com\/([^/]+)\/[^\s/]+/);
+	const urlMatch = (stdout + stderr).match(
+		/https:\/\/github\.com\/([^/]+)\/[^\s/]+/,
+	);
 	const repoOwner = urlMatch ? urlMatch[1] : owner;
 	const cloneUrl = `https://github.com/${repoOwner}/${projectName}.git`;
 
 	await git(["remote", "add", "origin", cloneUrl], projectPath);
 
-	s.stop(`${brand.success("✓")} 已创建私有仓库: ${brand.primary(`${repoOwner}/${projectName}`)}`);
+	s.stop(
+		`${brand.success("✓")} 已创建私有仓库: ${brand.primary(`${repoOwner}/${projectName}`)}`,
+	);
 	console.log();
 	return cloneUrl;
 }
 
 export const pushCommand = new Command("push")
 	.alias("pu")
-	.description("提交并推送项目代码到 remote origin（无 remote 则自动创建私有仓库）")
+	.description(
+		"提交并推送项目代码到 remote origin（无 remote 则询问创建私有仓库）",
+	)
 	.argument("[name]", "项目名称或 . 表示当前目录")
-	.action(async (name?: string) => {
+	.option("-a, --auto", "跳过所有询问，按默认行为执行")
+	.action(async (name?: string, options: { auto?: boolean } = {}) => {
 		let projectPath: string;
 		let projectName: string;
 
@@ -89,8 +124,30 @@ export const pushCommand = new Command("push")
 
 		intro(bgOrange(` Push · ${projectName} `));
 
+		// 不是 git 仓库时自动 init（push 的前置条件）
+		const inGitRepo = (
+			await git(["rev-parse", "--is-inside-work-tree"], projectPath)
+		).ok;
+		if (!inGitRepo) {
+			const initResult = await git(["init", "-b", "main"], projectPath);
+			if (!initResult.ok) {
+				printError(`git init 失败: ${initResult.output}`);
+				process.exit(1);
+			}
+			console.log(pc.dim("  已初始化 git 仓库 (main)"));
+		}
+
 		// 检查/创建 remote
-		const remoteUrl = await ensureRemote(projectPath, projectName);
+		const remoteUrl = await ensureRemote(
+			projectPath,
+			projectName,
+			options.auto === true,
+		);
+		if (!remoteUrl) {
+			console.log();
+			outro(pc.dim("已取消"));
+			return;
+		}
 		console.log(pc.dim("  remote:   ") + pc.underline(remoteUrl));
 		console.log();
 
@@ -154,7 +211,10 @@ export const pushCommand = new Command("push")
 		let pushResult = await git(["push", "origin", "HEAD"], projectPath);
 		if (!pushResult.ok) {
 			console.log(pc.dim("  普通推送失败，尝试强制推送..."));
-			pushResult = await git(["push", "--force", "origin", "HEAD"], projectPath);
+			pushResult = await git(
+				["push", "--force", "origin", "HEAD"],
+				projectPath,
+			);
 		}
 
 		if (!pushResult.ok) {

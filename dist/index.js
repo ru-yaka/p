@@ -17746,13 +17746,17 @@ import { basename as basename4 } from "path";
 init_esm();
 var import_picocolors23 = __toESM(require_picocolors(), 1);
 async function git2(args, cwd) {
-  const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+  const proc = Bun.spawn(["git", ...args], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe"
+  });
   const code = await proc.exited;
   const out = await new Response(proc.stdout).text();
   const err = await new Response(proc.stderr).text();
   return { ok: code === 0, output: err || out };
 }
-async function ensureRemote(projectPath, projectName) {
+async function ensureRemote(projectPath, projectName, auto) {
   const existing = await execAndCapture("git remote get-url origin", projectPath);
   if (existing.success)
     return existing.output.trim();
@@ -17762,9 +17766,26 @@ async function ensureRemote(projectPath, projectName) {
     printError("\u8BF7\u5148\u5B89\u88C5\u5E76\u767B\u5F55 GitHub CLI (gh)");
     process.exit(1);
   }
+  const fullRepo = `${owner}/${projectName}`;
+  if (!auto) {
+    const should = await ye({
+      message: `\u5C06\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93 ${fullRepo}\uFF0C\u662F\u5426\u7EE7\u7EED\uFF1F`,
+      initialValue: true
+    });
+    if (!should)
+      return null;
+  }
   const s = Y2();
-  s.start(`\u6B63\u5728\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93 ${owner}/${projectName}...`);
-  const proc = Bun.spawn(["gh", "repo", "create", projectName, "--private", "--description", `p: ${projectName}`], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" });
+  s.start(`\u6B63\u5728\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93 ${fullRepo}...`);
+  const proc = Bun.spawn([
+    "gh",
+    "repo",
+    "create",
+    projectName,
+    "--private",
+    "--description",
+    `p: ${projectName}`
+  ], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" });
   await proc.exited;
   const stdout = await new Response(proc.stdout).text();
   const stderr = await new Response(proc.stderr).text();
@@ -17776,7 +17797,7 @@ async function ensureRemote(projectPath, projectName) {
   console.log();
   return cloneUrl;
 }
-var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E76\u63A8\u9001\u9879\u76EE\u4EE3\u7801\u5230 remote origin\uFF08\u65E0 remote \u5219\u81EA\u52A8\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93\uFF09").argument("[name]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").action(async (name) => {
+var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E76\u63A8\u9001\u9879\u76EE\u4EE3\u7801\u5230 remote origin\uFF08\u65E0 remote \u5219\u8BE2\u95EE\u521B\u5EFA\u79C1\u6709\u4ED3\u5E93\uFF09").argument("[name]", "\u9879\u76EE\u540D\u79F0\u6216 . \u8868\u793A\u5F53\u524D\u76EE\u5F55").option("-a, --auto", "\u8DF3\u8FC7\u6240\u6709\u8BE2\u95EE\uFF0C\u6309\u9ED8\u8BA4\u884C\u4E3A\u6267\u884C").action(async (name, options = {}) => {
   let projectPath;
   let projectName;
   if (name === ".") {
@@ -17804,7 +17825,21 @@ var pushCommand = new Command("push").alias("pu").description("\u63D0\u4EA4\u5E7
     projectName = currentProject?.name || basename4(projectPath);
   }
   Ie(bgOrange(` Push \xB7 ${projectName} `));
-  const remoteUrl = await ensureRemote(projectPath, projectName);
+  const inGitRepo = (await git2(["rev-parse", "--is-inside-work-tree"], projectPath)).ok;
+  if (!inGitRepo) {
+    const initResult = await git2(["init", "-b", "main"], projectPath);
+    if (!initResult.ok) {
+      printError(`git init \u5931\u8D25: ${initResult.output}`);
+      process.exit(1);
+    }
+    console.log(import_picocolors23.default.dim("  \u5DF2\u521D\u59CB\u5316 git \u4ED3\u5E93 (main)"));
+  }
+  const remoteUrl = await ensureRemote(projectPath, projectName, options.auto === true);
+  if (!remoteUrl) {
+    console.log();
+    Se(import_picocolors23.default.dim("\u5DF2\u53D6\u6D88"));
+    return;
+  }
   console.log(import_picocolors23.default.dim("  remote:   ") + import_picocolors23.default.underline(remoteUrl));
   console.log();
   const removed = await removeNestedGitDirs(projectPath);
@@ -19502,7 +19537,7 @@ async function countFiles(dir) {
 }
 
 // src/commands/unzip.ts
-import { basename as basename6, dirname as dirname4, join as join13, parse } from "path";
+import { dirname as dirname4, join as join13, parse } from "path";
 init_esm();
 var import_adm_zip2 = __toESM(require_adm_zip(), 1);
 var import_fs_extra23 = __toESM(require_lib(), 1);
@@ -22839,6 +22874,9 @@ function stripSuffix(name, suffix) {
   }
   return name;
 }
+function truncateHash(name) {
+  return name.replace(/-([a-f0-9]{7,40})$/i, (_m, hash) => `-${hash.slice(0, 8)}\u2026`);
+}
 var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-a, --auto", "\u8DF3\u8FC7\u6240\u6709\u8BE2\u95EE\uFF0C\u6309\u9ED8\u8BA4\u89C4\u5219\u81EA\u52A8\u6E05\u7406").option("-p, --remove-prefix <prefix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u524D\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).option("-s, --remove-suffix <suffix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u540E\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).action(async (project, options = {}) => {
   let cwd;
   if (!project || project === ".") {
@@ -22871,8 +22909,9 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   console.log();
   console.log(import_picocolors33.default.dim(`  \u627E\u5230 ${zipFiles.length} \u4E2A zip \u6587\u4EF6:`));
   for (const info of zipInfos) {
+    const display = truncateHash(info.internalName);
     const tail = info.cleaned !== info.internalName ? import_picocolors33.default.dim(` \u2192 ${info.cleaned}`) : "";
-    console.log(`  ${brand.secondary("\u2022")} ${basename6(info.file)}${tail}`);
+    console.log(`  ${brand.secondary("\u2022")} ${display}.zip${tail}`);
   }
   console.log();
   const detectedPrefixes = detectCommonPrefixes(zipInfos.map((z2) => z2.cleaned));
@@ -22917,7 +22956,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   let successCount = 0;
   const errors2 = [];
   for (const { file: zipFile, internalName, finalName } of zipInfos) {
-    const relativePath = basename6(zipFile);
+    const relativePath = truncateHash(internalName) + ".zip";
     try {
       const destDir = join13(dirname4(zipFile), finalName);
       if (await import_fs_extra23.default.pathExists(destDir)) {
@@ -22952,9 +22991,7 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
       }
       await import_fs_extra23.default.remove(zipFile);
       successCount++;
-      const showRename = finalName !== internalName;
-      const tail = showRename ? import_picocolors33.default.dim(` (\u6E05\u7406\u81EA ${internalName})`) : "";
-      console.log(`  ${brand.success("\u2713")} ${relativePath} \u2192 ${finalName}/${tail}`);
+      console.log(`  ${brand.success("\u2713")} ${relativePath} \u2192 ${finalName}/`);
     } catch (error) {
       const err = error;
       errors2.push(`${relativePath}: ${err.message}`);
