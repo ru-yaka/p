@@ -198,7 +198,7 @@ p unzip -s template -s demo
 
 清理规则（交互式询问，`--auto` 时全部默认 yes）：
 - 移除 `-template` 后缀和长十六进制哈希后缀（如 GitHub commit SHA）
-- 检测到已知模板库前缀（如 `magicuidesign`）时询问是否移除
+- 当 ≥2 个 zip 共享 dash-token 公共前缀时（如都叫 `xxx-saas`、`xxx-landing`），询问是否移除公共前缀
 - `--remove-prefix <name>` / `--remove-suffix <name>` 手动指定要移除的前缀/后缀，可多次使用，不询问
 
 ## Publish 命令

@@ -8,11 +8,11 @@ import pc from "picocolors";
 import { getProjectPath, projectExists } from "../core/project";
 import { bgOrange, brand, printError, printInfo } from "../utils/ui";
 
-// 已知模板库前缀（检测到会询问是否移除）
-const KNOWN_TEMPLATE_PREFIXES = ["magicuidesign", "magicui"];
-
 // 哈希后缀：7-40 位十六进制（GitHub short SHA 到完整 SHA）
 const HASH_SUFFIX = /-([a-f0-9]{7,40})$/i;
+
+// 最小公共前缀长度（短于这个长度视作噪声）
+const MIN_PREFIX_LEN = 3;
 
 // 自动清理：循环移除 -template 和哈希后缀（处理多种顺序/组合）
 function autoClean(name: string): string {
@@ -25,18 +25,29 @@ function autoClean(name: string): string {
 	return cleaned;
 }
 
-// 检测已知前缀（最长匹配优先，避免 magicui 抢了 magicuidesign）
-function detectPrefix(name: string): string | null {
-	let best: string | null = null;
-	for (const prefix of KNOWN_TEMPLATE_PREFIXES) {
-		if (
-			name.startsWith(prefix + "-") &&
-			(best === null || prefix.length > best.length)
-		) {
-			best = prefix;
+// 检测一组名字的公共 dash-token 前缀（必须保留至少 1 个 token 作为后缀）
+// 至少 2 个名字共享，前缀 ≥ MIN_PREFIX_LEN 字符才返回，否则 null
+function detectCommonPrefix(names: string[]): string | null {
+	if (names.length < 2) return null;
+
+	const tokenGroups = names.map((n) => n.split("-"));
+	const minTokens = Math.min(...tokenGroups.map((t) => t.length));
+	if (minTokens < 2) return null;
+
+	const commonTokens: string[] = [];
+	for (let i = 0; i < minTokens; i++) {
+		const token = tokenGroups[0][i];
+		if (tokenGroups.every((tg) => tg[i] === token)) {
+			commonTokens.push(token);
+		} else {
+			break;
 		}
 	}
-	return best;
+
+	if (commonTokens.length < 1 || commonTokens.length >= minTokens) return null;
+
+	const prefix = commonTokens.join("-");
+	return prefix.length >= MIN_PREFIX_LEN ? prefix : null;
 }
 
 function stripPrefix(name: string, prefix: string): string {
@@ -102,20 +113,14 @@ export const unzipCommand = new Command("unzip")
 			return;
 		}
 
-		// 预计算：每个 zip 的原始名、清理后名、检测到的已知前缀
+		// 预计算：每个 zip 的原始名、清理后名
 		const zipInfos = zipFiles.map((file) => {
 			const internalName = parse(file).name;
 			const cleaned = autoClean(internalName);
-			const prefix = detectPrefix(cleaned);
-			return { file, internalName, cleaned, prefix, finalName: "" };
+			return { file, internalName, cleaned, finalName: "" };
 		});
 
 		const anyCleaned = zipInfos.some((z) => z.cleaned !== z.internalName);
-		const detectedPrefixes = Array.from(
-			new Set(
-				zipInfos.map((z) => z.prefix).filter((p): p is string => p !== null),
-			),
-		);
 		const manualPrefixes = options.removePrefix ?? [];
 
 		intro(bgOrange(" 解压 zip 文件 "));
@@ -141,17 +146,21 @@ export const unzipCommand = new Command("unzip")
 			applyAutoClean = false;
 		}
 
-		// 决定要移除哪些前缀：手动指定的不问，固定前缀逐个问（--auto 时全要）
+		// 检测一组 zip 的公共 dash-token 前缀（基于清理后的名字）
+		const baseNames = zipInfos.map((z) => z.cleaned);
+		const detectedPrefix = detectCommonPrefix(baseNames);
+
+		// 决定要移除哪些前缀：手动指定的不问，公共前缀问一次（--auto 时直接要）
 		const prefixesToRemove = new Set<string>(manualPrefixes);
-		for (const prefix of detectedPrefixes) {
+		if (detectedPrefix) {
 			if (options.auto) {
-				prefixesToRemove.add(prefix);
+				prefixesToRemove.add(detectedPrefix);
 			} else {
 				const should = await confirm({
-					message: `检测到 "${prefix}" 前缀，是否移除？`,
+					message: `检测到公共前缀 "${detectedPrefix}"，是否移除？`,
 					initialValue: true,
 				});
-				if (should) prefixesToRemove.add(prefix);
+				if (should) prefixesToRemove.add(detectedPrefix);
 			}
 		}
 		console.log();

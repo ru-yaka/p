@@ -1,5 +1,11 @@
 # p
 
+## 1.20.0
+
+### Minor Changes
+
+- `p unzip` 公共前缀检测改为基于 dash-token LCP 算法自动推断（不再维护硬编码模板库列表）。当 ≥2 个 zip 共享 dash-token 公共前缀时询问是否移除。
+
 ## 1.19.0
 
 ### Minor Changes

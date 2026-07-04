@@ -22797,8 +22797,8 @@ Ze.glob = Ze;
 
 // src/commands/unzip.ts
 var import_picocolors33 = __toESM(require_picocolors(), 1);
-var KNOWN_TEMPLATE_PREFIXES = ["magicuidesign", "magicui"];
 var HASH_SUFFIX = /-([a-f0-9]{7,40})$/i;
+var MIN_PREFIX_LEN = 3;
 function autoClean(name) {
   let cleaned = name;
   let prev = "";
@@ -22808,14 +22808,26 @@ function autoClean(name) {
   }
   return cleaned;
 }
-function detectPrefix(name) {
-  let best = null;
-  for (const prefix of KNOWN_TEMPLATE_PREFIXES) {
-    if (name.startsWith(prefix + "-") && (best === null || prefix.length > best.length)) {
-      best = prefix;
+function detectCommonPrefix(names) {
+  if (names.length < 2)
+    return null;
+  const tokenGroups = names.map((n7) => n7.split("-"));
+  const minTokens = Math.min(...tokenGroups.map((t) => t.length));
+  if (minTokens < 2)
+    return null;
+  const commonTokens = [];
+  for (let i = 0;i < minTokens; i++) {
+    const token = tokenGroups[0][i];
+    if (tokenGroups.every((tg) => tg[i] === token)) {
+      commonTokens.push(token);
+    } else {
+      break;
     }
   }
-  return best;
+  if (commonTokens.length < 1 || commonTokens.length >= minTokens)
+    return null;
+  const prefix = commonTokens.join("-");
+  return prefix.length >= MIN_PREFIX_LEN ? prefix : null;
 }
 function stripPrefix(name, prefix) {
   if (name.startsWith(prefix + "-")) {
@@ -22853,11 +22865,9 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   const zipInfos = zipFiles.map((file) => {
     const internalName = parse(file).name;
     const cleaned = autoClean(internalName);
-    const prefix = detectPrefix(cleaned);
-    return { file, internalName, cleaned, prefix, finalName: "" };
+    return { file, internalName, cleaned, finalName: "" };
   });
   const anyCleaned = zipInfos.some((z2) => z2.cleaned !== z2.internalName);
-  const detectedPrefixes = Array.from(new Set(zipInfos.map((z2) => z2.prefix).filter((p2) => p2 !== null)));
   const manualPrefixes = options.removePrefix ?? [];
   Ie(bgOrange(" \u89E3\u538B zip \u6587\u4EF6 "));
   console.log();
@@ -22878,17 +22888,19 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
   } else {
     applyAutoClean = false;
   }
+  const baseNames = zipInfos.map((z2) => z2.cleaned);
+  const detectedPrefix = detectCommonPrefix(baseNames);
   const prefixesToRemove = new Set(manualPrefixes);
-  for (const prefix of detectedPrefixes) {
+  if (detectedPrefix) {
     if (options.auto) {
-      prefixesToRemove.add(prefix);
+      prefixesToRemove.add(detectedPrefix);
     } else {
       const should = await ye({
-        message: `\u68C0\u6D4B\u5230 "${prefix}" \u524D\u7F00\uFF0C\u662F\u5426\u79FB\u9664\uFF1F`,
+        message: `\u68C0\u6D4B\u5230\u516C\u5171\u524D\u7F00 "${detectedPrefix}"\uFF0C\u662F\u5426\u79FB\u9664\uFF1F`,
         initialValue: true
       });
       if (should)
-        prefixesToRemove.add(prefix);
+        prefixesToRemove.add(detectedPrefix);
     }
   }
   console.log();
