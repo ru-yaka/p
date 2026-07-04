@@ -72,7 +72,7 @@ export const unzipCommand = new Command("unzip")
 	.argument("[project]", "项目名称（. 或省略表示当前目录）")
 	.option("-a, --auto", "跳过所有询问，按默认规则自动清理")
 	.option(
-		"-r, --remove-prefix <prefix>",
+		"-p, --remove-prefix <prefix>",
 		"手动指定要移除的前缀（可多次使用，不询问）",
 		(val: string, prev: string[]) => [...prev, val],
 		[],

@@ -1,5 +1,11 @@
 # p
 
+## 1.20.2
+
+### Patch Changes
+
+- `p unzip` 的 `--remove-prefix` 短选项从 `-r` 改为 `-p`（与 `--remove-suffix`/`-s` 对称，p=prefix 更直观）。
+
 ## 1.20.1
 
 ### Patch Changes

@@ -182,7 +182,7 @@ p unzip --auto
 
 # 手动指定要移除的前缀（可多次使用，不询问）
 p unzip --remove-prefix magicuidesign
-p unzip -r magicuidesign -r shadcn
+p unzip -p magicuidesign -p shadcn
 
 # 手动指定要移除的后缀（可多次使用，不询问）
 p unzip --remove-suffix template

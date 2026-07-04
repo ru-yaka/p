@@ -22839,7 +22839,7 @@ function stripSuffix(name, suffix) {
   }
   return name;
 }
-var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-a, --auto", "\u8DF3\u8FC7\u6240\u6709\u8BE2\u95EE\uFF0C\u6309\u9ED8\u8BA4\u89C4\u5219\u81EA\u52A8\u6E05\u7406").option("-r, --remove-prefix <prefix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u524D\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).option("-s, --remove-suffix <suffix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u540E\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).action(async (project, options = {}) => {
+var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-a, --auto", "\u8DF3\u8FC7\u6240\u6709\u8BE2\u95EE\uFF0C\u6309\u9ED8\u8BA4\u89C4\u5219\u81EA\u52A8\u6E05\u7406").option("-p, --remove-prefix <prefix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u524D\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).option("-s, --remove-suffix <suffix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u540E\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).action(async (project, options = {}) => {
   let cwd;
   if (!project || project === ".") {
     cwd = process.cwd();
