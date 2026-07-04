@@ -176,6 +176,17 @@ p unzip .
 
 # 指定项目
 p unzip my-project
+
+# 跳过所有询问，按默认规则自动清理
+p unzip --auto
+
+# 手动指定要移除的前缀（可多次使用，不询问）
+p unzip --remove-prefix magicuidesign
+p unzip -r magicuidesign -r shadcn
+
+# 手动指定要移除的后缀（可多次使用，不询问）
+p unzip --remove-suffix template
+p unzip -s template -s demo
 ```
 
 功能：
@@ -184,6 +195,11 @@ p unzip my-project
 - 如果 zip 内根目录与文件名一致，自动扁平化
 - 解压成功后自动删除原 zip 文件
 - 如果目标目录已存在，会先删除再解压
+
+清理规则（交互式询问，`--auto` 时全部默认 yes）：
+- 移除 `-template` 后缀和长十六进制哈希后缀（如 GitHub commit SHA）
+- 检测到已知模板库前缀（如 `magicuidesign`）时询问是否移除
+- `--remove-prefix <name>` / `--remove-suffix <name>` 手动指定要移除的前缀/后缀，可多次使用，不询问
 
 ## Publish 命令
 

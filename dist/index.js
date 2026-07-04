@@ -19502,6 +19502,7 @@ async function countFiles(dir) {
 }
 
 // src/commands/unzip.ts
+import { basename as basename6, dirname as dirname4, join as join13, parse } from "path";
 init_esm();
 var import_adm_zip2 = __toESM(require_adm_zip(), 1);
 var import_fs_extra23 = __toESM(require_lib(), 1);
@@ -22796,8 +22797,39 @@ Ze.glob = Ze;
 
 // src/commands/unzip.ts
 var import_picocolors33 = __toESM(require_picocolors(), 1);
-import { basename as basename6, dirname as dirname4, join as join13, parse } from "path";
-var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").action(async (project) => {
+var KNOWN_TEMPLATE_PREFIXES = ["magicuidesign", "magicui"];
+var HASH_SUFFIX = /-([a-f0-9]{7,40})$/i;
+function autoClean(name) {
+  let cleaned = name;
+  let prev = "";
+  while (prev !== cleaned) {
+    prev = cleaned;
+    cleaned = cleaned.replace(HASH_SUFFIX, "").replace(/-template$/i, "");
+  }
+  return cleaned;
+}
+function detectPrefix(name) {
+  let best = null;
+  for (const prefix of KNOWN_TEMPLATE_PREFIXES) {
+    if (name.startsWith(prefix + "-") && (best === null || prefix.length > best.length)) {
+      best = prefix;
+    }
+  }
+  return best;
+}
+function stripPrefix(name, prefix) {
+  if (name.startsWith(prefix + "-")) {
+    return name.slice(prefix.length + 1);
+  }
+  return name;
+}
+function stripSuffix(name, suffix) {
+  if (name.endsWith("-" + suffix)) {
+    return name.slice(0, name.length - suffix.length - 1);
+  }
+  return name;
+}
+var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4E2D\u6240\u6709 zip \u6587\u4EF6").argument("[project]", "\u9879\u76EE\u540D\u79F0\uFF08. \u6216\u7701\u7565\u8868\u793A\u5F53\u524D\u76EE\u5F55\uFF09").option("-a, --auto", "\u8DF3\u8FC7\u6240\u6709\u8BE2\u95EE\uFF0C\u6309\u9ED8\u8BA4\u89C4\u5219\u81EA\u52A8\u6E05\u7406").option("-r, --remove-prefix <prefix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u524D\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).option("-s, --remove-suffix <suffix>", "\u624B\u52A8\u6307\u5B9A\u8981\u79FB\u9664\u7684\u540E\u7F00\uFF08\u53EF\u591A\u6B21\u4F7F\u7528\uFF0C\u4E0D\u8BE2\u95EE\uFF09", (val, prev) => [...prev, val], []).action(async (project, options = {}) => {
   let cwd;
   if (!project || project === ".") {
     cwd = process.cwd();
@@ -22818,22 +22850,67 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
     console.log();
     return;
   }
+  const zipInfos = zipFiles.map((file) => {
+    const internalName = parse(file).name;
+    const cleaned = autoClean(internalName);
+    const prefix = detectPrefix(cleaned);
+    return { file, internalName, cleaned, prefix, finalName: "" };
+  });
+  const anyCleaned = zipInfos.some((z2) => z2.cleaned !== z2.internalName);
+  const detectedPrefixes = Array.from(new Set(zipInfos.map((z2) => z2.prefix).filter((p2) => p2 !== null)));
+  const manualPrefixes = options.removePrefix ?? [];
   Ie(bgOrange(" \u89E3\u538B zip \u6587\u4EF6 "));
   console.log();
   console.log(import_picocolors33.default.dim(`  \u627E\u5230 ${zipFiles.length} \u4E2A zip \u6587\u4EF6:`));
-  for (const file of zipFiles) {
-    console.log(`  ${brand.secondary("\u2022")} ${basename6(file)}`);
+  for (const info of zipInfos) {
+    const tail = info.cleaned !== info.internalName ? import_picocolors33.default.dim(` \u2192 ${info.cleaned}`) : "";
+    console.log(`  ${brand.secondary("\u2022")} ${basename6(info.file)}${tail}`);
   }
   console.log();
+  let applyAutoClean;
+  if (options.auto) {
+    applyAutoClean = anyCleaned;
+  } else if (anyCleaned) {
+    applyAutoClean = await ye({
+      message: "\u68C0\u6D4B\u5230 -template / \u54C8\u5E0C\u540E\u7F00\uFF0C\u662F\u5426\u79FB\u9664\uFF1F",
+      initialValue: true
+    });
+  } else {
+    applyAutoClean = false;
+  }
+  const prefixesToRemove = new Set(manualPrefixes);
+  for (const prefix of detectedPrefixes) {
+    if (options.auto) {
+      prefixesToRemove.add(prefix);
+    } else {
+      const should = await ye({
+        message: `\u68C0\u6D4B\u5230 "${prefix}" \u524D\u7F00\uFF0C\u662F\u5426\u79FB\u9664\uFF1F`,
+        initialValue: true
+      });
+      if (should)
+        prefixesToRemove.add(prefix);
+    }
+  }
+  console.log();
+  const manualSuffixes = options.removeSuffix ?? [];
+  for (const info of zipInfos) {
+    let name = applyAutoClean ? info.cleaned : info.internalName;
+    for (const prefix of prefixesToRemove) {
+      name = stripPrefix(name, prefix);
+    }
+    for (const suffix of manualSuffixes) {
+      name = stripSuffix(name, suffix);
+    }
+    info.finalName = name || info.internalName;
+  }
   const s = Y2();
   s.start("\u6B63\u5728\u89E3\u538B...");
   let successCount = 0;
   const errors2 = [];
-  for (const zipFile of zipFiles) {
+  for (const { file: zipFile, internalName, finalName } of zipInfos) {
     const relativePath = basename6(zipFile);
     try {
-      const zipName = parse(zipFile).name;
-      const destDir = join13(dirname4(zipFile), zipName);
+      const destDir = join13(dirname4(zipFile), finalName);
       if (await import_fs_extra23.default.pathExists(destDir)) {
         await import_fs_extra23.default.remove(destDir);
       }
@@ -22844,13 +22921,16 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
         return !name.startsWith("__MACOSX") && !name.includes("/__MACOSX") && !name.endsWith(".DS_Store");
       });
       const rootDirs = new Set(validEntries.filter((e2) => !e2.isDirectory).map((e2) => e2.entryName.split("/")[0]));
-      let stripPrefix = "";
-      if (rootDirs.size === 1 && [...rootDirs][0] === zipName) {
-        stripPrefix = zipName + "/";
+      let stripPrefix2 = "";
+      if (rootDirs.size === 1) {
+        const root = [...rootDirs][0];
+        if (root === internalName || root === finalName) {
+          stripPrefix2 = root + "/";
+        }
       }
       for (const entry of validEntries) {
         const entryPath = entry.entryName;
-        const targetRelPath = stripPrefix ? entryPath.startsWith(stripPrefix) ? entryPath.slice(stripPrefix.length) : entryPath : entryPath;
+        const targetRelPath = stripPrefix2 ? entryPath.startsWith(stripPrefix2) ? entryPath.slice(stripPrefix2.length) : entryPath : entryPath;
         if (!targetRelPath)
           continue;
         const fullPath = join13(destDir, targetRelPath);
@@ -22863,7 +22943,9 @@ var unzipCommand = new Command("unzip").description("\u89E3\u538B\u9879\u76EE\u4
       }
       await import_fs_extra23.default.remove(zipFile);
       successCount++;
-      console.log(`  ${brand.success("\u2713")} ${relativePath} \u2192 ${zipName}/`);
+      const showRename = finalName !== internalName;
+      const tail = showRename ? import_picocolors33.default.dim(` (\u6E05\u7406\u81EA ${internalName})`) : "";
+      console.log(`  ${brand.success("\u2713")} ${relativePath} \u2192 ${finalName}/${tail}`);
     } catch (error) {
       const err = error;
       errors2.push(`${relativePath}: ${err.message}`);

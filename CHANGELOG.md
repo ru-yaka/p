@@ -1,5 +1,11 @@
 # p
 
+## 1.19.0
+
+### Minor Changes
+
+- `p unzip` 新增清理能力：自动识别并询问是否移除 `-template` 后缀、十六进制哈希后缀、已知模板库前缀（如 `magicuidesign`）。新增 `--auto` 跳过所有询问，`--remove-prefix <name>` / `--remove-suffix <name>` 手动指定要移除的前缀/后缀（可多次）。
+
 ## 1.18.0
 
 ### Minor Changes

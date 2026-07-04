@@ -1,17 +1,81 @@
-import { intro, outro, spinner } from "@clack/prompts";
-import { Command } from "commander";
+import { basename, dirname, join, parse } from "node:path";
+import { confirm, intro, outro, spinner } from "@clack/prompts";
 import AdmZip from "adm-zip";
+import { Command } from "commander";
 import fse from "fs-extra";
 import { glob } from "glob";
 import pc from "picocolors";
-import { basename, dirname, join, parse } from "node:path";
 import { getProjectPath, projectExists } from "../core/project";
 import { bgOrange, brand, printError, printInfo } from "../utils/ui";
+
+// 已知模板库前缀（检测到会询问是否移除）
+const KNOWN_TEMPLATE_PREFIXES = ["magicuidesign", "magicui"];
+
+// 哈希后缀：7-40 位十六进制（GitHub short SHA 到完整 SHA）
+const HASH_SUFFIX = /-([a-f0-9]{7,40})$/i;
+
+// 自动清理：循环移除 -template 和哈希后缀（处理多种顺序/组合）
+function autoClean(name: string): string {
+	let cleaned = name;
+	let prev = "";
+	while (prev !== cleaned) {
+		prev = cleaned;
+		cleaned = cleaned.replace(HASH_SUFFIX, "").replace(/-template$/i, "");
+	}
+	return cleaned;
+}
+
+// 检测已知前缀（最长匹配优先，避免 magicui 抢了 magicuidesign）
+function detectPrefix(name: string): string | null {
+	let best: string | null = null;
+	for (const prefix of KNOWN_TEMPLATE_PREFIXES) {
+		if (
+			name.startsWith(prefix + "-") &&
+			(best === null || prefix.length > best.length)
+		) {
+			best = prefix;
+		}
+	}
+	return best;
+}
+
+function stripPrefix(name: string, prefix: string): string {
+	if (name.startsWith(prefix + "-")) {
+		return name.slice(prefix.length + 1);
+	}
+	return name;
+}
+
+function stripSuffix(name: string, suffix: string): string {
+	if (name.endsWith("-" + suffix)) {
+		return name.slice(0, name.length - suffix.length - 1);
+	}
+	return name;
+}
+
+type UnzipOptions = {
+	auto?: boolean;
+	removePrefix?: string[];
+	removeSuffix?: string[];
+};
 
 export const unzipCommand = new Command("unzip")
 	.description("解压项目中所有 zip 文件")
 	.argument("[project]", "项目名称（. 或省略表示当前目录）")
-	.action(async (project?: string) => {
+	.option("-a, --auto", "跳过所有询问，按默认规则自动清理")
+	.option(
+		"-r, --remove-prefix <prefix>",
+		"手动指定要移除的前缀（可多次使用，不询问）",
+		(val: string, prev: string[]) => [...prev, val],
+		[],
+	)
+	.option(
+		"-s, --remove-suffix <suffix>",
+		"手动指定要移除的后缀（可多次使用，不询问）",
+		(val: string, prev: string[]) => [...prev, val],
+		[],
+	)
+	.action(async (project?: string, options: UnzipOptions = {}) => {
 		// 确定工作目录
 		let cwd: string;
 
@@ -38,13 +102,72 @@ export const unzipCommand = new Command("unzip")
 			return;
 		}
 
+		// 预计算：每个 zip 的原始名、清理后名、检测到的已知前缀
+		const zipInfos = zipFiles.map((file) => {
+			const internalName = parse(file).name;
+			const cleaned = autoClean(internalName);
+			const prefix = detectPrefix(cleaned);
+			return { file, internalName, cleaned, prefix, finalName: "" };
+		});
+
+		const anyCleaned = zipInfos.some((z) => z.cleaned !== z.internalName);
+		const detectedPrefixes = Array.from(
+			new Set(
+				zipInfos.map((z) => z.prefix).filter((p): p is string => p !== null),
+			),
+		);
+		const manualPrefixes = options.removePrefix ?? [];
+
 		intro(bgOrange(" 解压 zip 文件 "));
 		console.log();
 		console.log(pc.dim(`  找到 ${zipFiles.length} 个 zip 文件:`));
-		for (const file of zipFiles) {
-			console.log(`  ${brand.secondary("•")} ${basename(file)}`);
+		for (const info of zipInfos) {
+			const tail =
+				info.cleaned !== info.internalName ? pc.dim(` → ${info.cleaned}`) : "";
+			console.log(`  ${brand.secondary("•")} ${basename(info.file)}${tail}`);
 		}
 		console.log();
+
+		// 决定是否应用 autoClean（-template / 哈希后缀移除）
+		let applyAutoClean: boolean;
+		if (options.auto) {
+			applyAutoClean = anyCleaned;
+		} else if (anyCleaned) {
+			applyAutoClean = await confirm({
+				message: "检测到 -template / 哈希后缀，是否移除？",
+				initialValue: true,
+			});
+		} else {
+			applyAutoClean = false;
+		}
+
+		// 决定要移除哪些前缀：手动指定的不问，固定前缀逐个问（--auto 时全要）
+		const prefixesToRemove = new Set<string>(manualPrefixes);
+		for (const prefix of detectedPrefixes) {
+			if (options.auto) {
+				prefixesToRemove.add(prefix);
+			} else {
+				const should = await confirm({
+					message: `检测到 "${prefix}" 前缀，是否移除？`,
+					initialValue: true,
+				});
+				if (should) prefixesToRemove.add(prefix);
+			}
+		}
+		console.log();
+
+		const manualSuffixes = options.removeSuffix ?? [];
+
+		for (const info of zipInfos) {
+			let name = applyAutoClean ? info.cleaned : info.internalName;
+			for (const prefix of prefixesToRemove) {
+				name = stripPrefix(name, prefix);
+			}
+			for (const suffix of manualSuffixes) {
+				name = stripSuffix(name, suffix);
+			}
+			info.finalName = name || info.internalName;
+		}
 
 		const s = spinner();
 		s.start("正在解压...");
@@ -52,11 +175,10 @@ export const unzipCommand = new Command("unzip")
 		let successCount = 0;
 		const errors: string[] = [];
 
-		for (const zipFile of zipFiles) {
+		for (const { file: zipFile, internalName, finalName } of zipInfos) {
 			const relativePath = basename(zipFile);
 			try {
-				const zipName = parse(zipFile).name;
-				const destDir = join(dirname(zipFile), zipName);
+				const destDir = join(dirname(zipFile), finalName);
 
 				// 如果目标目录已存在，先删除
 				if (await fse.pathExists(destDir)) {
@@ -69,7 +191,11 @@ export const unzipCommand = new Command("unzip")
 				// 过滤 __MACOSX 和 .DS_Store
 				const validEntries = entries.filter((entry) => {
 					const name = entry.entryName;
-					return !name.startsWith("__MACOSX") && !name.includes("/__MACOSX") && !name.endsWith(".DS_Store");
+					return (
+						!name.startsWith("__MACOSX") &&
+						!name.includes("/__MACOSX") &&
+						!name.endsWith(".DS_Store")
+					);
 				});
 
 				// 检查是否需要 flatten：如果所有条目都在同一个根目录下
@@ -79,10 +205,13 @@ export const unzipCommand = new Command("unzip")
 						.map((e) => e.entryName.split("/")[0]),
 				);
 
-				// 计算 flatten 偏移：如果唯一根目录名 == zip 文件名，跳过它
+				// 计算 flatten 偏移：唯一根目录名等于原始 internalName 或清理后名字，则跳过它
 				let stripPrefix = "";
-				if (rootDirs.size === 1 && [...rootDirs][0] === zipName) {
-					stripPrefix = zipName + "/";
+				if (rootDirs.size === 1) {
+					const root = [...rootDirs][0];
+					if (root === internalName || root === finalName) {
+						stripPrefix = root + "/";
+					}
 				}
 
 				for (const entry of validEntries) {
@@ -109,7 +238,11 @@ export const unzipCommand = new Command("unzip")
 				await fse.remove(zipFile);
 
 				successCount++;
-				console.log(`  ${brand.success("✓")} ${relativePath} → ${zipName}/`);
+				const showRename = finalName !== internalName;
+				const tail = showRename ? pc.dim(` (清理自 ${internalName})`) : "";
+				console.log(
+					`  ${brand.success("✓")} ${relativePath} → ${finalName}/${tail}`,
+				);
 			} catch (error) {
 				const err = error as Error;
 				errors.push(`${relativePath}: ${err.message}`);
