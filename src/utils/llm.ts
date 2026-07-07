@@ -3,7 +3,7 @@ import pc from "picocolors";
 import { loadConfig } from "../core/config";
 import type { Config } from "../types";
 
-type Provider = "glm" | "deepseek";
+export type Provider = "glm" | "deepseek";
 
 interface ProviderSpec {
 	name: string;
@@ -51,28 +51,46 @@ export class LLMError extends Error {
 	}
 }
 
-function pickProvider(config: Config): Provider {
-	const explicit = config.ai?.provider;
-	if (explicit === "glm" || explicit === "deepseek") return explicit;
-
-	// 自动推断：只有一边配了 key 时用那一边；两边都配或都没配默认 GLM
-	const hasGlm = !!(process.env.ZHIPU_API_KEY || config.apiKey);
-	const hasDs = !!(process.env.DEEPSEEK_API_KEY || config.deepseekApiKey);
-	if (!hasGlm && hasDs) return "deepseek";
-	return "glm";
+export function getProviderName(p: Provider): string {
+	return PROVIDERS[p].name;
 }
 
-function getApiKey(provider: Provider): string | null {
+function hasApiKey(provider: Provider, config: Config): boolean {
 	const spec = PROVIDERS[provider];
-	const config = loadConfig();
+	return !!(
+		process.env[spec.envKey] || (config[spec.configKey] as string | undefined)
+	);
+}
+
+function getApiKey(provider: Provider, config: Config): string | null {
+	const spec = PROVIDERS[provider];
 	const envKey = process.env[spec.envKey];
 	if (envKey) return envKey;
 	const configVal = config[spec.configKey] as string | undefined;
 	return configVal || null;
 }
 
-function getAIConfig(provider: Provider) {
-	const config = loadConfig();
+/**
+ * 构建 provider 优先级链：providers > provider > 自动推断（按已配 key，DeepSeek 优先）
+ */
+function buildProviderChain(config: Config): Provider[] {
+	// 1. 显式 providers 列表（过滤没 key 的）
+	if (config.ai?.providers && config.ai.providers.length > 0) {
+		return config.ai.providers.filter((p) => hasApiKey(p, config));
+	}
+	// 2. 显式单 provider
+	if (config.ai?.provider && hasApiKey(config.ai.provider, config)) {
+		return [config.ai.provider];
+	}
+	// 3. 自动：所有已配 key 的 provider，DeepSeek 优先
+	const chain: Provider[] = [];
+	if (hasApiKey("deepseek", config)) chain.push("deepseek");
+	if (hasApiKey("glm", config)) chain.push("glm");
+	if (chain.length === 0) return ["glm"]; // 触发缺 key 错误提示
+	return chain;
+}
+
+function getAIConfig(provider: Provider, config: Config) {
 	const spec = PROVIDERS[provider];
 	const configured = config.ai?.model;
 	// 配置里的 model 若是其他 provider 的默认值（常见：用户切了 provider 但没改 model），回落到当前 provider 默认
@@ -88,40 +106,41 @@ function getAIConfig(provider: Provider) {
 
 export interface GenerateOptions {
 	onName?: (name: string) => void;
+	onProvider?: (info: {
+		provider: Provider;
+		fellBackFrom: Provider | null;
+		error?: string;
+	}) => void;
 	exclude?: string[];
 	debug?: boolean;
 }
 
-export async function generateProjectNames(
+async function callProvider(
+	provider: Provider,
 	description: string,
-	options?: GenerateOptions,
+	options: GenerateOptions,
+	config: Config,
+	markStreamStarted: () => void,
 ): Promise<string[]> {
-	const config = loadConfig();
-	const provider = pickProvider(config);
 	const spec = PROVIDERS[provider];
-
-	const apiKey = getApiKey(provider);
+	const apiKey = getApiKey(provider, config);
 	if (!apiKey) {
-		throw new LLMError(
-			`未配置 ${spec.name} API Key。请设置环境变量：\n  ${pc.cyan(`export ${spec.envKey}=your-key`)}\n或在配置文件中设置 ${spec.configKey}。\n\n免费获取：${pc.underline(spec.docsUrl)}`,
-		);
+		throw new Error(`${spec.name} 未配置 API Key`);
 	}
 
-	const { model, count } = getAIConfig(provider);
+	const { model, count } = getAIConfig(provider, config);
 
-	// 构建系统提示词，排除已有名称
 	let systemPrompt = `你是一个项目命名助手。用户会描述一个项目，你需要生成 ${count} 个合适的项目名称。
 
 ${NAME_RULES}
 
 每行一个名称，不要编号，不要其他内容。`;
 
-	if (options?.exclude && options.exclude.length > 0) {
+	if (options.exclude && options.exclude.length > 0) {
 		systemPrompt += `\n\n不要使用以下已生成的名称：\n${options.exclude.join("\n")}`;
 	}
 
-	// Debug 模式
-	if (options?.debug) {
+	if (options.debug) {
 		console.log(pc.cyan("\n[DEBUG MODE]\n"));
 		console.log(pc.dim("Provider:"), spec.name);
 		console.log(pc.dim("Model:"), model);
@@ -159,13 +178,13 @@ ${NAME_RULES}
 
 	if (!response.ok) {
 		const text = await response.text().catch(() => "");
-		throw new LLMError(
-			`API 请求失败 (${response.status}): ${text || response.statusText}`,
+		throw new Error(
+			`${spec.name} API 请求失败 (${response.status}): ${text || response.statusText}`,
 		);
 	}
 
 	if (!response.body) {
-		throw new LLMError("API 响应无 body");
+		throw new Error(`${spec.name} API 响应无 body`);
 	}
 
 	const reader = response.body.getReader();
@@ -176,7 +195,6 @@ ${NAME_RULES}
 	let firstTokenTime: number | null = null;
 	let totalTokens = 0;
 
-	// 解析并输出名称的辅助函数
 	function processPartial(force: boolean = false) {
 		const parts = partial.split("\n");
 		const endIndex = force ? parts.length : parts.length - 1;
@@ -184,7 +202,7 @@ ${NAME_RULES}
 			const name = parts[i].trim();
 			if (name && /^[a-z][a-z0-9-]*$/.test(name)) {
 				names.push(name);
-				options?.onName?.(name);
+				options.onName?.(name);
 			}
 		}
 		partial = force ? "" : parts[parts.length - 1];
@@ -204,10 +222,10 @@ ${NAME_RULES}
 				const data = JSON.parse(line.slice(6));
 				const delta = data.choices?.[0]?.delta?.content;
 				if (delta) {
-					// 记录首字符响应时间
 					if (firstTokenTime === null) {
 						firstTokenTime = Date.now();
-						if (options?.debug) {
+						markStreamStarted();
+						if (options.debug) {
 							console.log(
 								pc.dim("First token:"),
 								`${firstTokenTime - startTime}ms`,
@@ -217,7 +235,7 @@ ${NAME_RULES}
 						}
 					}
 
-					if (options?.debug) {
+					if (options.debug) {
 						process.stdout.write(pc.dim(delta));
 					}
 
@@ -231,13 +249,12 @@ ${NAME_RULES}
 		}
 	}
 
-	// 处理 buffer 中剩余的数据
 	if (buffer.startsWith("data: ") && buffer !== "data: [DONE]") {
 		try {
 			const data = JSON.parse(buffer.slice(6));
 			const delta = data.choices?.[0]?.delta?.content;
 			if (delta) {
-				if (options?.debug) {
+				if (options.debug) {
 					process.stdout.write(pc.dim(delta));
 				}
 				partial += delta;
@@ -247,12 +264,11 @@ ${NAME_RULES}
 		}
 	}
 
-	// 强制处理剩余的 partial
 	processPartial(true);
 
 	const totalTime = Date.now() - startTime;
 
-	if (options?.debug) {
+	if (options.debug) {
 		console.log(pc.dim("\n" + "─".repeat(40)));
 		console.log(pc.dim("\nTotal time:"), `${totalTime}ms`);
 		console.log(
@@ -264,8 +280,66 @@ ${NAME_RULES}
 	}
 
 	if (names.length === 0) {
-		throw new LLMError("AI 未生成有效名称");
+		throw new Error(`${spec.name} 未生成有效名称`);
 	}
 
 	return names;
+}
+
+/**
+ * 生成项目名称：按 provider 链顺序尝试，HTTP/鉴权类错误自动 fallback。
+ * 一旦流式输出开始（onName 触发过），不再 fallback。
+ */
+export async function generateProjectNames(
+	description: string,
+	options?: GenerateOptions,
+): Promise<string[]> {
+	const config = loadConfig();
+	const chain = buildProviderChain(config);
+
+	if (chain.length === 0) {
+		throw new LLMError(
+			`未配置任何 AI provider 的 API Key。请在配置文件中设置 apiKey 或 deepseekApiKey，或通过环境变量 ZHIPU_API_KEY / DEEPSEEK_API_KEY 设置。`,
+		);
+	}
+
+	const errors: string[] = [];
+	let streamStarted = false;
+
+	for (let i = 0; i < chain.length; i++) {
+		const provider = chain[i];
+		const fellBackFrom = i > 0 ? chain[i - 1] : null;
+
+		if (streamStarted) {
+			// 理论上不会走到这里：流开始后 callProvider 直接抛出，外层不会进下一个
+			throw new LLMError(errors[errors.length - 1] || "流式输出中断");
+		}
+
+		options?.onProvider?.({ provider, fellBackFrom });
+
+		try {
+			const names = await callProvider(
+				provider,
+				description,
+				options ?? {},
+				config,
+				() => {
+					streamStarted = true;
+				},
+			);
+			return names;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			errors.push(`${PROVIDERS[provider].name}: ${msg}`);
+			// 流已开始则不 fallback，直接抛
+			if (streamStarted) {
+				throw new LLMError(msg);
+			}
+			// 否则继续下一个 provider
+		}
+	}
+
+	throw new LLMError(
+		`所有 provider 都失败：\n${errors.map((e) => `  - ${e}`).join("\n")}`,
+	);
 }

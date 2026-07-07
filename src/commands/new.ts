@@ -27,7 +27,7 @@ import {
 	getAllTemplates,
 	getTemplateChoices,
 } from "../core/template";
-import { generateProjectNames, LLMError } from "../utils/llm";
+import { generateProjectNames, getProviderName, LLMError } from "../utils/llm";
 import { CONFIG_PATH, PROJECTS_DIR } from "../utils/paths";
 import { CANCEL, selectOrInput } from "../utils/select-or-input";
 import {
@@ -320,15 +320,34 @@ export const newCommand = new Command("new")
 								process.stdout.write("\x1b[2K\n");
 							}
 							process.stdout.write(`\x1b[${linesPrinted}A`);
+							linesPrinted = 0;
 						}
-
-						console.log(`  ${brand.secondary("◆")} ${pc.dim("AI 命名建议")}`);
-						linesPrinted = 1;
 
 						const result = await generateProjectNames(options.desc!, {
 							onName: (name) => {
 								console.log(`  ${brand.secondary("│")} ${brand.primary(name)}`);
 								linesPrinted++;
+							},
+							onProvider: ({ provider, fellBackFrom }) => {
+								// fallback 时清除上一行 header（此时还没 onName，linesPrinted 应为 1）
+								if (linesPrinted > 0) {
+									process.stdout.write(`\x1b[${linesPrinted}A`);
+									for (let i = 0; i < linesPrinted; i++) {
+										process.stdout.write("\x1b[2K\n");
+									}
+									process.stdout.write(`\x1b[${linesPrinted}A`);
+									linesPrinted = 0;
+								}
+								const providerLabel = getProviderName(provider);
+								const note = fellBackFrom
+									? pc.yellow(
+											` (${getProviderName(fellBackFrom)} 失败，使用 ${providerLabel})`,
+										)
+									: pc.dim(` (${providerLabel})`);
+								console.log(
+									`  ${brand.secondary("◆")} ${pc.dim("AI 命名建议")}${note}`,
+								);
+								linesPrinted = 1;
 							},
 							exclude: allGenerated,
 						});

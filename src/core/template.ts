@@ -114,10 +114,8 @@ export async function applyTemplate(
 		return { success: true, message: "模板配置有效（仅执行 hooks）" };
 	}
 
-	return {
-		success: false,
-		message: "模板配置无效（需要 command、dir 或 hooks）",
-	};
+	// 空模板（如默认 empty 模板，仅创建目录无其他操作）
+	return { success: true, message: "空模板（无操作）" };
 }
 
 /**
@@ -159,13 +157,21 @@ export function loadTemplatesMeta(): TemplatesMeta {
  * 保存模板发布元数据
  */
 function saveTemplatesMeta(meta: TemplatesMeta): void {
-	fse.writeFileSync(TEMPLATES_META_PATH, JSON.stringify(meta, null, 2), "utf-8");
+	fse.writeFileSync(
+		TEMPLATES_META_PATH,
+		JSON.stringify(meta, null, 2),
+		"utf-8",
+	);
 }
 
 /**
  * 标记模板已发布到 GitHub
  */
-export function markTemplatePublished(name: string, owner: string, repo: string): void {
+export function markTemplatePublished(
+	name: string,
+	owner: string,
+	repo: string,
+): void {
 	const meta = loadTemplatesMeta();
 	const url = `https://github.com/${owner}/${repo}`;
 	meta[name] = { owner, repo, url, publishedAt: new Date().toISOString() };

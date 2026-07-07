@@ -295,6 +295,17 @@ ai:
   model: deepseek-v4-flash  # 留空时按 provider 选默认
 ```
 
+### 多源 Fallback
+
+配 `ai.providers` 优先级列表，前一个失败（HTTP 错误、鉴权失败等）时自动切换到下一个：
+
+```yaml
+ai:
+  providers: [deepseek, glm]  # DeepSeek 主用，失败时切到 GLM
+```
+
+UI 会展示当前使用的源，fallback 时显示 `(智谱 GLM 失败，使用 DeepSeek)` 提示。流式输出开始后不再 fallback（避免结果错乱）。
+
 ## 实时搜索
 
 `p open`、`p delete`、`p templates add` 支持实时搜索：
@@ -413,5 +424,6 @@ templates:
 | `apiKey` | 智谱 GLM API Key，也可通过 `ZHIPU_API_KEY` 环境变量设置 | - |
 | `deepseekApiKey` | DeepSeek API Key，也可通过 `DEEPSEEK_API_KEY` 环境变量设置 | - |
 | `ai.provider` | AI 服务商：`glm` 或 `deepseek` | 按已配 key 自动推断，否则 `glm` |
+| `ai.providers` | 优先级列表，前一个失败时 fallback 到下一个 | 同上 |
 | `ai.model` | 模型名 | GLM: `glm-4.7-flash` / DeepSeek: `deepseek-v4-flash` |
 | `ai.count` | 生成名称数量（5-20） | `5` |

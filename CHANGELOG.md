@@ -1,5 +1,13 @@
 # p
 
+## 1.23.0
+
+### Minor Changes
+
+- `p new -d` 支持多源 fallback。新增 `ai.providers` 优先级列表配置（如 `[deepseek, glm]`），前一个 HTTP/鉴权类失败时自动切到下一个；UI 在 AI 命名建议标题后展示当前使用的源，fallback 时显示 `(智谱 GLM 失败，使用 DeepSeek)`。流式输出开始后不再 fallback，避免结果错乱。
+
+  修复：`applyTemplate` 在模板仅声明 `name` 而无 command/dir/hooks 时（如默认 `empty` 模板）不再报"模板配置无效"，视为合法空模板直接成功。
+
 ## 1.22.0
 
 ### Minor Changes

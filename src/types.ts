@@ -21,7 +21,8 @@ export interface HookDefinition {
  * AI 配置
  */
 export interface AIConfig {
-	provider?: "glm" | "deepseek"; // AI 服务商，缺省时按已配置的 key 自动推断
+	provider?: "glm" | "deepseek"; // AI 服务商（单源，向后兼容）
+	providers?: Array<"glm" | "deepseek">; // 优先级列表，前一个失败时 fallback 到下一个
 	model?: string; // 模型名（不填用 provider 默认）
 	count?: number; // 生成名称数量，默认 5，范围 5-20
 }

@@ -14823,10 +14823,7 @@ async function applyTemplate(template, projectPath) {
   if (template.hooks && template.hooks.length > 0) {
     return { success: true, message: "\u6A21\u677F\u914D\u7F6E\u6709\u6548\uFF08\u4EC5\u6267\u884C hooks\uFF09" };
   }
-  return {
-    success: false,
-    message: "\u6A21\u677F\u914D\u7F6E\u65E0\u6548\uFF08\u9700\u8981 command\u3001dir \u6216 hooks\uFF09"
-  };
+  return { success: true, message: "\u7A7A\u6A21\u677F\uFF08\u65E0\u64CD\u4F5C\uFF09" };
 }
 function getTemplateChoices(templates) {
   return Object.entries(templates).map(([key, template]) => {
@@ -16702,27 +16699,38 @@ class LLMError extends Error {
     this.name = "LLMError";
   }
 }
-function pickProvider(config) {
-  const explicit = config.ai?.provider;
-  if (explicit === "glm" || explicit === "deepseek")
-    return explicit;
-  const hasGlm = !!(process.env.ZHIPU_API_KEY || config.apiKey);
-  const hasDs = !!(process.env.DEEPSEEK_API_KEY || config.deepseekApiKey);
-  if (!hasGlm && hasDs)
-    return "deepseek";
-  return "glm";
+function getProviderName(p2) {
+  return PROVIDERS[p2].name;
 }
-function getApiKey(provider) {
+function hasApiKey(provider, config) {
   const spec = PROVIDERS[provider];
-  const config = loadConfig();
+  return !!(process.env[spec.envKey] || config[spec.configKey]);
+}
+function getApiKey(provider, config) {
+  const spec = PROVIDERS[provider];
   const envKey = process.env[spec.envKey];
   if (envKey)
     return envKey;
   const configVal = config[spec.configKey];
   return configVal || null;
 }
-function getAIConfig(provider) {
-  const config = loadConfig();
+function buildProviderChain(config) {
+  if (config.ai?.providers && config.ai.providers.length > 0) {
+    return config.ai.providers.filter((p2) => hasApiKey(p2, config));
+  }
+  if (config.ai?.provider && hasApiKey(config.ai.provider, config)) {
+    return [config.ai.provider];
+  }
+  const chain = [];
+  if (hasApiKey("deepseek", config))
+    chain.push("deepseek");
+  if (hasApiKey("glm", config))
+    chain.push("glm");
+  if (chain.length === 0)
+    return ["glm"];
+  return chain;
+}
+function getAIConfig(provider, config) {
   const spec = PROVIDERS[provider];
   const configured = config.ai?.model;
   const isOtherDefault = configured ? Object.values(PROVIDERS).some((s) => s !== spec && s.defaultModel === configured) : false;
@@ -16730,32 +16738,26 @@ function getAIConfig(provider) {
   const count = Math.max(5, Math.min(20, config.ai?.count || DEFAULT_COUNT));
   return { model, count };
 }
-async function generateProjectNames(description, options) {
-  const config = loadConfig();
-  const provider = pickProvider(config);
+async function callProvider(provider, description, options, config, markStreamStarted) {
   const spec = PROVIDERS[provider];
-  const apiKey = getApiKey(provider);
+  const apiKey = getApiKey(provider, config);
   if (!apiKey) {
-    throw new LLMError(`\u672A\u914D\u7F6E ${spec.name} API Key\u3002\u8BF7\u8BBE\u7F6E\u73AF\u5883\u53D8\u91CF\uFF1A
-  ${import_picocolors18.default.cyan(`export ${spec.envKey}=your-key`)}
-\u6216\u5728\u914D\u7F6E\u6587\u4EF6\u4E2D\u8BBE\u7F6E ${spec.configKey}\u3002
-
-\u514D\u8D39\u83B7\u53D6\uFF1A${import_picocolors18.default.underline(spec.docsUrl)}`);
+    throw new Error(`${spec.name} \u672A\u914D\u7F6E API Key`);
   }
-  const { model, count } = getAIConfig(provider);
+  const { model, count } = getAIConfig(provider, config);
   let systemPrompt = `\u4F60\u662F\u4E00\u4E2A\u9879\u76EE\u547D\u540D\u52A9\u624B\u3002\u7528\u6237\u4F1A\u63CF\u8FF0\u4E00\u4E2A\u9879\u76EE\uFF0C\u4F60\u9700\u8981\u751F\u6210 ${count} \u4E2A\u5408\u9002\u7684\u9879\u76EE\u540D\u79F0\u3002
 
 ${NAME_RULES}
 
 \u6BCF\u884C\u4E00\u4E2A\u540D\u79F0\uFF0C\u4E0D\u8981\u7F16\u53F7\uFF0C\u4E0D\u8981\u5176\u4ED6\u5185\u5BB9\u3002`;
-  if (options?.exclude && options.exclude.length > 0) {
+  if (options.exclude && options.exclude.length > 0) {
     systemPrompt += `
 
 \u4E0D\u8981\u4F7F\u7528\u4EE5\u4E0B\u5DF2\u751F\u6210\u7684\u540D\u79F0\uFF1A
 ${options.exclude.join(`
 `)}`;
   }
-  if (options?.debug) {
+  if (options.debug) {
     console.log(import_picocolors18.default.cyan(`
 [DEBUG MODE]
 `));
@@ -16796,10 +16798,10 @@ Streaming...
   });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new LLMError(`API \u8BF7\u6C42\u5931\u8D25 (${response.status}): ${text || response.statusText}`);
+    throw new Error(`${spec.name} API \u8BF7\u6C42\u5931\u8D25 (${response.status}): ${text || response.statusText}`);
   }
   if (!response.body) {
-    throw new LLMError("API \u54CD\u5E94\u65E0 body");
+    throw new Error(`${spec.name} API \u54CD\u5E94\u65E0 body`);
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder;
@@ -16816,7 +16818,7 @@ Streaming...
       const name = parts[i].trim();
       if (name && /^[a-z][a-z0-9-]*$/.test(name)) {
         names.push(name);
-        options?.onName?.(name);
+        options.onName?.(name);
       }
     }
     partial = force ? "" : parts[parts.length - 1];
@@ -16838,14 +16840,15 @@ Streaming...
         if (delta) {
           if (firstTokenTime === null) {
             firstTokenTime = Date.now();
-            if (options?.debug) {
+            markStreamStarted();
+            if (options.debug) {
               console.log(import_picocolors18.default.dim("First token:"), `${firstTokenTime - startTime}ms`);
               console.log(import_picocolors18.default.dim(`
 Raw Output:`));
               console.log(import_picocolors18.default.dim("\u2500".repeat(40)));
             }
           }
-          if (options?.debug) {
+          if (options.debug) {
             process.stdout.write(import_picocolors18.default.dim(delta));
           }
           totalTokens++;
@@ -16860,7 +16863,7 @@ Raw Output:`));
       const data = JSON.parse(buffer.slice(6));
       const delta = data.choices?.[0]?.delta?.content;
       if (delta) {
-        if (options?.debug) {
+        if (options.debug) {
           process.stdout.write(import_picocolors18.default.dim(delta));
         }
         partial += delta;
@@ -16869,7 +16872,7 @@ Raw Output:`));
   }
   processPartial(true);
   const totalTime = Date.now() - startTime;
-  if (options?.debug) {
+  if (options.debug) {
     console.log(import_picocolors18.default.dim(`
 ` + "\u2500".repeat(40)));
     console.log(import_picocolors18.default.dim(`
@@ -16880,9 +16883,41 @@ Total time:`), `${totalTime}ms`);
 Parsed names:`), names);
   }
   if (names.length === 0) {
-    throw new LLMError("AI \u672A\u751F\u6210\u6709\u6548\u540D\u79F0");
+    throw new Error(`${spec.name} \u672A\u751F\u6210\u6709\u6548\u540D\u79F0`);
   }
   return names;
+}
+async function generateProjectNames(description, options) {
+  const config = loadConfig();
+  const chain = buildProviderChain(config);
+  if (chain.length === 0) {
+    throw new LLMError(`\u672A\u914D\u7F6E\u4EFB\u4F55 AI provider \u7684 API Key\u3002\u8BF7\u5728\u914D\u7F6E\u6587\u4EF6\u4E2D\u8BBE\u7F6E apiKey \u6216 deepseekApiKey\uFF0C\u6216\u901A\u8FC7\u73AF\u5883\u53D8\u91CF ZHIPU_API_KEY / DEEPSEEK_API_KEY \u8BBE\u7F6E\u3002`);
+  }
+  const errors2 = [];
+  let streamStarted = false;
+  for (let i = 0;i < chain.length; i++) {
+    const provider = chain[i];
+    const fellBackFrom = i > 0 ? chain[i - 1] : null;
+    if (streamStarted) {
+      throw new LLMError(errors2[errors2.length - 1] || "\u6D41\u5F0F\u8F93\u51FA\u4E2D\u65AD");
+    }
+    options?.onProvider?.({ provider, fellBackFrom });
+    try {
+      const names = await callProvider(provider, description, options ?? {}, config, () => {
+        streamStarted = true;
+      });
+      return names;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors2.push(`${PROVIDERS[provider].name}: ${msg}`);
+      if (streamStarted) {
+        throw new LLMError(msg);
+      }
+    }
+  }
+  throw new LLMError(`\u6240\u6709 provider \u90FD\u5931\u8D25\uFF1A
+${errors2.map((e2) => `  - ${e2}`).join(`
+`)}`);
 }
 
 // src/utils/select-or-input.ts
@@ -17285,13 +17320,27 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
 `);
           }
           process.stdout.write(`\x1B[${linesPrinted}A`);
+          linesPrinted = 0;
         }
-        console.log(`  ${brand.secondary("\u25C6")} ${import_picocolors20.default.dim("AI \u547D\u540D\u5EFA\u8BAE")}`);
-        linesPrinted = 1;
         const result = await generateProjectNames(options.desc, {
           onName: (name2) => {
             console.log(`  ${brand.secondary("\u2502")} ${brand.primary(name2)}`);
             linesPrinted++;
+          },
+          onProvider: ({ provider, fellBackFrom }) => {
+            if (linesPrinted > 0) {
+              process.stdout.write(`\x1B[${linesPrinted}A`);
+              for (let i = 0;i < linesPrinted; i++) {
+                process.stdout.write(`\x1B[2K
+`);
+              }
+              process.stdout.write(`\x1B[${linesPrinted}A`);
+              linesPrinted = 0;
+            }
+            const providerLabel = getProviderName(provider);
+            const note = fellBackFrom ? import_picocolors20.default.yellow(` (${getProviderName(fellBackFrom)} \u5931\u8D25\uFF0C\u4F7F\u7528 ${providerLabel})`) : import_picocolors20.default.dim(` (${providerLabel})`);
+            console.log(`  ${brand.secondary("\u25C6")} ${import_picocolors20.default.dim("AI \u547D\u540D\u5EFA\u8BAE")}${note}`);
+            linesPrinted = 1;
           },
           exclude: allGenerated
         });
