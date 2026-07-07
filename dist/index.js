@@ -17314,7 +17314,7 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     }
     projectName = result;
   } else {
-    const validation = validateProjectName(cleanName);
+    const validation = validateProjectName(projectName);
     if (!validation.valid) {
       printError(validation.message);
       process.exit(1);

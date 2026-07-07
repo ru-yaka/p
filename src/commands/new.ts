@@ -376,8 +376,8 @@ export const newCommand = new Command("new")
 			}
 			projectName = result as string;
 		} else {
-			// 验证传入的名称
-			const validation = validateProjectName(cleanName);
+			// 验证项目名称（命令行传入或 AI 命名）
+			const validation = validateProjectName(projectName);
 			if (!validation.valid) {
 				printError(validation.message!);
 				process.exit(1);

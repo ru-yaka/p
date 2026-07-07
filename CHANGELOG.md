@@ -1,5 +1,11 @@
 # p
 
+## 1.21.1
+
+### Patch Changes
+
+- 修复 `p new -d` 选择 AI 命名后误报"项目名称不能为空"：校验对象错误地指向了命令行传入的 `cleanName`（在 `-d` 模式下为空），改为统一校验最终选中的 `projectName`。
+
 ## 1.21.0
 
 ### Minor Changes
