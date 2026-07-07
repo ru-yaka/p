@@ -21,7 +21,8 @@ export interface HookDefinition {
  * AI 配置
  */
 export interface AIConfig {
-	model?: string; // GLM 模型，默认 glm-4.7-flash
+	provider?: "glm" | "deepseek"; // AI 服务商，缺省时按已配置的 key 自动推断
+	model?: string; // 模型名（不填用 provider 默认）
 	count?: number; // 生成名称数量，默认 5，范围 5-20
 }
 
@@ -30,7 +31,8 @@ export interface AIConfig {
  */
 export interface Config {
 	ide: string;
-	apiKey?: string;
+	apiKey?: string; // 智谱 GLM API Key（也可 ZHIPU_API_KEY 环境变量）
+	deepseekApiKey?: string; // DeepSeek API Key（也可 DEEPSEEK_API_KEY 环境变量）
 	ai?: AIConfig;
 	hooks: Record<string, HookDefinition>;
 	templates: Record<string, TemplateConfig>;

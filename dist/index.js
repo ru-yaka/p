@@ -16588,11 +16588,11 @@ var metaCommand = new Command("meta").description("\u67E5\u770B\u9879\u76EE\u514
 });
 
 // src/commands/new.ts
+import { tmpdir } from "os";
+import { join as join9 } from "path";
 init_esm();
 var import_fs_extra14 = __toESM(require_lib(), 1);
 var import_picocolors20 = __toESM(require_picocolors(), 1);
-import { tmpdir } from "os";
-import { join as join9 } from "path";
 
 // src/core/hooks.ts
 var import_fs_extra13 = __toESM(require_lib(), 1);
@@ -16669,8 +16669,25 @@ async function runHooksByKeys(config, hookKeys, projectPath, projectName) {
 
 // src/utils/llm.ts
 var import_picocolors18 = __toESM(require_picocolors(), 1);
-var GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-var DEFAULT_MODEL = "glm-4.7-flash";
+var PROVIDERS = {
+  glm: {
+    name: "\u667A\u8C31 GLM",
+    apiUrl: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    defaultModel: "glm-4.7-flash",
+    envKey: "ZHIPU_API_KEY",
+    configKey: "apiKey",
+    docsUrl: "https://open.bigmodel.cn/",
+    extraBody: { thinking: { type: "disabled" } }
+  },
+  deepseek: {
+    name: "DeepSeek",
+    apiUrl: "https://api.deepseek.com/chat/completions",
+    defaultModel: "deepseek-v4-flash",
+    envKey: "DEEPSEEK_API_KEY",
+    configKey: "deepseekApiKey",
+    docsUrl: "https://api-docs.deepseek.com/"
+  }
+};
 var DEFAULT_COUNT = 5;
 var NAME_RULES = `\u89C4\u5219\uFF1A
 - \u53EA\u4F7F\u7528\u5C0F\u5199\u82F1\u6587\u5B57\u6BCD\u3001\u6570\u5B57\u548C\u8FDE\u5B57\u7B26
@@ -16685,29 +16702,47 @@ class LLMError extends Error {
     this.name = "LLMError";
   }
 }
-function getApiKey() {
-  const envKey = process.env.ZHIPU_API_KEY;
+function pickProvider(config) {
+  const explicit = config.ai?.provider;
+  if (explicit === "glm" || explicit === "deepseek")
+    return explicit;
+  const hasGlm = !!(process.env.ZHIPU_API_KEY || config.apiKey);
+  const hasDs = !!(process.env.DEEPSEEK_API_KEY || config.deepseekApiKey);
+  if (!hasGlm && hasDs)
+    return "deepseek";
+  return "glm";
+}
+function getApiKey(provider) {
+  const spec = PROVIDERS[provider];
+  const config = loadConfig();
+  const envKey = process.env[spec.envKey];
   if (envKey)
     return envKey;
-  const config = loadConfig();
-  return config.apiKey || null;
+  const configVal = config[spec.configKey];
+  return configVal || null;
 }
-function getAIConfig() {
+function getAIConfig(provider) {
   const config = loadConfig();
-  const model = config.ai?.model || DEFAULT_MODEL;
+  const spec = PROVIDERS[provider];
+  const configured = config.ai?.model;
+  const isOtherDefault = configured ? Object.values(PROVIDERS).some((s) => s !== spec && s.defaultModel === configured) : false;
+  const model = configured && !isOtherDefault ? configured : spec.defaultModel;
   const count = Math.max(5, Math.min(20, config.ai?.count || DEFAULT_COUNT));
   return { model, count };
 }
 async function generateProjectNames(description, options) {
-  const apiKey = getApiKey();
+  const config = loadConfig();
+  const provider = pickProvider(config);
+  const spec = PROVIDERS[provider];
+  const apiKey = getApiKey(provider);
   if (!apiKey) {
-    throw new LLMError(`\u672A\u914D\u7F6E API Key\u3002\u8BF7\u8BBE\u7F6E\u73AF\u5883\u53D8\u91CF\uFF1A
-  ${import_picocolors18.default.cyan("export ZHIPU_API_KEY=your-key")}
-\u6216\u5728\u914D\u7F6E\u6587\u4EF6\u4E2D\u8BBE\u7F6E apiKey\u3002
+    throw new LLMError(`\u672A\u914D\u7F6E ${spec.name} API Key\u3002\u8BF7\u8BBE\u7F6E\u73AF\u5883\u53D8\u91CF\uFF1A
+  ${import_picocolors18.default.cyan(`export ${spec.envKey}=your-key`)}
+\u6216\u5728\u914D\u7F6E\u6587\u4EF6\u4E2D\u8BBE\u7F6E ${spec.configKey}\u3002
 
-\u514D\u8D39\u83B7\u53D6\uFF1A${import_picocolors18.default.underline("https://open.bigmodel.cn/")}`);
+\u514D\u8D39\u83B7\u53D6\uFF1A${import_picocolors18.default.underline(spec.docsUrl)}`);
   }
-  const { model, count } = getAIConfig();
+  const { model, count } = getAIConfig(provider);
   let systemPrompt = `\u4F60\u662F\u4E00\u4E2A\u9879\u76EE\u547D\u540D\u52A9\u624B\u3002\u7528\u6237\u4F1A\u63CF\u8FF0\u4E00\u4E2A\u9879\u76EE\uFF0C\u4F60\u9700\u8981\u751F\u6210 ${count} \u4E2A\u5408\u9002\u7684\u9879\u76EE\u540D\u79F0\u3002
 
 ${NAME_RULES}
@@ -16724,6 +16759,7 @@ ${options.exclude.join(`
     console.log(import_picocolors18.default.cyan(`
 [DEBUG MODE]
 `));
+    console.log(import_picocolors18.default.dim("Provider:"), spec.name);
     console.log(import_picocolors18.default.dim("Model:"), model);
     console.log(import_picocolors18.default.dim("Count:"), count);
     console.log(import_picocolors18.default.dim(`
@@ -16739,22 +16775,24 @@ Streaming...
 `));
   }
   const startTime = Date.now();
-  const response = await fetch(GLM_API_URL, {
+  const body = {
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: description }
+    ],
+    temperature: 0.6,
+    stream: true
+  };
+  if (spec.extraBody)
+    Object.assign(body, spec.extraBody);
+  const response = await fetch(spec.apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: description }
-      ],
-      temperature: 0.6,
-      thinking: { type: "disabled" },
-      stream: true
-    })
+    body: JSON.stringify(body)
   });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
@@ -17094,11 +17132,15 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
     console.log();
     await import_fs_extra14.default.ensureDir(PROJECTS_DIR);
     const existingProjects = new Set(listProjects().map((p2) => p2.name));
-    const result = await execInDir(cmd, PROJECTS_DIR, { captureStderr: true });
+    const result = await execInDir(cmd, PROJECTS_DIR, {
+      captureStderr: true
+    });
     if (!result.success) {
       let createdDirs = [];
       try {
-        const afterAll = await import_fs_extra14.default.readdir(PROJECTS_DIR, { withFileTypes: true });
+        const afterAll = await import_fs_extra14.default.readdir(PROJECTS_DIR, {
+          withFileTypes: true
+        });
         const afterDirNames = afterAll.filter((e2) => e2.isDirectory()).map((e2) => e2.name);
         createdDirs = afterDirNames.filter((name2) => !existingProjects.has(name2));
       } catch {}
@@ -17156,7 +17198,9 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
         }
       }
     }
-    const entries = await import_fs_extra14.default.readdir(PROJECTS_DIR, { withFileTypes: true });
+    const entries = await import_fs_extra14.default.readdir(PROJECTS_DIR, {
+      withFileTypes: true
+    });
     const newProjects = [];
     for (const entry of entries) {
       if (entry.isDirectory() && !existingProjects.has(entry.name)) {
@@ -17267,7 +17311,11 @@ var newCommand = new Command("new").alias("n").alias("create").description("\u52
         }
         const selectOptions = [
           ...suggestions.map((n) => ({ value: n, label: n })),
-          { value: "__regenerate__", label: import_picocolors20.default.cyan("\u6362\u4E00\u6279"), hint: "\u91CD\u65B0\u751F\u6210" }
+          {
+            value: "__regenerate__",
+            label: import_picocolors20.default.cyan("\u6362\u4E00\u6279"),
+            hint: "\u91CD\u65B0\u751F\u6210"
+          }
         ];
         const choice = await selectOrInput({
           message: "\u9009\u62E9\u9879\u76EE\u540D\u79F0:",

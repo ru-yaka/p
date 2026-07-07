@@ -1,5 +1,11 @@
 # p
 
+## 1.22.0
+
+### Minor Changes
+
+- `p new -d` AI 命名支持 DeepSeek。新增 `ai.provider`（`glm` | `deepseek`）字段切换服务商，缺省时按已配置的 key 自动推断。DeepSeek 用 OpenAI 兼容端点 `https://api.deepseek.com/chat/completions`，默认模型 `deepseek-v4-flash`。配置 `ai.model` 若是另一个 provider 的默认值（如切了 provider 没改 model），会自动回落到当前 provider 默认，避免 400 错误。
+
 ## 1.21.1
 
 ### Patch Changes

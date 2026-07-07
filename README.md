@@ -10,7 +10,7 @@ bun install -g ru-yaka/p
 
 安装完成后，运行 `p` 命令即可使用。
 
-> **AI 命名功能**需要配置智谱 API Key，见下方[配置说明](#配置)。
+> **AI 命名功能**需要配置 DeepSeek 或智谱 GLM 的 API Key，见下方[配置说明](#配置)。
 
 ### 从源码安装
 
@@ -270,13 +270,13 @@ p sync import path/to/file.zip  # 指定文件
 
 ## AI 命名
 
-使用 AI 生成项目名称：
+使用 AI 生成项目名称，支持 **DeepSeek** 和 **智谱 GLM** 两个服务商：
 
 ```bash
 # 交互式选择
 p new -d "一个博客项目"
 
-# 调试模式（显示首字符响应时间、token 统计）
+# 调试模式（显示 provider、首字符响应时间、token 统计）
 p new -d "一个博客项目" --debug
 ```
 
@@ -284,6 +284,16 @@ AI 命名功能支持：
 - 实时流式输出名称
 - 直接输入自定义名称（无需先选择再输入）
 - "换一批"排除已生成的名称
+
+### 切换 Provider
+
+通过 `ai.provider` 显式指定，缺省时按已配置的 key 自动推断（只配了 DeepSeek 就用 DeepSeek，否则默认 GLM）：
+
+```yaml
+ai:
+  provider: deepseek  # glm | deepseek
+  model: deepseek-v4-flash  # 留空时按 provider 选默认
+```
 
 ## 实时搜索
 
@@ -363,13 +373,18 @@ p tp
 # 默认 IDE
 ide: cursor
 
-# 智谱 API Key（用于 AI 命名，必填）
+# 智谱 GLM API Key（AI 命名用，二选一）
 # 在 https://open.bigmodel.cn/ 申请
-apiKey: your-api-key
+apiKey: your-glm-key
+
+# DeepSeek API Key（AI 命名用，二选一）
+# 在 https://platform.deepseek.com/ 申请
+deepseekApiKey: your-deepseek-key
 
 # AI 配置
 ai:
-  model: glm-4.7-flash  # GLM 模型
+  # provider: glm  # glm | deepseek，缺省时按已配置的 key 自动推断
+  model: glm-4.7-flash  # 留空时按 provider 选默认
   count: 5              # 生成名称数量（5-20）
 
 # 命令快捷方式（用于 p new -- <别名> <项目名>）
@@ -395,6 +410,8 @@ templates:
 
 | 字段 | 说明 | 默认值 |
 |------|------|--------|
-| `apiKey` | 智谱 API Key，也可通过 `ZHIPU_API_KEY` 环境变量设置 | - |
-| `ai.model` | GLM 模型 | `glm-4.7-flash` |
+| `apiKey` | 智谱 GLM API Key，也可通过 `ZHIPU_API_KEY` 环境变量设置 | - |
+| `deepseekApiKey` | DeepSeek API Key，也可通过 `DEEPSEEK_API_KEY` 环境变量设置 | - |
+| `ai.provider` | AI 服务商：`glm` 或 `deepseek` | 按已配 key 自动推断，否则 `glm` |
+| `ai.model` | 模型名 | GLM: `glm-4.7-flash` / DeepSeek: `deepseek-v4-flash` |
 | `ai.count` | 生成名称数量（5-20） | `5` |

@@ -3,12 +3,16 @@
 # 默认 IDE（可选: cursor, code, windsurf, trae，或自定义命令）
 ide: cursor
 
-# 智谱 API Key（用于 AI 生成项目名称，也可通过 ZHIPU_API_KEY 环境变量设置）
+# 智谱 GLM API Key（用于 AI 生成项目名称，也可通过 ZHIPU_API_KEY 环境变量设置）
 apiKey:
+
+# DeepSeek API Key（也可通过 DEEPSEEK_API_KEY 环境变量设置）
+deepseekApiKey:
 
 # AI 命名配置
 ai:
-  model: glm-4.7-flash # GLM 模型
+  # provider: glm  # AI 服务商：glm | deepseek。缺省时按已配置的 key 自动推断（只配了 DeepSeek 就用 DeepSeek）
+  # model: glm-4.7-flash  # 模型名，留空时按 provider 选默认（GLM: glm-4.7-flash / DeepSeek: deepseek-v4-flash）
   count: 5 # 生成名称数量（5-20）
 
 # 命令快捷方式（用于 p new -- <别名> <项目名>）
