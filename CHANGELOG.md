@@ -1,5 +1,18 @@
 # p
 
+## 1.23.1
+
+### Patch Changes
+
+- fix: publish 命令 spinner 复用导致"已推送 N 个文件"重复打印且进程卡死
+
+  `@clack/prompts` 的 spinner 内部把 interval id 存在闭包变量里，多次 `s.start()` 会覆盖变量、泄漏前一个 interval，导致：
+
+  - 第一个 stop 之后，泄漏的 interval 还在不停刷新屏幕，把 stop message 反复打印（用户看到的"打印两次"）
+  - 泄漏的 interval 阻止 Node.js/Bun 事件循环退出（用户看到的"转了半天都不停"）
+
+  修复：每个步骤用独立的 spinner 实例（sPrepare / sCreate / sPush），符合 CLAUDE.md 既有规范。
+
 ## 1.23.0
 
 ### Minor Changes

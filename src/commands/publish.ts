@@ -107,20 +107,23 @@ async function publishNewRepo(projectPath: string, templateName: string, saveAsL
 		return;
 	}
 
-	const s = spinner();
-	s.start("正在准备...");
+	// 每个步骤用独立的 spinner 实例：@clack/prompts 的 spinner 内部把 interval id
+	// 存在闭包变量里，多次 start 会覆盖变量、泄漏前一个 interval 且永远停不下来
+	const sPrepare = spinner();
+	sPrepare.start("正在准备...");
 
 	// 收集项目文件
 	const { success, files, message } = await collectProjectFiles(projectPath);
 	if (!success || files.length === 0) {
-		s.stop("收集文件失败");
+		sPrepare.stop("收集文件失败");
 		printError(message || "项目没有文件");
 		return;
 	}
 
+	sPrepare.stop(`${brand.success("✓")} 找到 ${files.length} 个文件`);
+
 	// 如果需要保存为本地模板
 	if (saveAsLocal) {
-		s.stop(`${brand.success("✓")} 找到 ${files.length} 个文件`);
 		await fse.ensureDir(TEMPLATES_DIR);
 		await copyFiles(projectPath, join(TEMPLATES_DIR, templateName), files);
 
@@ -145,7 +148,8 @@ async function publishNewRepo(projectPath: string, templateName: string, saveAsL
 		}
 	}
 
-	s.start("正在创建 GitHub 仓库...");
+	const sCreate = spinner();
+	sCreate.start("正在创建 GitHub 仓库...");
 
 	// gh repo create
 	const proc = Bun.spawn(
@@ -167,14 +171,14 @@ async function publishNewRepo(projectPath: string, templateName: string, saveAsL
 	}
 
 	if (!owner) {
-		s.stop("获取 GitHub 用户名失败");
+		sCreate.stop("获取 GitHub 用户名失败");
 		printError(output || "请确认已安装并登录 GitHub CLI (gh)");
 		await fse.remove(tmpDir).catch(() => {});
 		return;
 	}
 
 	if (exitCode !== 0 && !output.includes("Name already exists")) {
-		s.stop("创建仓库失败");
+		sCreate.stop("创建仓库失败");
 		printError(output);
 		await fse.remove(tmpDir).catch(() => {});
 		return;
@@ -183,12 +187,13 @@ async function publishNewRepo(projectPath: string, templateName: string, saveAsL
 	const cloneUrl = `https://github.com/${owner}/${templateName}.git`;
 
 	if (exitCode === 0) {
-		s.stop(`${brand.success("✓")} 仓库已创建: ${brand.primary(`${owner}/${templateName}`)}`);
+		sCreate.stop(`${brand.success("✓")} 仓库已创建: ${brand.primary(`${owner}/${templateName}`)}`);
 	} else {
-		s.stop(`${brand.success("✓")} 仓库已存在: ${brand.primary(`${owner}/${templateName}`)}`);
+		sCreate.stop(`${brand.success("✓")} 仓库已存在: ${brand.primary(`${owner}/${templateName}`)}`);
 	}
 
-	s.start("正在推送文件...");
+	const sPush = spinner();
+	sPush.start("正在推送文件...");
 
 	// git init + commit + push
 	await git(["init"], tmpDir);
@@ -206,7 +211,7 @@ async function publishNewRepo(projectPath: string, templateName: string, saveAsL
 	}
 
 	if (!pushResult.ok) {
-		s.stop("推送失败");
+		sPush.stop("推送失败");
 		printError(pushResult.output);
 		await fse.remove(tmpDir).catch(() => {});
 		return;
@@ -217,7 +222,7 @@ async function publishNewRepo(projectPath: string, templateName: string, saveAsL
 
 	markTemplatePublished(templateName, owner, templateName);
 
-	s.stop(`${brand.success("✓")} 已推送 ${brand.primary(files.length.toString())} 个文件`);
+	sPush.stop(`${brand.success("✓")} 已推送 ${brand.primary(files.length.toString())} 个文件`);
 
 	if (saveAsLocal) {
 		const projects = listProjects();

@@ -17706,16 +17706,16 @@ async function publishNewRepo(projectPath, templateName, saveAsLocal) {
     Se(import_picocolors22.default.dim("\u5DF2\u53D6\u6D88"));
     return;
   }
-  const s = Y2();
-  s.start("\u6B63\u5728\u51C6\u5907...");
+  const sPrepare = Y2();
+  sPrepare.start("\u6B63\u5728\u51C6\u5907...");
   const { success, files, message } = await collectProjectFiles(projectPath);
   if (!success || files.length === 0) {
-    s.stop("\u6536\u96C6\u6587\u4EF6\u5931\u8D25");
+    sPrepare.stop("\u6536\u96C6\u6587\u4EF6\u5931\u8D25");
     printError(message || "\u9879\u76EE\u6CA1\u6709\u6587\u4EF6");
     return;
   }
+  sPrepare.stop(`${brand.success("\u2713")} \u627E\u5230 ${files.length} \u4E2A\u6587\u4EF6`);
   if (saveAsLocal) {
-    s.stop(`${brand.success("\u2713")} \u627E\u5230 ${files.length} \u4E2A\u6587\u4EF6`);
     await import_fs_extra16.default.ensureDir(TEMPLATES_DIR);
     await copyFiles(projectPath, join11(TEMPLATES_DIR, templateName), files);
     Ie(bgOrange(" \u6DFB\u52A0\u6A21\u677F "));
@@ -17733,7 +17733,8 @@ async function publishNewRepo(projectPath, templateName, saveAsLocal) {
       await import_fs_extra16.default.copyFile(src, dest);
     }
   }
-  s.start("\u6B63\u5728\u521B\u5EFA GitHub \u4ED3\u5E93...");
+  const sCreate = Y2();
+  sCreate.start("\u6B63\u5728\u521B\u5EFA GitHub \u4ED3\u5E93...");
   const proc = Bun.spawn(["gh", "repo", "create", templateName, "--public", "--description", `p template: ${templateName}`], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" });
   const exitCode = await proc.exited;
   const stdout = await new Response(proc.stdout).text();
@@ -17748,24 +17749,25 @@ async function publishNewRepo(projectPath, templateName, saveAsLocal) {
     owner = whoami.success ? whoami.output.trim() : "";
   }
   if (!owner) {
-    s.stop("\u83B7\u53D6 GitHub \u7528\u6237\u540D\u5931\u8D25");
+    sCreate.stop("\u83B7\u53D6 GitHub \u7528\u6237\u540D\u5931\u8D25");
     printError(output || "\u8BF7\u786E\u8BA4\u5DF2\u5B89\u88C5\u5E76\u767B\u5F55 GitHub CLI (gh)");
     await import_fs_extra16.default.remove(tmpDir).catch(() => {});
     return;
   }
   if (exitCode !== 0 && !output.includes("Name already exists")) {
-    s.stop("\u521B\u5EFA\u4ED3\u5E93\u5931\u8D25");
+    sCreate.stop("\u521B\u5EFA\u4ED3\u5E93\u5931\u8D25");
     printError(output);
     await import_fs_extra16.default.remove(tmpDir).catch(() => {});
     return;
   }
   const cloneUrl = `https://github.com/${owner}/${templateName}.git`;
   if (exitCode === 0) {
-    s.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u521B\u5EFA: ${brand.primary(`${owner}/${templateName}`)}`);
+    sCreate.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u521B\u5EFA: ${brand.primary(`${owner}/${templateName}`)}`);
   } else {
-    s.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u5B58\u5728: ${brand.primary(`${owner}/${templateName}`)}`);
+    sCreate.stop(`${brand.success("\u2713")} \u4ED3\u5E93\u5DF2\u5B58\u5728: ${brand.primary(`${owner}/${templateName}`)}`);
   }
-  s.start("\u6B63\u5728\u63A8\u9001\u6587\u4EF6...");
+  const sPush = Y2();
+  sPush.start("\u6B63\u5728\u63A8\u9001\u6587\u4EF6...");
   await git(["init"], tmpDir);
   await git(["remote", "add", "origin", cloneUrl], tmpDir);
   await git(["add", "-A"], tmpDir);
@@ -17778,14 +17780,14 @@ async function publishNewRepo(projectPath, templateName, saveAsLocal) {
     pushResult = await git(["push", "-u", "--force", "origin", "master"], tmpDir);
   }
   if (!pushResult.ok) {
-    s.stop("\u63A8\u9001\u5931\u8D25");
+    sPush.stop("\u63A8\u9001\u5931\u8D25");
     printError(pushResult.output);
     await import_fs_extra16.default.remove(tmpDir).catch(() => {});
     return;
   }
   await import_fs_extra16.default.remove(tmpDir).catch(() => {});
   markTemplatePublished(templateName, owner, templateName);
-  s.stop(`${brand.success("\u2713")} \u5DF2\u63A8\u9001 ${brand.primary(files.length.toString())} \u4E2A\u6587\u4EF6`);
+  sPush.stop(`${brand.success("\u2713")} \u5DF2\u63A8\u9001 ${brand.primary(files.length.toString())} \u4E2A\u6587\u4EF6`);
   if (saveAsLocal) {
     const projects = listProjects();
     const currentProject = projects.find((p2) => p2.path === projectPath);
